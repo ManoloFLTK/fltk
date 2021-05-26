@@ -42,12 +42,12 @@ xdg-shell-protocol.o : xdg-shell-protocol.c
 	$(CC) $(CFLAGS) -c xdg-shell-protocol.c
 	
 #this shared lib is used by Wayland client programs and also as a plugin (for the Wayland composer ?)
-libdecor-0.1.so : libdecor.o libdecor-cairo-blur.o libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
+../../lib/libdecor-0.1.so : libdecor.o libdecor-cairo-blur.o libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
 		xdg-shell-protocol.o cursor-settings.o
 	$(CC) -shared  libdecor.o libdecor-cairo-blur.o libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
 		xdg-shell-protocol.o cursor-settings.o -o ../../lib/libdecor-0.1.so -lcairo
 
-demo : libdecor-0.1.so ../demo/demo.c  
+demo : ../../lib/libdecor-0.1.so ../demo/demo.c  
 	$(CC)  -o demo ../demo/demo.c  xdg-decoration-protocol.o xdg-shell-protocol.o -D_GNU_SOURCE -I../src -I. -L../../lib -ldecor-0.1  -lwayland-cursor -lwayland-client -lxkbcommon -lpangocairo-1.0 -ldl -ldbus-1 -Wl,-rpath,$(BUILD)
 
 clean:
