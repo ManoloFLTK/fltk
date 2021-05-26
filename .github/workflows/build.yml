@@ -40,6 +40,25 @@ jobs:
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: cmake --build . --config $BUILD_TYPE
+      
+  build-wayland:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: install prerequisites
+      run: sudo apt-get install -y libasound2-dev libglu1-mesa-dev libwayland-dev wayland-protocols libdbus-1-dev libxkbcommon-dev libegl-dev
+
+    - name: Create Build Environment
+      shell: bash
+      run: autoconf -f
+      run: ./configure --enable-wayland
+
+    - name: Build
+      shell: bash
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      run: make
 
   build-macos:
     # The CMake configure and build commands are platform agnostic and should work equally
