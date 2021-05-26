@@ -198,7 +198,10 @@ int main (int argc, char* argv[])
   glutCreateWindow("Triangle Test");
 #ifndef __APPLE__
   GLenum err = glewInit(); // defines pters to functions of OpenGL V 1.2 and above
-  if (err) Fl::error("glewInit() failed returning %u", err);
+#ifdef __WAYLAND__
+  if (err == GLEW_ERROR_NO_GLX_DISPLAY) err = GLEW_OK;
+#endif
+  if (err != GLEW_OK) Fl::error("glewInit() failed returning %u", err);
   fprintf(stderr, "Status: Using GLEW %s\n", glewGetString(GLEW_VERSION));
 #endif
   int gl_version_major;

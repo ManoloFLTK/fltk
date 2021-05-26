@@ -122,3 +122,5 @@ etc/FLTKConfig.cmake
 # see test/.gitignore
 
 **/.DS_Store
+
+save*wayland*
