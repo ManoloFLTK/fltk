@@ -899,6 +899,7 @@ dnl Define OS-specific stuff...
 HLINKS=
 OSX_ONLY=:
 THREADS=
+LIBDECORDIR=""
 
 AC_ARG_WITH([links], AS_HELP_STRING([--with-links], [make header links for common misspellings (default=no)]))
 
@@ -1015,6 +1016,7 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
       LDFLAGS="$LIBS $LDFLAGS"
       DSOFLAGS="$LIBS $DSOFLAGS"
       enable_pango=yes
+      LIBDECORDIR="libdecor/build"
     
       AC_SEARCH_LIBS([dlopen], [dl])
       AC_CHECK_HEADER([GL/gl.h], [AC_DEFINE([HAVE_GL])])
@@ -1284,6 +1286,8 @@ AC_SUBST([GLLIBS])
 AC_SUBST([HLINKS])
 AC_SUBST([OSX_ONLY])
 AC_SUBST([THREADS])
+
+AC_SUBST([LIBDECORDIR])
 
 AC_SUBST([INSTALL_DESKTOP])
 AC_SUBST([UNINSTALL_DESKTOP])
