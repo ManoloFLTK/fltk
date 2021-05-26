@@ -109,6 +109,8 @@ AC_ARG_ENABLE([localzlib], AS_HELP_STRING([--enable-localzlib], [use local ZLIB 
 
 AC_ARG_ENABLE([pango], AS_HELP_STRING([--enable-pango], [turn on Pango support]))
 
+AC_ARG_ENABLE([wayland], AS_HELP_STRING([--enable-wayland], [turn on Wayland support]))
+
 AC_ARG_ENABLE([print], AS_HELP_STRING([--disable-print], [turn off print support (X11)]))
 AS_IF([test x$enable_print = xno], [
     AC_DEFINE([FL_NO_PRINT_SUPPORT], [Disable X11 print support?])
@@ -978,6 +980,52 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
         THREADS="threads$EXEEXT"
     ])
 
+    AS_IF([test x$enable_wayland = xyes], [
+      dnl Prepare for Wayland...
+      
+      AS_IF([test x$PKGCONFIG = x], [
+          dnl pkg-config is not available, issue warning and abort...
+          AC_MSG_WARN([--enable-wayland: please install pkg-config.])
+          AC_MSG_ERROR([Aborting.])
+      ])
+
+      BUILD="WAYLAND"
+      graphics="Wayland"
+      LIBS="$LIBS -L../lib -ldecor-0.1 $($PKGCONFIG --libs dbus-1) -ldl -Wl,-rpath,\`readlink -f ../lib\` -no-pie"
+      LIBS="$($PKGCONFIG --libs wayland-cursor) $($PKGCONFIG --libs wayland-client) $($PKGCONFIG --libs xkbcommon) $LIBS"
+      CFLAGS="$CFLAGS -D__WAYLAND__"
+      CXXFLAGS="$CXXFLAGS -D__WAYLAND__ -I../libdecor/src"
+      LDFLAGS="$LIBS $LDFLAGS"
+      DSOFLAGS="$LIBS $DSOFLAGS"
+      enable_pango=yes
+    
+      AC_SEARCH_LIBS([dlopen], [dl])
+      AC_CHECK_HEADER([GL/gl.h], [AC_DEFINE([HAVE_GL])])
+      AC_CHECK_HEADER([GL/glu.h], [
+          AC_DEFINE([HAVE_GL_GLU_H])
+          GLLIBS="$($PKGCONFIG --libs wayland-egl) $($PKGCONFIG --libs egl) $($PKGCONFIG --libs glu) $GLLIBS"
+      ])
+        
+      dnl Check for the Pango library ...
+      pango_found=no
+      CXXFLAGS="$($PKGCONFIG --cflags pangocairo) $CXXFLAGS"
+      LIBS="$($PKGCONFIG --libs pangocairo) $LIBS"
+ 
+      CPPFLAGS="$CXXFLAGS"
+      AC_CHECK_HEADERS([pango/pangocairo.h], [
+          AC_DEFINE([USE_PANGO])
+          AC_DEFINE([USE_XFT])
+          pango_found=yes
+      ])
+
+      dnl Early abort if Pango could not be found
+      AS_IF([test x$pango_found != xyes], [
+          AC_MSG_NOTICE([--enable-wayland: Pango libs and/or headers could not be found.])
+          AC_MSG_ERROR([Aborting.])
+      ])
+
+    ], [
+
     dnl Check for X11...
     AC_PATH_XTRA
 
@@ -1205,6 +1253,8 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
 
     AS_IF([test x$ac_cv_have_overlay = xyes], [
         AC_DEFINE([HAVE_OVERLAY])
+    ])
+    
     ])
 
     # Make symlinks since UNIX/Linux is case sensitive,
@@ -1542,7 +1592,9 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
 ], [darwin*], [
     graphics="Quartz"
 ], [*], [
-    graphics="X11"
+    AS_IF([test x$enable_wayland != xyes], [
+        graphics="X11"
+    ])
     AS_IF([test x$xft_found = xyes], [
         graphics="$graphics + Xft"
     ])

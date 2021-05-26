@@ -120,6 +120,17 @@ typedef struct HGLRC__ *GLContext;
    struct dirent {char d_name[1];};
 #endif
 
+#elif defined(__WAYLAND__)
+typedef struct buffer *Fl_Offscreen; /**< an offscreen drawing buffer */
+typedef void* Fl_Bitmask; /**< mask */
+typedef struct flWaylandRegion* Fl_Region;
+typedef int FL_SOCKET; /**< socket or file descriptor */
+typedef void *EGLContext;
+typedef EGLContext GLContext;
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <dirent.h>
+
 #elif defined(__ANDROID__)
 
 #ifdef __cplusplus
