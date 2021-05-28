@@ -33,13 +33,6 @@
 extern unsigned fl_cmap[256]; // defined in fl_color.cxx
 
 
-//TODO: put that in the graphics driver classes
-void fl_rectf(int x, int y, int w, int h, uchar r, uchar g, uchar b) {
-  fl_color(r,g,b);
-  fl_rectf(x,y,w,h);
-}
-
-
 static int create_anonymous_file(off_t size)
 {
   int ret;
