@@ -46,6 +46,7 @@ class Fl_Wayland_Graphics_Driver : public Fl_Cairo_Graphics_Driver {
 private:
   cairo_surface_t *cairo_surface_;
   PangoLayout *dummy_pango_layout_; // used to measure text width before showing a window
+  void draw_cached_pattern_(Fl_Image *img, cairo_pattern_t *pat, int X, int Y, int W, int H, int cx, int cy);
 public:
   Fl_Wayland_Graphics_Driver();
   ~Fl_Wayland_Graphics_Driver();
@@ -79,6 +80,15 @@ public:
   void begin_points();
   void end_points();
   void transformed_vertex(double x, double y);
+  void draw_rgb(Fl_RGB_Image *rgb,int XP, int YP, int WP, int HP, int cx, int cy);
+  void cache(Fl_RGB_Image *rgb);
+  void uncache(Fl_RGB_Image *img, fl_uintptr_t &id_, fl_uintptr_t &mask_);
+  void draw_bitmap(Fl_Bitmap *bm,int XP, int YP, int WP, int HP, int cx, int cy);
+  void cache(Fl_Bitmap *img);
+  void delete_bitmask(Fl_Bitmask bm);
+  void cache(Fl_Pixmap *pxm);
+  void draw_pixmap(Fl_Pixmap *rgb,int XP, int YP, int WP, int HP, int cx, int cy);
+  void uncache_pixmap(fl_uintptr_t p);
   static void init_built_in_fonts();
   static struct buffer *create_shm_buffer(int width, int height, uint32_t format, struct wld_window *window);
   static void buffer_release(struct wld_window *window);

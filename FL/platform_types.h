@@ -118,7 +118,7 @@ typedef struct HGLRC__ *GLContext;
 
 #elif defined(FLTK_USE_WAYLAND)
 typedef struct buffer *Fl_Offscreen; /**< an offscreen drawing buffer */
-typedef void* Fl_Bitmask; /**< mask */
+typedef struct _cairo_pattern* Fl_Bitmask;
 typedef struct flWaylandRegion* Fl_Region;
 typedef int FL_SOCKET; /**< socket or file descriptor */
 typedef void *EGLContext;

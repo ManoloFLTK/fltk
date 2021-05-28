@@ -32,6 +32,14 @@
 
 extern unsigned fl_cmap[256]; // defined in fl_color.cxx
 
+
+//TODO: put that in the graphics driver classes
+void fl_rectf(int x, int y, int w, int h, uchar r, uchar g, uchar b) {
+  fl_color(r,g,b);
+  fl_rectf(x,y,w,h);
+}
+
+
 static int create_anonymous_file(off_t size)
 {
   int ret;
@@ -151,6 +159,13 @@ Fl_Wayland_Graphics_Driver::Fl_Wayland_Graphics_Driver () : Fl_Cairo_Graphics_Dr
   clip_ = NULL;
   dummy_pango_layout_ = NULL;
   pango_layout_ = NULL;
+}
+
+
+Fl_Graphics_Driver *Fl_Graphics_Driver::newMainGraphicsDriver()
+{
+  fl_graphics_driver = new Fl_Wayland_Graphics_Driver();
+  return fl_graphics_driver;
 }
 
 
@@ -401,7 +416,6 @@ void Fl_Wayland_Graphics_Driver::draw(const char* str, int n, float x, float y) 
   pango_layout_set_text(pango_layout_, str, n);
   pango_cairo_show_layout(cairo_, pango_layout_);
   cairo_restore(cairo_);
-  check_status();
 }
 
 
@@ -656,14 +670,192 @@ void Fl_Wayland_Graphics_Driver::transformed_vertex(double x, double y) {
 }
 
 
-Fl_Graphics_Driver *Fl_Graphics_Driver::newMainGraphicsDriver()
-{
-  fl_graphics_driver = new Fl_Wayland_Graphics_Driver();
-  return fl_graphics_driver;
+void Fl_Wayland_Graphics_Driver::draw_cached_pattern_(Fl_Image *img, cairo_pattern_t *pat, int X, int Y, int W, int H, int cx, int cy) {
+  cairo_save(cairo_);
+  cairo_rectangle(cairo_, X-0.5, Y-0.5, W+1, H+1);
+  cairo_clip(cairo_);
+  if (img->d() >= 1) cairo_set_source(cairo_, pat);
+  cairo_matrix_t matrix;
+  cairo_matrix_init_scale(&matrix, double(img->data_w())/(img->w()+1), double(img->data_h())/(img->h()+1));
+  cairo_matrix_translate(&matrix, -X+0.5+cx, -Y+0.5+cy);
+  cairo_pattern_set_matrix(pat, &matrix);
+  cairo_mask(cairo_, pat);
+  cairo_restore(cairo_);
 }
 
 
-void fl_rectf(int x, int y, int w, int h, uchar r, uchar g, uchar b) {
-  fl_color(r,g,b);
-  fl_rectf(x,y,w,h);
+void Fl_Wayland_Graphics_Driver::draw_rgb(Fl_RGB_Image *rgb,int XP, int YP, int WP, int HP, int cx, int cy) {
+  int X, Y, W, H;
+  // Don't draw an empty image...
+  if (!rgb->d() || !rgb->array) {
+    Fl_Graphics_Driver::draw_empty(rgb, XP, YP);
+    return;
+  }
+  if (start_image(rgb, XP, YP, WP, HP, cx, cy, X, Y, W, H)) {
+    return;
+  }
+  cairo_pattern_t *pat = (cairo_pattern_t*)*Fl_Graphics_Driver::id(rgb);
+  if (!pat) {
+    cache(rgb);
+    pat = (cairo_pattern_t*)*Fl_Graphics_Driver::id(rgb);
+  }
+  draw_cached_pattern_(rgb, pat, X, Y, W, H, cx, cy);
+}
+
+
+void Fl_Wayland_Graphics_Driver::cache(Fl_RGB_Image *rgb) {
+  int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, rgb->data_w());
+  uchar *BGRA = new uchar[stride * rgb->data_h()];
+  memset(BGRA, 0, stride * rgb->data_h());
+  int lrgb = rgb->ld() ? rgb->ld() : rgb->data_w() * rgb->d();
+  uchar A = 0xff, R,G,B, *q;
+  const uchar *r;
+  float f = 1;
+  if (rgb->d() >= 3) { // color images
+    for (int j = 0; j < rgb->data_h(); j++) {
+      r = rgb->array + j * lrgb;
+      q = BGRA + j * stride;
+      for (int i = 0; i < rgb->data_w(); i++) {
+        R = *r;
+        G = *(r+1);
+        B = *(r+2);
+        if (rgb->d() == 4) {
+          A = *(r+3);
+          f = float(A)/0xff;
+        }
+        *q =  B * f;
+        *(q+1) =  G * f;
+        *(q+2) =  R * f;
+        *(q+3) =  A;
+        r += rgb->d(); q += 4;
+      }
+    }
+  } else if (rgb->d() == 1 || rgb->d() == 2) { // B&W
+    for (int j = 0; j < rgb->data_h(); j++) {
+      r = rgb->array + j * lrgb;
+      q = BGRA + j * stride;
+      for (int i = 0; i < rgb->data_w(); i++) {
+        G = *r;
+        if (rgb->d() == 2) {
+          A = *(r+1);
+          f = float(A)/0xff;
+        }
+        *(q) =  G * f;
+        *(q+1) =  G * f;
+        *(q+2) =  G * f;
+        *(q+3) =  A;
+        r += rgb->d(); q += 4;
+      }
+    }
+  }
+  cairo_surface_t *surf = cairo_image_surface_create_for_data(BGRA, CAIRO_FORMAT_ARGB32, rgb->data_w(), rgb->data_h(), stride);
+  if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) return;
+  cairo_pattern_t *pat = cairo_pattern_create_for_surface(surf);
+  *Fl_Graphics_Driver::id(rgb) = (fl_uintptr_t)pat;
+}
+
+
+void Fl_Wayland_Graphics_Driver::uncache(Fl_RGB_Image *img, fl_uintptr_t &id_, fl_uintptr_t &mask_) {
+  cairo_pattern_t *pat = (cairo_pattern_t*)id_;
+  if (pat) {
+    cairo_surface_t *surf;
+    cairo_pattern_get_surface(pat, &surf);
+    cairo_pattern_destroy(pat);
+    cairo_surface_destroy(surf);
+    id_ = 0;
+  }
+}
+
+
+void Fl_Wayland_Graphics_Driver::draw_bitmap(Fl_Bitmap *bm,int XP, int YP, int WP, int HP, int cx, int cy) {
+  int X, Y, W, H;
+  if (!bm->array) {
+    draw_empty(bm, XP, YP);
+    return;
+  }
+  if (start_image(bm, XP,YP,WP,HP,cx,cy,X,Y,W,H)) return;
+  cairo_pattern_t *pat = (cairo_pattern_t*)*Fl_Graphics_Driver::id(bm);
+  if (!pat) {
+    cache(bm);
+    pat = (cairo_pattern_t*)*Fl_Graphics_Driver::id(bm);
+  }
+  if (pat) {
+    draw_cached_pattern_(bm, pat, X, Y, W, H, cx, cy);
+  }
+}
+
+
+void Fl_Wayland_Graphics_Driver::cache(Fl_Bitmap *bm) {
+  int stride = cairo_format_stride_for_width(CAIRO_FORMAT_A1, bm->data_w());
+  uchar *BGRA = new uchar[stride * bm->data_h()];
+  memset(BGRA, 0, stride * bm->data_h());
+    uchar  *r, p;
+    unsigned *q;
+    for (int j = 0; j < bm->data_h(); j++) {
+      r = (uchar*)bm->array + j * ((bm->data_w() + 7)/8);
+      q = (unsigned*)(BGRA + j * stride);
+      unsigned k = 0, mask32 = 1;
+      p = *r;
+      for (int i = 0; i < bm->data_w(); i++) {
+        if (p&1) (*q) |= mask32;
+        k++;
+        if (k % 8 != 0) p >>= 1; else p = *(++r);
+        if (k % 32 != 0) mask32 <<= 1; else {q++; mask32 = 1;}
+      }
+    }
+  cairo_surface_t *surf = cairo_image_surface_create_for_data(BGRA, CAIRO_FORMAT_A1, bm->data_w(), bm->data_h(), stride);
+  if (cairo_surface_status(surf) == CAIRO_STATUS_SUCCESS) {
+    cairo_pattern_t *pat = cairo_pattern_create_for_surface(surf);
+    *Fl_Graphics_Driver::id(bm) = (fl_uintptr_t)pat;
+  }
+}
+
+
+void Fl_Wayland_Graphics_Driver::delete_bitmask(Fl_Bitmask bm) {
+  cairo_pattern_t *pat = (cairo_pattern_t*)bm;
+  if (pat) {
+    cairo_surface_t *surf;
+    cairo_pattern_get_surface(pat, &surf);
+    cairo_pattern_destroy(pat);
+    cairo_surface_destroy(surf);
+  }
+}
+
+
+void Fl_Wayland_Graphics_Driver::draw_pixmap(Fl_Pixmap *pxm,int XP, int YP, int WP, int HP, int cx, int cy) {
+  int X, Y, W, H;
+  // Don't draw an empty image...
+  if (!pxm->data() || !pxm->w()) {
+    Fl_Graphics_Driver::draw_empty(pxm, XP, YP);
+    return;
+  }
+  if (start_image(pxm, XP, YP, WP, HP, cx, cy, X, Y, W, H)) {
+    return;
+  }
+  cairo_pattern_t *pat = (cairo_pattern_t*)*Fl_Graphics_Driver::id(pxm);
+  if (!pat) {
+    cache(pxm);
+    pat = (cairo_pattern_t*)*Fl_Graphics_Driver::id(pxm);
+  }
+  draw_cached_pattern_(pxm, pat, X, Y, W, H, cx, cy);
+}
+
+
+void Fl_Wayland_Graphics_Driver::cache(Fl_Pixmap *pxm) {
+  Fl_RGB_Image *rgb = new Fl_RGB_Image(pxm);
+  cache(rgb);
+  *Fl_Graphics_Driver::id(pxm) = *Fl_Graphics_Driver::id(rgb);
+  *Fl_Graphics_Driver::id(rgb) = 0;
+  delete rgb;
+}
+
+
+void Fl_Wayland_Graphics_Driver::uncache_pixmap(fl_uintptr_t p) {
+  cairo_pattern_t *pat = (cairo_pattern_t*)p;
+  if (pat) {
+    cairo_surface_t *surf;
+    cairo_pattern_get_surface(pat, &surf);
+    cairo_pattern_destroy(pat);
+    cairo_surface_destroy(surf);
+  }
 }
