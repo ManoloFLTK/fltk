@@ -696,6 +696,13 @@ void Fl_Wayland_Graphics_Driver::draw_rgb(Fl_RGB_Image *rgb,int XP, int YP, int 
 }
 
 
+static cairo_user_data_key_t data_key_for_surface = {};
+
+static void dealloc_surface_data(void *data) {
+  delete[] (uchar*)data;
+}
+
+
 void Fl_Wayland_Graphics_Driver::cache(Fl_RGB_Image *rgb) {
   int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, rgb->data_w());
   uchar *BGRA = new uchar[stride * rgb->data_h()];
@@ -743,6 +750,7 @@ void Fl_Wayland_Graphics_Driver::cache(Fl_RGB_Image *rgb) {
   }
   cairo_surface_t *surf = cairo_image_surface_create_for_data(BGRA, CAIRO_FORMAT_ARGB32, rgb->data_w(), rgb->data_h(), stride);
   if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) return;
+  (void)cairo_surface_set_user_data(surf, &data_key_for_surface, BGRA, dealloc_surface_data);
   cairo_pattern_t *pat = cairo_pattern_create_for_surface(surf);
   *Fl_Graphics_Driver::id(rgb) = (fl_uintptr_t)pat;
 }
@@ -798,6 +806,7 @@ void Fl_Wayland_Graphics_Driver::cache(Fl_Bitmap *bm) {
     }
   cairo_surface_t *surf = cairo_image_surface_create_for_data(BGRA, CAIRO_FORMAT_A1, bm->data_w(), bm->data_h(), stride);
   if (cairo_surface_status(surf) == CAIRO_STATUS_SUCCESS) {
+    (void)cairo_surface_set_user_data(surf, &data_key_for_surface, BGRA, dealloc_surface_data);
     cairo_pattern_t *pat = cairo_pattern_create_for_surface(surf);
     *Fl_Graphics_Driver::id(bm) = (fl_uintptr_t)pat;
   }
