@@ -1009,11 +1009,11 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
 
       BUILD="WAYLAND"
       graphics="Wayland"
-      LIBS="$LIBS -L../lib -ldecor-0.1 $($PKGCONFIG --libs dbus-1) -ldl -Wl,-rpath,`readlink -f ./lib` -no-pie"
+      pathtolib=`readlink -f ./lib`
+      LIBS="$LIBS -L$pathtolib -ldecor-0.1 $($PKGCONFIG --libs dbus-1) -ldl -Wl,-rpath,$pathtolib -no-pie"
       LIBS="$($PKGCONFIG --libs wayland-cursor) $($PKGCONFIG --libs wayland-client) $($PKGCONFIG --libs xkbcommon) $LIBS"
       CFLAGS="$CFLAGS -D__WAYLAND__"
       CXXFLAGS="$CXXFLAGS -D__WAYLAND__ -I../libdecor/src"
-      LDFLAGS="$LIBS $LDFLAGS"
       DSOFLAGS="$LIBS $DSOFLAGS"
       enable_pango=yes
       LIBDECORDIR="libdecor/build"
