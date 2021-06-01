@@ -56,6 +56,7 @@ public:
   void draw(const char* s, int nBytes, int x, int y) { draw(s, nBytes, float(x), float(y)); }
   void draw(const char* s, int nBytes, float x, float y);
   void draw(int angle, const char *str, int n, int x, int y);
+  void rtl_draw(const char* str, int n, int x, int y);
   int height();
   int descent();
   double width(const char *str, int n);
@@ -94,6 +95,23 @@ public:
   static void buffer_release(struct wld_window *window);
   static void buffer_commit(struct wld_window *window);
   static void cairo_init(struct buffer *buffer, int width, int height, int stride);
+void line(int x1, int y1, int x2, int y2);
+void line(int x1, int y1, int x2, int y2, int x3, int y3);
+void xyline(int x, int y, int x1);
+void xyline(int x, int y, int x1, int y2);
+void xyline(int x, int y, int x1, int y2, int x3);
+void yxline(int x, int y, int y1);
+void yxline(int x, int y, int y1, int x2);
+void yxline(int x, int y, int y1, int x2, int y3);
+void loop(int x0, int y0, int x1, int y1, int x2, int y2);
+void loop(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3);
+void rect(int x, int y, int w, int h);
+void rectf(int x, int y, int w, int h);
+void polygon(int x0, int y0, int x1, int y1, int x2, int y2);
+void polygon(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3);
+void end_loop();
+void end_line();
+void end_polygon();
 };
 
 #endif // FL_WAYLAND_GRAPHICS_DRIVER_H

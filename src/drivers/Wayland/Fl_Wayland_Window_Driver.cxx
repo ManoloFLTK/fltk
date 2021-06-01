@@ -355,7 +355,6 @@ void Fl_Wayland_Window_Driver::make_current() {
   if (!window->buffer) window->buffer = Fl_Wayland_Graphics_Driver::create_shm_buffer(
           pWindow->w() * window->scale, pWindow->h() * window->scale, WL_SHM_FORMAT_ARGB8888, window);
   ((Fl_Wayland_Graphics_Driver*)fl_graphics_driver)->activate(window->buffer, window->scale);
-  window->buffer->draw_buffer_needs_commit = true;
 
 #ifdef FLTK_USE_CAIRO
   // update the cairo_t context
