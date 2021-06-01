@@ -105,6 +105,7 @@ struct buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int heig
 
 
 void Fl_Wayland_Graphics_Driver::buffer_commit(struct wld_window *window) {
+  cairo_surface_flush(window->buffer->cairo_surface_);
   memcpy(window->buffer->data, window->buffer->draw_buffer, window->buffer->data_size);
   wl_surface_attach(window->wl_surface, window->buffer->wl_buffer, 0, 0);
   wl_surface_set_buffer_scale(window->wl_surface, window->scale);
