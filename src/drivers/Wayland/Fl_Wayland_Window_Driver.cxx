@@ -338,10 +338,12 @@ void Fl_Wayland_Window_Driver::make_current() {
   // to support progressive drawing
   if ( (!Fl_Wayland_Window_Driver::in_flush) && window && window->buffer && window->buffer->draw_buffer_needs_commit) {
     while (! window->buffer->wl_buffer_ready) {
+//fprintf(stderr, "direct make_current calls wl_display_dispatch\n");
       wl_display_dispatch(fl_display);
     }
     if (window->buffer->draw_buffer_needs_commit) {
       wl_surface_damage_buffer(window->wl_surface, 0, 0, pWindow->w() * window->scale, pWindow->h() * window->scale);
+//fprintf(stderr, "direct make_current calls buffer_commit\n");
       Fl_Wayland_Graphics_Driver::buffer_commit(window);
     }
   }

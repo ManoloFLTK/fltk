@@ -55,8 +55,8 @@ static void buffer_gets_ready(void *user_data, struct wl_buffer *unused)
 {
   struct wld_window *window = (struct wld_window *)user_data;
   window->buffer->wl_buffer_ready = true;
+//fprintf(stderr, "buffer_gets_ready: needs_commit=%d\n", window->buffer->draw_buffer_needs_commit);
   if (window->buffer->draw_buffer_needs_commit) {
-//fprintf(stderr, "buffer_gets_ready calls buffer_commit\n");
     Fl_Wayland_Graphics_Driver::buffer_commit(window);
   }
 }
@@ -127,6 +127,7 @@ void Fl_Wayland_Graphics_Driver::cairo_init(struct buffer *buffer, int width, in
   }
   cairo_set_source_rgba(buffer->cairo_, 1.0, 1.0, 1.0, 0.);
   cairo_paint(buffer->cairo_);
+  cairo_set_source_rgba(buffer->cairo_, .0, .0, .0, 1.0); // Black default color
   buffer->pango_layout_ = pango_cairo_create_layout(buffer->cairo_);
   cairo_save(buffer->cairo_);
 }
