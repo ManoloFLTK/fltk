@@ -330,27 +330,24 @@ void Fl_Wayland_Window_Driver::capture_titlebar_and_borders(Fl_RGB_Image*& top, 
 // make drawing go into this window (called by subclass flush() impl.)
 void Fl_Wayland_Window_Driver::make_current() {
   if (!shown()) {
-    fl_alert("Fl_Window::make_current(), but window is not shown().");
-    Fl::fatal("Fl_Window::make_current(), but window is not shown().");
+    static const char err_message[] = "Fl_Window::make_current(), but window is not shown().";
+    fl_alert(err_message);
+    Fl::fatal(err_message);
   }
   
   struct wld_window *window = fl_xid(pWindow);
   // to support progressive drawing
-  if ( (!Fl_Wayland_Window_Driver::in_flush) && window && window->buffer && window->buffer->draw_buffer_needs_commit) {
-    while (! window->buffer->wl_buffer_ready) {
-//fprintf(stderr, "direct make_current calls wl_display_dispatch\n");
-      wl_display_dispatch(fl_display);
-    }
-    if (window->buffer->draw_buffer_needs_commit) {
+  if ( (!Fl_Wayland_Window_Driver::in_flush) && window && window->buffer) {
+    if (!window->buffer->draw_buffer_needs_commit) {
       wl_surface_damage_buffer(window->wl_surface, 0, 0, pWindow->w() * window->scale, pWindow->h() * window->scale);
+//fprintf(stderr, "direct make_current calls damage_buffer\n");
+    } else if (window->buffer->wl_buffer_ready) {
 //fprintf(stderr, "direct make_current calls buffer_commit\n");
       Fl_Wayland_Graphics_Driver::buffer_commit(window);
     }
   }
 
   fl_graphics_driver->clip_region(0);
-  //((Fl_Cairo_Graphics_Driver*)fl_graphics_driver)->scale(Fl::screen_driver()->scale(screen_num()));
-  
   fl_window = window;
   if (!window->buffer) window->buffer = Fl_Wayland_Graphics_Driver::create_shm_buffer(
           pWindow->w() * window->scale, pWindow->h() * window->scale, WL_SHM_FORMAT_ARGB8888, window);
