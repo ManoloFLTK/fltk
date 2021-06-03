@@ -36,7 +36,6 @@ struct buffer {
   unsigned char *draw_buffer;
   bool wl_buffer_ready;
   bool draw_buffer_needs_commit;
-  cairo_surface_t *cairo_surface_;
   cairo_t *cairo_;
   PangoLayout *pango_layout_;
 };
@@ -44,7 +43,6 @@ struct wld_window;
 
 class Fl_Wayland_Graphics_Driver : public Fl_Cairo_Graphics_Driver {
 private:
-  cairo_surface_t *cairo_surface_;
   PangoLayout *dummy_pango_layout_; // used to measure text width before showing a window
   void draw_cached_pattern_(Fl_Image *img, cairo_pattern_t *pat, int X, int Y, int W, int H, int cx, int cy);
 public:

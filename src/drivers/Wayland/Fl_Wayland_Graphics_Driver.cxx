@@ -105,7 +105,8 @@ struct buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int heig
 
 
 void Fl_Wayland_Graphics_Driver::buffer_commit(struct wld_window *window) {
-  cairo_surface_flush(window->buffer->cairo_surface_);
+  cairo_surface_t *surf = cairo_get_target(window->buffer->cairo_);
+  cairo_surface_flush(surf);
   memcpy(window->buffer->data, window->buffer->draw_buffer, window->buffer->data_size);
   wl_surface_attach(window->wl_surface, window->buffer->wl_buffer, 0, 0);
   wl_surface_set_buffer_scale(window->wl_surface, window->scale);
@@ -116,15 +117,17 @@ void Fl_Wayland_Graphics_Driver::buffer_commit(struct wld_window *window) {
 
 
 void Fl_Wayland_Graphics_Driver::cairo_init(struct buffer *buffer, int width, int height, int stride) {
-  buffer->cairo_surface_ = cairo_image_surface_create_for_data (buffer->draw_buffer, CAIRO_FORMAT_ARGB32,
+  cairo_surface_t *surf = cairo_image_surface_create_for_data (buffer->draw_buffer, CAIRO_FORMAT_ARGB32,
                                                         width, height, stride);
-  if (cairo_surface_status(buffer->cairo_surface_) != CAIRO_STATUS_SUCCESS) {
+  if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
     fprintf(stderr, "Can't create Cairo surface\n");
+    return;
   }
-  buffer->cairo_ = cairo_create(buffer->cairo_surface_);
+  buffer->cairo_ = cairo_create(surf);
   cairo_status_t err;
   if ((err = cairo_status(buffer->cairo_)) != CAIRO_STATUS_SUCCESS) {
     fprintf(stderr, "Cairo error on create %s\n", cairo_status_to_string(err));
+    return;
   }
   cairo_set_source_rgba(buffer->cairo_, 1.0, 1.0, 1.0, 0.);
   cairo_paint(buffer->cairo_);
@@ -141,8 +144,9 @@ void Fl_Wayland_Graphics_Driver::buffer_release(struct wld_window *window)
     munmap(window->buffer->data, window->buffer->data_size);
     delete[] window->buffer->draw_buffer;
     window->buffer->draw_buffer = NULL;
+    cairo_surface_t *surf = cairo_get_target(window->buffer->cairo_);
     cairo_destroy(window->buffer->cairo_);
-    cairo_surface_destroy(window->buffer->cairo_surface_);
+    cairo_surface_destroy(surf);
     g_object_unref(window->buffer->pango_layout_);
     free(window->buffer);
     window->buffer = NULL;
@@ -171,13 +175,13 @@ Fl_Wayland_Graphics_Driver::~Fl_Wayland_Graphics_Driver() {
 
 void Fl_Wayland_Graphics_Driver::activate(struct buffer *buffer, int scale) {
   if (dummy_pango_layout_) {
+    cairo_surface_t *surf = cairo_get_target(cairo_);
     cairo_destroy(cairo_);
-    cairo_surface_destroy(cairo_surface_);
+    cairo_surface_destroy(surf);
     g_object_unref(dummy_pango_layout_);
     dummy_pango_layout_ = NULL;
     pango_layout_ = NULL;
   }
-  cairo_surface_ = buffer->cairo_surface_;
   cairo_ = buffer->cairo_;
   if (pango_layout_ != buffer->pango_layout_) {
     if (pango_layout_) g_object_unref(pango_layout_);
@@ -271,8 +275,8 @@ void Fl_Wayland_Graphics_Driver::font(Fl_Font fnum, Fl_Fontsize s) {
   if (font() == fnum && size() == s) return;
   if (!font_descriptor()) fl_open_display();
   if (!pango_layout_) {
-    cairo_surface_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 100, 100);
-    cairo_ = cairo_create(cairo_surface_);
+    cairo_surface_t *surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 100, 100);
+    cairo_ = cairo_create(surf);
     dummy_pango_layout_ = pango_cairo_create_layout(cairo_);
     pango_layout_ = dummy_pango_layout_;
   }
