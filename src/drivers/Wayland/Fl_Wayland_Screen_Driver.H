@@ -164,8 +164,8 @@ public:
   struct wl_cursor *default_cursor();
   void default_cursor(struct wl_cursor *cursor);
   struct wl_cursor *cache_cursor(const char *cursor_name);
-uint32_t get_serial();
-struct wl_seat *get_wl_seat();
+//uint32_t get_serial();
+//struct wl_seat *get_wl_seat();
 //char  *get_seat_name();
   struct xkb_keymap *get_xkb_keymap();
   static bool own_output(struct wl_output *output);
