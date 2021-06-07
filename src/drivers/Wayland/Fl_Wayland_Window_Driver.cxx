@@ -307,10 +307,10 @@ void Fl_Wayland_Window_Driver::capture_titlebar_and_borders(Fl_RGB_Image*& top, 
   fl_color(FL_BLACK);
   fl_rectf(0, 0, pWindow->w(), htop);
   fl_color(FL_WHITE);
-  Fl::set_font(FL_SCREEN_BOLD, "System-ui Bold");
-  fl_font(FL_SCREEN_BOLD, 17);
+  Fl::set_font(FL_SCREEN_BOLD, "sans Bold");
+  fl_font(FL_SCREEN_BOLD, 20);
   double w = fl_width(pWindow->label());
-  fl_draw(pWindow->label(), pWindow->w()/2 - w/2, htop - fl_descent() - 4);
+  fl_draw(pWindow->label(), pWindow->w()/2 - w/2, htop - fl_descent() - 1);
   int X = pWindow->w()-1.1*htop;
   fl_line(X, htop-5, X+htop-10, 5);
   fl_line(X,5, X+htop-10,htop-5);
