@@ -585,20 +585,10 @@ void Fl_Wayland_Window_Driver::show_with_args_end(int argc, char **argv) {
 }
 
 
-int Fl_Wayland_Window_Driver::can_do_overlay() {
-  return Fl_Window_Driver::can_do_overlay();
-}
-
-void Fl_Wayland_Window_Driver::redraw_overlay() {
-  Fl_Window_Driver::redraw_overlay();
-}
-
 void Fl_Wayland_Window_Driver::flush_menu() {
    flush_Fl_Window();
 }
 
-void Fl_Wayland_Window_Driver::erase_menu() {
-}
 
 int Fl_Wayland_Window_Driver::scroll(int src_x, int src_y, int src_w, int src_h, int dest_x, int dest_y,
                                  void (*draw_area)(void*, int,int,int,int), void* data)
