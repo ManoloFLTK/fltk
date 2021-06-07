@@ -436,7 +436,7 @@ const struct wl_data_device_listener *Fl_Wayland_Screen_Driver::p_data_device_li
 // which is enlarged if necessary.
 static void get_clipboard_text() {
   int fds[2];
-  pipe(fds);
+  if (pipe(fds)) return;
   wl_data_offer_receive(fl_selection_offer, wld_plain_text_clipboard, fds[1]);
   close(fds[1]);
   wl_display_roundtrip(fl_display);
@@ -467,7 +467,7 @@ static void get_clipboard_text() {
   }
 //fprintf(stderr, "get_clipboard_text: size=%ld\n", rest);
   // read full clipboard data
-  pipe(fds);
+  if (pipe(fds)) return;
   wl_data_offer_receive(fl_selection_offer, wld_plain_text_clipboard, fds[1]);
   close(fds[1]);
   wl_display_roundtrip(fl_display);
@@ -495,7 +495,7 @@ static void get_clipboard_text() {
 // Returns 0 if OK, != 0 if error.
 static int get_clipboard_image() {
   int fds[2];
-  pipe(fds);
+  if (pipe(fds)) return 1;
   wl_data_offer_receive(fl_selection_offer, fl_selection_offer_type, fds[1]);
   close(fds[1]);
   wl_display_roundtrip(fl_display);
@@ -513,7 +513,7 @@ static int get_clipboard_image() {
         close(fd);
         break;
       }
-      write(fd, buf, n);
+      n = write(fd, buf, n);
     }
     shared = Fl_Shared_Image::get(tmp_fname);
     fl_unlink(tmp_fname);

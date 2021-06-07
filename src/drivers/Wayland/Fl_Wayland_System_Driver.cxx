@@ -513,9 +513,9 @@ char *Fl_Wayland_System_Driver::get_prog_name() {
   FILE *in = fopen(fname, "r");
   if (in) {
     static char line[200];
-    fgets(line, sizeof(line), in);
+    char *p = fgets(line, sizeof(line), in);
     fclose(in);
-    char *p = strrchr(line, '/'); if (!p) p = line; else p++;
+    p = strrchr(line, '/'); if (!p) p = line; else p++;
     return p;
   }
   return NULL;
