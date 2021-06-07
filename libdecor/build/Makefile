@@ -1,7 +1,7 @@
 CC = gcc
 BUILD = `readlink -f ../../lib`
 
-CFLAGS = -I. -I../src -fPIC 
+CFLAGS = -I. -I../src -fPIC -D_GNU_SOURCE
 
 all : demo 
 
@@ -48,7 +48,7 @@ xdg-shell-protocol.o : xdg-shell-protocol.c
 		xdg-shell-protocol.o cursor-settings.o -o ../../lib/libdecor-0.1.so -lcairo
 
 demo : ../../lib/libdecor-0.1.so ../demo/demo.c  
-	$(CC)  -o demo ../demo/demo.c  xdg-decoration-protocol.o xdg-shell-protocol.o -D_GNU_SOURCE -I../src -I. -L../../lib -ldecor-0.1  -lwayland-cursor -lwayland-client -lxkbcommon -lpangocairo-1.0 -ldl -ldbus-1 -Wl,-rpath,$(BUILD)
+	$(CC)  -o demo ../demo/demo.c  xdg-decoration-protocol.o xdg-shell-protocol.o -D_GNU_SOURCE -I../src -I. -L../../lib -ldecor-0.1  -lwayland-cursor -lwayland-client -lxkbcommon -lpangocairo-1.0 -ldl -ldbus-1 -Wl,-rpath,$(BUILD) -no-pie
 
 clean:
 	rm *.o ../../lib/libdecor-0.1.so
