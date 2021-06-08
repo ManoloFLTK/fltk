@@ -737,7 +737,7 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
         }
         fl_win->configured_width = W;
         fl_win->configured_height = H;
-        if (!in_handle_configure) {
+        if (!in_handle_configure && fl_win->xdg_toplevel) {
           struct libdecor_state *state = libdecor_state_new(W, H);
           libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
           libdecor_state_free(state);
