@@ -712,6 +712,7 @@ static void handle_configure(struct libdecor_frame *frame,
   if (width == 0) {
     width = window->fl_win->w();
     height = window->fl_win->h();
+    driver->wait_for_expose_value = 0;// necessary for Weston
   }
   if (width < 128) width = 128; // enforce minimal size of decorated windows for libdecor
   if (height < 56) height = 56;
@@ -733,7 +734,7 @@ static void handle_configure(struct libdecor_frame *frame,
   if (!libdecor_configuration_get_window_state(configuration, &window_state))
     window_state = LIBDECOR_WINDOW_STATE_NONE;
 
-//fprintf(stderr, "handle_configure fl_win=%p pos:%dx%d size:%dx%d state=%x\n", window->fl_win, window->fl_win->x(), window->fl_win->y(), width,height,window_state);
+//fprintf(stderr, "handle_configure fl_win=%p pos:%dx%d size:%dx%d state=%x wait_for_expose_value=%d\n", window->fl_win, window->fl_win->x(), window->fl_win->y(), width,height,window_state,driver->wait_for_expose_value);
 
 /* We would like to do FL_HIDE when window is minimized but :
  "There is no way to know if the surface is currently minimized, nor is there any way to
@@ -872,6 +873,9 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
   new_window = (struct wld_window *)calloc(1, sizeof *new_window);
   new_window->fl_win = pWindow;
   new_window->scale = 1;
+  // for Weston, pre-estimate decorated_height
+  new_window->decorated_height = pWindow->h();
+  if (!pWindow->parent()) new_window->decorated_height += 24; // can be changed later
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   wl_list_for_each(output, &(scr_driver->outputs), link) {
     new_window->scale = MAX(new_window->scale, output->scale);

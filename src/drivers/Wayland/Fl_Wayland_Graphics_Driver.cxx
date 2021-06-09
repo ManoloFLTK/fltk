@@ -70,7 +70,7 @@ struct buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int heig
 {
   struct buffer *buffer;
 
-  int stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, width);
+  int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
   int size = stride * height;
   int fd = create_anonymous_file(size);
   if (fd < 0) {
@@ -99,7 +99,7 @@ struct buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int heig
   buffer->wl_buffer_ready = true;
   buffer->draw_buffer_needs_commit = false;
 //fprintf(stderr, "create_shm_buffer: %dx%d\n", width, height);
-  cairo_init(buffer, width, height, stride);
+  cairo_init(buffer, width, height, stride, CAIRO_FORMAT_ARGB32);
   return buffer;
 }
 
@@ -116,8 +116,8 @@ void Fl_Wayland_Graphics_Driver::buffer_commit(struct wld_window *window) {
 }
 
 
-void Fl_Wayland_Graphics_Driver::cairo_init(struct buffer *buffer, int width, int height, int stride) {
-  cairo_surface_t *surf = cairo_image_surface_create_for_data (buffer->draw_buffer, CAIRO_FORMAT_ARGB32,
+void Fl_Wayland_Graphics_Driver::cairo_init(struct buffer *buffer, int width, int height, int stride, cairo_format_t format) {
+  cairo_surface_t *surf = cairo_image_surface_create_for_data (buffer->draw_buffer, format,
                                                         width, height, stride);
   if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
     fprintf(stderr, "Can't create Cairo surface\n");
