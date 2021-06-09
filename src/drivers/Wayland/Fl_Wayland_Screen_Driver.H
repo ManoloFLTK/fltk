@@ -111,7 +111,7 @@ public:
   struct xdg_wm_base *xdg_wm_base;
   
   Fl_Wayland_Screen_Driver();
-  virtual APP_SCALING_CAPABILITY rescalable() { return PER_SCREEN_APP_SCALING; }
+  virtual APP_SCALING_CAPABILITY rescalable() { return NO_APP_SCALING; }
   virtual float scale(int n) {return screens[n].scale;}
   virtual void scale(int n, float f) { screens[n].scale = f;}
   virtual void desktop_scale_factor();
