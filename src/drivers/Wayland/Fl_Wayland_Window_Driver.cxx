@@ -827,11 +827,11 @@ static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel
   window->configured_width = width;
   window->configured_height = height;
   Fl_Window_Driver::driver(window->fl_win)->wait_for_expose_value = 0;
-  if (window->fl_win->as_gl_window()) {
+  /*if (window->fl_win->as_gl_window()) {
     Fl_Window_Driver::driver(window->fl_win)->Fl_Window_Driver::flush();
   } else {
     Fl_Window_Driver::driver(window->fl_win)->flush();
-  }
+  }*/
 }
 
 
