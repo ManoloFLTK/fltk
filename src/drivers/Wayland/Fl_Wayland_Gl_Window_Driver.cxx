@@ -54,6 +54,7 @@ public:
   //static GLContext create_gl_context(XVisualInfo* vis);
   static EGLDisplay egl_display;
   static EGLConfig egl_conf;
+  static EGLint configs_count;
   void init();
   struct wl_egl_window *egl_window;
   EGLSurface egl_surface;
@@ -63,19 +64,15 @@ public:
 class Fl_Wayland_Gl_Choice : public Fl_Gl_Choice {
   friend class Fl_Wayland_Gl_Window_Driver;
 private:
-  /*XVisualInfo *vis;
-  Colormap colormap;
-  GLXFBConfig best_fb;*/
 public:
   Fl_Wayland_Gl_Choice(int m, const int *alistp, Fl_Gl_Choice *n) : Fl_Gl_Choice(m, alistp, n) {
-    /*vis = NULL;
-    colormap = 0;
-    best_fb = NULL;*/
   }
 };
 
 EGLDisplay Fl_Wayland_Gl_Window_Driver::egl_display = EGL_NO_DISPLAY;
 EGLConfig Fl_Wayland_Gl_Window_Driver::egl_conf = 0;
+EGLint Fl_Wayland_Gl_Window_Driver::configs_count = 0;
+
 
 Fl_Wayland_Gl_Window_Driver::Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win) : Fl_Gl_Window_Driver(win) {
   if (egl_display == EGL_NO_DISPLAY) init();
@@ -85,23 +82,7 @@ Fl_Wayland_Gl_Window_Driver::Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win) : Fl
 
 
 void Fl_Wayland_Gl_Window_Driver::init() {
-  EGLint major, minor, count, n, size;
-  EGLConfig *configs;
-  int i;
-  EGLint config_attribs[] = {
-    EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-    EGL_RED_SIZE, 8,
-    EGL_GREEN_SIZE, 8,
-    EGL_BLUE_SIZE, 8,
-    EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
-    EGL_NONE
-  };
-  
-  /*static const EGLint context_attribs[] = {
-    EGL_CONTEXT_MAJOR_VERSION, 2,
-    EGL_CONTEXT_OPENGL_PROFILE_MASK,  EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT,//for OpenGL 1 et 2
-    EGL_NONE
-  };*/
+  EGLint major, minor;
   
   if (!fl_display) Fl::screen_driver()->open_display();
   egl_display = eglGetDisplay((EGLNativeDisplayType) fl_display);
@@ -118,30 +99,9 @@ void Fl_Wayland_Gl_Window_Driver::init() {
   }
   printf("EGL major: %d, minor %d\n", major, minor);
   
-  eglGetConfigs(egl_display, NULL, 0, &count);
-  printf("EGL has %d configs\n", count);
-  
-  configs = (void**)calloc(count, sizeof *configs);
-  
-  eglChooseConfig(egl_display, config_attribs,
-                  configs, count, &n);
-  if (n == 0) {
-    fprintf(stderr, "failed to choose an EGL config\n");
-    exit(1);
-  }
-  eglBindAPI(EGL_OPENGL_API); //necessary
-  for (i = 0; i < n; i++) {
-    eglGetConfigAttrib(egl_display,
-                       configs[i], EGL_BUFFER_SIZE, &size);
-    printf("Buffer size for config %d is %d\n", i, size);
-    eglGetConfigAttrib(egl_display,
-                       configs[i], EGL_RED_SIZE, &size);
-    printf("Red size for config %d is %d\n", i, size);
-    
-    // just choose the first one
-    egl_conf = configs[i];
-    break;
-  }
+  eglGetConfigs(egl_display, NULL, 0, &configs_count);
+  printf("EGL has %d configs\n", configs_count);
+  eglBindAPI(EGL_OPENGL_API);
 }
 
 
@@ -174,133 +134,46 @@ char *Fl_Wayland_Gl_Window_Driver::alpha_mask_for_string(const char *str, int n,
 }
 
 
-/*static XVisualInfo *gl3_getvisual(const int *blist, GLXFBConfig *pbestFB)
-{
-  int glx_major, glx_minor;
-
-  // FBConfigs were added in GLX version 1.3.
-  if ( !glXQueryVersion(fl_display, &glx_major, &glx_minor) ||
-      ( ( glx_major == 1 ) && ( glx_minor < 3 ) ) || ( glx_major < 1 ) ) {
-    return NULL;
-  }
-
-  //printf( "Getting matching framebuffer configs\n" );
-  int fbcount;
-  GLXFBConfig* fbc = glXChooseFBConfig(fl_display, DefaultScreen(fl_display), blist, &fbcount);
-  if (!fbc) {
-    //printf( "Failed to retrieve a framebuffer config\n" );
-    return NULL;
-  }
-  //printf( "Found %d matching FB configs.\n", fbcount );
-
-  // Pick the FB config/visual with the most samples per pixel
-  int best_fbc = -1, worst_fbc = -1, best_num_samp = -1, worst_num_samp = 999;
-  for (int i = 0; i < fbcount; ++i)
-  {
-    XVisualInfo *vi = glXGetVisualFromFBConfig( fl_display, fbc[i] );
-    if (vi) {
-      int samp_buf, samples;
-      glXGetFBConfigAttrib(fl_display, fbc[i], GLX_SAMPLE_BUFFERS, &samp_buf);
-      glXGetFBConfigAttrib(fl_display, fbc[i], GLX_SAMPLES       , &samples );
-      if ( best_fbc < 0 || (samp_buf && samples > best_num_samp) )
-        best_fbc = i, best_num_samp = samples;
-      if ( worst_fbc < 0 || !samp_buf || samples < worst_num_samp )
-        worst_fbc = i, worst_num_samp = samples;
-    }
-    XFree(vi);
-  }
-
-  GLXFBConfig bestFbc = fbc[ best_fbc ];
-  // Be sure to free the FBConfig list allocated by glXChooseFBConfig()
-  XFree(fbc);
-  // Get a visual
-  XVisualInfo *vi = glXGetVisualFromFBConfig(fl_display, bestFbc);
-  *pbestFB = bestFbc;
-  return vi;
-}*/
-
 Fl_Gl_Choice *Fl_Wayland_Gl_Window_Driver::find(int m, const int *alistp)
 {
   Fl_Wayland_Gl_Choice *g = (Fl_Wayland_Gl_Choice*)Fl_Gl_Window_Driver::find_begin(m, alistp);
   if (g) return g;
-
-/*  const int *blist;
-  int list[32];
-
-  if (alistp)
-    blist = alistp;
-  else {
-    int n = 0;
-    if (m & FL_INDEX) {
-      list[n++] = GLX_BUFFER_SIZE;
-      list[n++] = 8; // glut tries many sizes, but this should work...
-    } else {
-      list[n++] = GLX_RGBA;
-      list[n++] = GLX_GREEN_SIZE;
-      list[n++] = (m & FL_RGB8) ? 8 : 1;
-      if (m & FL_ALPHA) {
-        list[n++] = GLX_ALPHA_SIZE;
-        list[n++] = (m & FL_RGB8) ? 8 : 1;
-      }
-      if (m & FL_ACCUM) {
-        list[n++] = GLX_ACCUM_GREEN_SIZE;
-        list[n++] = 1;
-        if (m & FL_ALPHA) {
-          list[n++] = GLX_ACCUM_ALPHA_SIZE;
-          list[n++] = 1;
-        }
-      }
-    }
-    if (m & FL_DOUBLE) {
-      list[n++] = GLX_DOUBLEBUFFER;
-    }
-    if (m & FL_DEPTH) {
-      list[n++] = GLX_DEPTH_SIZE; list[n++] = 1;
-    }
-    if (m & FL_STENCIL) {
-      list[n++] = GLX_STENCIL_SIZE; list[n++] = 1;
-    }
-    if (m & FL_STEREO) {
-      list[n++] = GLX_STEREO;
-    }
-#    if defined(GLX_VERSION_1_1) && defined(GLX_SGIS_multisample)
-    if (m & FL_MULTISAMPLE) {
-      list[n++] = GLX_SAMPLES_SGIS;
-      list[n++] = 4; // value Glut uses
-    }
-#    endif
-    list[n] = 0;
-    blist = list;
+  
+  EGLint n, size;
+  EGLint config_attribs[] = {
+    EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+    EGL_RED_SIZE, 8,
+    EGL_GREEN_SIZE, 8,
+    EGL_BLUE_SIZE, 8,
+    EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+    EGL_DEPTH_SIZE, 0, // set at 11
+    EGL_SAMPLE_BUFFERS, 0,  // set at 13
+    EGL_STENCIL_SIZE, 0, // set at 15
+    EGL_NONE
+  };
+  
+  if (m & FL_DEPTH) config_attribs[11] = 1;
+  if (m & FL_MULTISAMPLE) config_attribs[13] = 1;
+  if (m & FL_STENCIL) config_attribs[15] = 1;
+  
+  static EGLConfig *configs = (void**)calloc(configs_count, sizeof(EGLConfig));
+  eglChooseConfig(egl_display, config_attribs, configs, configs_count, &n);
+  if (n == 0) {
+    fprintf(stderr, "failed to choose an EGL config\n");
+    exit(1);
   }
-
-  fl_open_display();
-  XVisualInfo *visp = NULL;
-  GLXFBConfig best_fb = NULL;
-  if (m & FL_OPENGL3) {
-    visp = gl3_getvisual((const int *)blist, &best_fb);
+  for (int i = 0; i < n; i++) {
+    eglGetConfigAttrib(egl_display, configs[i], EGL_BUFFER_SIZE, &size);
+    printf("Buffer size for config %d is %d\n", i, size);
+    eglGetConfigAttrib(egl_display, configs[i], EGL_RED_SIZE, &size);
+    printf("Red size for config %d is %d\n", i, size);
+    // just choose the first one
+    egl_conf = configs[i];
+    break;
   }
-  if (!visp) {
-    visp = glXChooseVisual(fl_display, fl_screen, (int *)blist);
-    if (!visp) {
-#     if defined(GLX_VERSION_1_1) && defined(GLX_SGIS_multisample)
-        if (m&FL_MULTISAMPLE) return find(m&~FL_MULTISAMPLE, 0);
-#     endif
-      return 0;
-    }
-  }*/
 
   g = new Fl_Wayland_Gl_Choice(m, alistp, first);
   first = g;
-
-/*  g->vis = visp;
-  g->best_fb = best_fb;
-
-  if (visp->visualid == fl_visual->visualid &&
-      !fl_getenv("MESA_PRIVATE_CMAP"))
-    g->colormap = fl_colormap;
-  else
-    g->colormap = XCreateColormap(fl_display, RootWindow(fl_display,fl_screen),
-                                  visp->visual, AllocNone);*/
   return g;
 }
 
@@ -316,15 +189,6 @@ GLContext Fl_Wayland_Gl_Window_Driver::create_gl_context(Fl_Window* window, cons
     add_context(ctx);
   return ctx;
 }
-
-/*GLContext Fl_Wayland_Gl_Window_Driver::create_gl_context(XVisualInfo *vis) {
-  GLContext shared_ctx = 0;
-  if (context_list && nContext) shared_ctx = context_list[0];
-  GLContext context = glXCreateContext(fl_display, vis, shared_ctx, 1);
-  if (context)
-    add_context(context);
-  return context;
-}*/
 
 
 void Fl_Wayland_Gl_Window_Driver::set_gl_context(Fl_Window* w, GLContext context) {
@@ -402,30 +266,6 @@ float Fl_Wayland_Gl_Window_Driver::pixels_per_unit()
 
 
 int Fl_Wayland_Gl_Window_Driver::mode_(int m, const int *a) {
-  /*int oldmode = mode();
-  if (a) { // when the mode is set using the a array of system-dependent values, and if asking for double buffer,
-    // the FL_DOUBLE flag must be set in the mode_ member variable
-    const int *aa = a;
-    while (*aa) {
-      if (*(aa++) ==
-          GLX_DOUBLEBUFFER
-          ) { m |= FL_DOUBLE; break; }
-    }
-  }
-  Fl_Wayland_Gl_Choice* oldg = (Fl_Wayland_Gl_Choice*)g();
-  pWindow->context(0);
-  mode(m); alist(a);
-  if (pWindow->shown()) {
-    g( find(m, a) );
-    // under X, if the visual changes we must make a new X window (yuck!):
-    Fl_Wayland_Gl_Choice* g = (Fl_Wayland_Gl_Choice*)this->g();
-    if (!g || g->vis->visualid != oldg->vis->visualid || (oldmode^m)&FL_DOUBLE) {
-      pWindow->hide();
-      pWindow->show();
-    }
-  } else {
-    g(0);
-  }*/
   return 1;
 }
 
@@ -519,18 +359,13 @@ char Fl_Wayland_Gl_Window_Driver::swap_type() {
 }
 
 void Fl_Wayland_Gl_Window_Driver::waitGL() {
-  //glXWaitGL();
 }
 
 
 void Fl_Wayland_Gl_Window_Driver::gl_visual(Fl_Gl_Choice *c) {
-  /*Fl_Gl_Window_Driver::gl_visual(c);
-  fl_visual = ((Fl_Wayland_Gl_Choice*)c)->vis;
-  fl_colormap = ((Fl_Wayland_Gl_Choice*)c)->colormap;*/
 }
 
 void Fl_Wayland_Gl_Window_Driver::gl_start() {
-  //glXWaitX();
 }
 
 
