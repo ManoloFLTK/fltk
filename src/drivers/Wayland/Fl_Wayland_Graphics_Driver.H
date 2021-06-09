@@ -93,7 +93,7 @@ public:
   static struct buffer *create_shm_buffer(int width, int height, uint32_t format, struct wld_window *window);
   static void buffer_release(struct wld_window *window);
   static void buffer_commit(struct wld_window *window);
-  static void cairo_init(struct buffer *buffer, int width, int height, int stride);
+  static void cairo_init(struct buffer *buffer, int width, int height, int stride, cairo_format_t format);
 void line(int x1, int y1, int x2, int y2);
 void line(int x1, int y1, int x2, int y2, int x3, int y3);
 void xyline(int x, int y, int x1);

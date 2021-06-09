@@ -56,7 +56,7 @@ Fl_Wayland_Image_Surface_Driver::Fl_Wayland_Image_Surface_Driver(int w, int h, i
     offscreen->data_size = offscreen->stride * h;
     offscreen->draw_buffer = (uchar*)malloc(offscreen->data_size);
     offscreen->width = w;
-    Fl_Wayland_Graphics_Driver::cairo_init(offscreen, w, h, offscreen->stride);
+    Fl_Wayland_Graphics_Driver::cairo_init(offscreen, w, h, offscreen->stride, CAIRO_FORMAT_RGB24);
   }
   driver(new Fl_Wayland_Graphics_Driver());
   if (d != 1 && high_res) ((Fl_Wayland_Graphics_Driver*)driver())->scale(d);
