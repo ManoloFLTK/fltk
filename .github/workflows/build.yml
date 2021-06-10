@@ -47,12 +47,15 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: install prerequisites
+    - name: Install prerequisites
       run: sudo apt-get install -y libasound2-dev libglu1-mesa-dev libwayland-dev wayland-protocols libdbus-1-dev libxkbcommon-dev libegl-dev
 
-    - name: Create Build Environment
+    - name: Create configure file
       shell: bash
       run: autoconf -f
+
+    - name: Configure for Wayland platform
+      shell: bash
       run: ./configure --enable-wayland
 
     - name: Build
