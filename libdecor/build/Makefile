@@ -5,6 +5,10 @@ CFLAGS = -I. -I../src -fPIC -D_GNU_SOURCE
 
 all : demo 
 
+depend:
+	: echo "libdecor/build: make depend..."
+
+
 config.h :
 	touch config.h
 
