@@ -541,16 +541,18 @@ static void data_device_handle_motion(void *data, struct wl_data_device *data_de
     wl_fixed_t x, wl_fixed_t y) {
   if (!current_drag_offer) return;
 //printf("data_device_handle_motion fl_dnd_target_window=%p\n", fl_dnd_target_window);
+  int ret = 0;
   if (fl_dnd_target_window) {
     Fl::e_x = wl_fixed_to_int(x);
     Fl::e_x_root = Fl::e_x + fl_dnd_target_window->x();
     Fl::e_y = wl_fixed_to_int(y);
     Fl::e_y_root = Fl::e_y + fl_dnd_target_window->y();
-    Fl::handle(FL_DND_DRAG, fl_dnd_target_window);
+    ret = Fl::handle(FL_DND_DRAG, fl_dnd_target_window);
   }
-  uint32_t supported_actions =  WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY;
+  uint32_t supported_actions =  ret ? WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY : WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
   uint32_t preferred_action = supported_actions;
   wl_data_offer_set_actions(current_drag_offer, supported_actions, preferred_action);
+  wl_display_roundtrip(fl_display);
 }
 
 static void data_device_handle_leave(void *data, struct wl_data_device *data_device) {
