@@ -403,8 +403,31 @@ static void data_offer_handle_offer(void *data, struct wl_data_offer *offer, con
   }
 }
 
+
+static void data_offer_handle_source_actions(void *data, struct wl_data_offer *offer, uint32_t actions) {
+  if (actions & WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY) {
+    //printf("Drag supports the copy action\n");
+  }
+}
+
+static void data_offer_handle_action(void *data, struct wl_data_offer *offer, uint32_t dnd_action) {
+  switch (dnd_action) {
+  case WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE:
+    //printf("A move action would be performed if dropped\n");
+    break;
+  case WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY:
+    //printf("A copy action would be performed if dropped\n");
+    break;
+  case WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE:
+    //printf("The drag would be rejected if dropped\n");
+    break;
+  }
+}
+
 static const struct wl_data_offer_listener data_offer_listener = {
   .offer = data_offer_handle_offer,
+  .source_actions = data_offer_handle_source_actions,
+  .action = data_offer_handle_action,
 };
 
 static void data_device_handle_data_offer(void *data, struct wl_data_device *data_device, struct wl_data_offer *offer) {
@@ -424,22 +447,14 @@ static void data_device_handle_selection(void *data, struct wl_data_device *data
 //if (offer == NULL) fprintf(stderr, "Clipboard is empty\n");
 }
 
-
-static const struct wl_data_device_listener data_device_listener = {
-  .data_offer = data_device_handle_data_offer,
-  .selection = data_device_handle_selection,
-};
-const struct wl_data_device_listener *Fl_Wayland_Screen_Driver::p_data_device_listener = &data_device_listener;
-
-
-// Gets from the system the clipboard text and puts it in fl_selection_buffer[1]
+// Gets from the system the clipboard or dnd text and puts it in fl_selection_buffer[1]
 // which is enlarged if necessary.
-static void get_clipboard_text() {
+static void get_clipboard_or_dragged_text(struct wl_data_offer *offer) {
   int fds[2];
   if (pipe(fds)) return;
-  wl_data_offer_receive(fl_selection_offer, wld_plain_text_clipboard, fds[1]);
+  wl_data_offer_receive(offer, wld_plain_text_clipboard, fds[1]);
   close(fds[1]);
-  wl_display_roundtrip(fl_display);
+  wl_display_flush(fl_display);
   // read in fl_selection_buffer
   char *to = fl_selection_buffer[1];
   ssize_t rest = fl_selection_buffer_length[1];
@@ -465,12 +480,12 @@ static void get_clipboard_text() {
     }
     rest += n;
   }
-//fprintf(stderr, "get_clipboard_text: size=%ld\n", rest);
+//fprintf(stderr, "get_clipboard_or_dragged_text: size=%ld\n", rest);
   // read full clipboard data
   if (pipe(fds)) return;
-  wl_data_offer_receive(fl_selection_offer, wld_plain_text_clipboard, fds[1]);
+  wl_data_offer_receive(offer, wld_plain_text_clipboard, fds[1]);
   close(fds[1]);
-  wl_display_roundtrip(fl_display);
+  wl_display_flush(fl_display);
   if (rest+1 > fl_selection_buffer_length[1]) {
     delete[] fl_selection_buffer[1];
     fl_selection_buffer[1] = new char[rest+1000+1];
@@ -489,6 +504,98 @@ static void get_clipboard_text() {
   fl_selection_buffer[1][rest] = 0;
   Fl::e_clipboard_type = Fl::clipboard_plain_text;
 }
+
+static struct wl_data_offer *current_drag_offer = NULL;
+static Fl_Window *fl_dnd_target_window = 0;
+static uint32_t fl_dnd_serial;
+
+static Fl_Window *surface_to_window(struct wl_surface *surface) {//TODO avoid duplication
+  Fl_X *xp = Fl_X::first;
+  while (xp) {
+    if (xp->xid->wl_surface == surface || xp->xid->gl_wl_surface == surface) return xp->w;
+    xp = xp->next;
+  }
+  return NULL;
+}
+
+static void data_device_handle_enter(void *data, struct wl_data_device *data_device, uint32_t serial,
+    struct wl_surface *surface, wl_fixed_t x, wl_fixed_t y, struct wl_data_offer *offer) {
+  Fl_Window *win = surface_to_window(surface);
+//printf("Drag entered our surface %p(win=%p) at %dx%d\n", surface, win, wl_fixed_to_int(x), wl_fixed_to_int(y));
+  if (win) {
+    fl_dnd_target_window = win;
+    Fl::e_x = wl_fixed_to_int(x);
+    Fl::e_x_root = Fl::e_x + fl_dnd_target_window->x();
+    Fl::e_y = wl_fixed_to_int(y);
+    Fl::e_y_root = Fl::e_y + fl_dnd_target_window->y();
+    Fl::handle(FL_DND_ENTER, fl_dnd_target_window);
+    current_drag_offer = offer;
+    fl_dnd_serial = serial;
+  }
+  uint32_t supported_actions = WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY;
+  uint32_t preferred_action = supported_actions;
+  wl_data_offer_set_actions(offer, supported_actions, preferred_action);
+}
+
+static void data_device_handle_motion(void *data, struct wl_data_device *data_device, uint32_t time,
+    wl_fixed_t x, wl_fixed_t y) {
+  if (!current_drag_offer) return;
+//printf("data_device_handle_motion fl_dnd_target_window=%p\n", fl_dnd_target_window);
+  if (fl_dnd_target_window) {
+    Fl::e_x = wl_fixed_to_int(x);
+    Fl::e_x_root = Fl::e_x + fl_dnd_target_window->x();
+    Fl::e_y = wl_fixed_to_int(y);
+    Fl::e_y_root = Fl::e_y + fl_dnd_target_window->y();
+    Fl::handle(FL_DND_DRAG, fl_dnd_target_window);
+  }
+  uint32_t supported_actions =  WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY;
+  uint32_t preferred_action = supported_actions;
+  wl_data_offer_set_actions(current_drag_offer, supported_actions, preferred_action);
+}
+
+static void data_device_handle_leave(void *data, struct wl_data_device *data_device) {
+//printf("Drag left our surface\n");
+  current_drag_offer = NULL;
+  Fl::handle(FL_DND_LEAVE, fl_dnd_target_window);
+  fl_dnd_target_window = NULL;
+}
+
+
+static void data_device_handle_drop(void *data, struct wl_data_device *data_device) {
+  if (!current_drag_offer) return;
+  int ret = Fl::handle(FL_DND_RELEASE, fl_dnd_target_window);
+//printf("data_device_handle_drop ret=%d\n", ret);
+
+  if (!ret) wl_data_offer_destroy(current_drag_offer);
+  wl_data_offer_accept(current_drag_offer, fl_dnd_serial, ret ? "text/plain" : NULL);
+  if (!ret) {
+    current_drag_offer = NULL;
+    return;
+  }
+
+  get_clipboard_or_dragged_text(current_drag_offer);
+  Fl::e_text = fl_selection_buffer[1];
+  Fl::e_length = fl_selection_length[1];
+  int old_event = Fl::e_number;
+  Fl::belowmouse()->handle(Fl::e_number = FL_PASTE);
+  Fl::e_number = old_event;
+
+  wl_data_offer_finish(current_drag_offer);
+  wl_data_offer_destroy(current_drag_offer);
+  current_drag_offer = NULL;
+}
+
+static const struct wl_data_device_listener data_device_listener = {
+  .data_offer = data_device_handle_data_offer,
+  .enter = data_device_handle_enter,
+  .leave = data_device_handle_leave,
+  .motion = data_device_handle_motion,
+  .drop = data_device_handle_drop,
+  .selection = data_device_handle_selection,
+};
+
+
+const struct wl_data_device_listener *Fl_Wayland_Screen_Driver::p_data_device_listener = &data_device_listener;
 
 
 // Reads from the clipboard an image which can be in image/bmp or image/png MIME type.
@@ -575,7 +682,7 @@ void Fl_Wayland_System_Driver::paste(Fl_Widget &receiver, int clipboard, const c
   // otherwise get the compositor to return it:
   if (!fl_selection_offer) return;
   if (type == Fl::clipboard_plain_text && clipboard_contains(Fl::clipboard_plain_text)) {
-    get_clipboard_text();
+    get_clipboard_or_dragged_text(fl_selection_offer);
     Fl::e_text = fl_selection_buffer[1];
     Fl::e_length = fl_selection_length[1];
     receiver.handle(FL_PASTE);
