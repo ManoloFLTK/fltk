@@ -1323,10 +1323,6 @@ Fl_RGB_Image *Fl_Wayland_Screen_Driver::read_win_rectangle(int X, int Y, int w, 
 }
 
 
-int Fl_Wayland_Screen_Driver::dnd(int unused) {
-  return 0;
-}
-
 void Fl_Wayland_Screen_Driver::offscreen_size(Fl_Offscreen off, int &width, int &height)
 {
   width = off->width;
