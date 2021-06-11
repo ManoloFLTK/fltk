@@ -51,7 +51,6 @@ Build with :
 
 * "make install" is not supported. All apps use a dynamic library, libdecor-0.1.so, currently put
 in the lib/ subdirectory of the FLTK source tree.
-* Drag-and-drop is not implemented (but copy/paste of text and images is supported).
 * Complex text-input methods are not supported (but dead and compose keys are supported).
 * With Wayland, there is no way to know if a window is currently minimized, nor is there any way to
 unset minimization on this window. Consequently, Fl_Window::show() of a minimized window does nothing.
