@@ -8,7 +8,6 @@ all : demo
 depend:
 	: echo "libdecor/build: make depend..."
 
-
 config.h :
 	touch config.h
 
@@ -21,12 +20,11 @@ libdecor-fallback.o : ../src/libdecor-fallback.c
 libdecor-cairo.o : ../src/plugins/cairo/libdecor-cairo.c
 	$(CC) $(CFLAGS) -c  ../src/plugins/cairo/libdecor-cairo.c -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 `pkg-config --cflags pangocairo`
 
-
 libdecor-cairo-blur.o : ../src/plugins/cairo/libdecor-cairo-blur.c
 	$(CC) $(CFLAGS) -c  ../src/plugins/cairo/libdecor-cairo-blur.c -D_GNU_SOURCE
 
 cursor-settings.o : ../src/cursor-settings.c
-	$(CC) $(CFLAGS)  -c ../src/cursor-settings.c -DHAS_DBUS -I/usr/include/dbus-1.0 -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include 
+	$(CC) $(CFLAGS)  -c ../src/cursor-settings.c -DHAS_DBUS `pkg-config --cflags dbus-1`
 
 xdg-shell-protocol.c :
 	wayland-scanner private-code < /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml  > xdg-shell-protocol.c
