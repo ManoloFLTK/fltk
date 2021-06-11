@@ -363,12 +363,13 @@ fprintf(stderr, "write_data_source_cb: error while writing clipboard data\n");
 }
 
 static void data_source_handle_send(void *data, struct wl_data_source *source, const char *mime_type, int fd) {
+  fl_intptr_t rank = (fl_intptr_t)data;
 //fprintf(stderr, "data_source_handle_send: %s fd=%d l=%d\n", mime_type, fd, fl_selection_length[1]);
-  if (strcmp(mime_type, wld_plain_text_clipboard) == 0 || strcmp(mime_type, "image/bmp") == 0) {
-    data_source_write_struct *data = new data_source_write_struct;
-    data->rest = fl_selection_length[1];
-    data->from = fl_selection_buffer[1];
-    Fl::add_fd(fd, FL_WRITE, (Fl_FD_Handler)write_data_source_cb, data);
+  if (strcmp(mime_type, wld_plain_text_clipboard) == 0 || strcmp(mime_type, "text/plain") == 0 || strcmp(mime_type, "image/bmp") == 0) {
+    data_source_write_struct *write_data = new data_source_write_struct;
+    write_data->rest = fl_selection_length[rank];
+    write_data->from = fl_selection_buffer[rank];
+    Fl::add_fd(fd, FL_WRITE, (Fl_FD_Handler)write_data_source_cb, write_data);
   } else {
 fprintf(stderr, "Destination client requested unsupported MIME type: %s\n", mime_type);
     close(fd);
@@ -383,10 +384,90 @@ static void data_source_handle_cancelled(void *data, struct wl_data_source *sour
 }
 
 
+static void data_source_handle_target(void *data, struct wl_data_source *source, const char *mime_type) {
+  if (mime_type != NULL) {
+    //printf("Destination would accept MIME type if dropped: %s\n", mime_type);
+  } else {
+    //printf("Destination would reject if dropped\n");
+  }
+}
+
+static uint32_t last_dnd_action = WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
+
+static void data_source_handle_action(void *data, struct wl_data_source *source, uint32_t dnd_action) {
+  last_dnd_action = dnd_action;
+  switch (dnd_action) {
+  case WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY:
+    //printf("Destination would perform a copy action if dropped\n");
+    break;
+  case WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE:
+    //printf("Destination would reject the drag if dropped\n");
+    break;
+  }
+}
+  
+static void data_source_handle_dnd_drop_performed(void *data, struct wl_data_source *source) {
+  //printf("Drop performed\n");
+}
+
+static void data_source_handle_dnd_finished(void *data, struct wl_data_source *source) {
+  switch (last_dnd_action) {
+  case WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE:
+    //printf("Destination has accepted the drop with a move action\n");
+    break;
+  case WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY:
+    //printf("Destination has accepted the drop with a copy action\n");
+    break;
+  }
+}
+
 static const struct wl_data_source_listener data_source_listener = {
+  .target = data_source_handle_target,
   .send = data_source_handle_send,
   .cancelled = data_source_handle_cancelled,
+  .dnd_drop_performed = data_source_handle_dnd_drop_performed,
+  .dnd_finished = data_source_handle_dnd_finished,
+  .action = data_source_handle_action,
 };
+
+/*
+#include <FL/Fl_Image_Surface.H>
+static struct wl_surface *defaultDragImage(Fl_Wayland_Screen_Driver *scr_driver) {
+  int width = 50, height = 40;
+  struct buffer *offscreen = Fl_Wayland_Graphics_Driver::create_shm_buffer(width, height, WL_SHM_FORMAT_ARGB8888, NULL);
+  Fl_Image_Surface *img_surf = new Fl_Image_Surface(width, height, 0, offscreen);
+  Fl_Surface_Device::push_current(img_surf);
+  fl_rectf(0,0,width,height,FL_YELLOW);
+  fl_font(FL_HELVETICA, 20);
+  fl_color(FL_BLACK);
+  char str[4];
+  int l = fl_utf8encode(0x1F69A, str); // the "Delivery truck" Unicode character from "Apple Color Emoji" font
+  fl_draw(str, l, 1, 16);
+  Fl_Surface_Device::pop_current();
+  memcpy(offscreen->data, offscreen->draw_buffer, offscreen->data_size);
+  struct wl_surface *surface = wl_compositor_create_surface(scr_driver->wl_compositor);
+  wl_surface_attach(surface, offscreen->wl_buffer, 0, 0);
+  wl_surface_set_buffer_scale(surface, 1);
+  wl_surface_damage_buffer(surface, 0, 0, width, height);
+  wl_surface_commit(surface);
+  return surface;
+}*/
+
+int Fl_Wayland_Screen_Driver::dnd(int unused) {
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+
+  struct wl_data_source *source =
+    wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
+  // we transmit the adequate value of index in fl_selection_buffer[index]
+  wl_data_source_add_listener(source, &data_source_listener, (void*)0);
+  wl_data_source_offer(source, wld_plain_text_clipboard);
+  wl_data_source_set_actions(source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
+
+  struct wl_surface *icon = NULL;// defaultDragImage(scr_driver); //TODO put an image in there
+  wl_data_device_start_drag(scr_driver->seat->data_device, source, scr_driver->seat->pointer_focus, icon, scr_driver->seat->serial);
+
+  return 0;
+}
 
 
 static void data_offer_handle_offer(void *data, struct wl_data_offer *offer, const char *mime_type) {
@@ -724,7 +805,8 @@ void Fl_Wayland_System_Driver::copy(const char *stuff, int len, int clipboard, c
   if (clipboard == 1) {
     Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
     scr_driver->seat->data_source = wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
-    wl_data_source_add_listener(scr_driver->seat->data_source, &data_source_listener, NULL);
+    // we transmit the adequate value of index in fl_selection_buffer[index]
+    wl_data_source_add_listener(scr_driver->seat->data_source, &data_source_listener, (void*)1);
     wl_data_source_offer(scr_driver->seat->data_source, wld_plain_text_clipboard);
     wl_data_device_set_selection(scr_driver->seat->data_device, scr_driver->seat->data_source, scr_driver->seat->keyboard_enter_serial);
 //fprintf(stderr, "wl_data_device_set_selection len=%d to %d\n", len, clipboard);
@@ -800,7 +882,8 @@ void Fl_Wayland_Screen_Driver::copy_image(const unsigned char *data, int W, int 
   fl_i_own_selection[1] = 1;
   fl_selection_type[1] = Fl::clipboard_image;
   seat->data_source = wl_data_device_manager_create_data_source(seat->data_device_manager);
-  wl_data_source_add_listener(seat->data_source, &data_source_listener, NULL);
+  // we transmit the adequate value of index in fl_selection_buffer[index]
+  wl_data_source_add_listener(seat->data_source, &data_source_listener, (void*)1);
   wl_data_source_offer(seat->data_source, "image/bmp");
   wl_data_device_set_selection(seat->data_device, seat->data_source, seat->keyboard_enter_serial);
 //fprintf(stderr, "copy_image: len=%d\n", fl_selection_length[1]);
