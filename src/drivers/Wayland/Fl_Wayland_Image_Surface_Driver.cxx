@@ -22,6 +22,7 @@
 
 class Fl_Wayland_Image_Surface_Driver : public Fl_Image_Surface_Driver {
   int wld_scale;
+  virtual void end_current();
 public:
   Fl_Wayland_Image_Surface_Driver(int w, int h, int high_res, Fl_Offscreen off);
   ~Fl_Wayland_Image_Surface_Driver();
@@ -74,6 +75,11 @@ Fl_Wayland_Image_Surface_Driver::~Fl_Wayland_Image_Surface_Driver() {
 void Fl_Wayland_Image_Surface_Driver::set_current() {
   Fl_Surface_Device::set_current();
   ((Fl_Wayland_Graphics_Driver*)fl_graphics_driver)->activate(offscreen, wld_scale);
+}
+
+void Fl_Wayland_Image_Surface_Driver::end_current() {
+  cairo_surface_t *surf = cairo_get_target(offscreen->cairo_);
+  cairo_surface_flush(surf);
 }
 
 void Fl_Wayland_Image_Surface_Driver::translate(int x, int y) {
