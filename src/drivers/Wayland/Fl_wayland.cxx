@@ -30,6 +30,7 @@
 #  include <FL/Fl_Shared_Image.H>
 #  include <FL/fl_ask.H>
 #  include <FL/filename.H>
+#  include <FL/Fl_Image_Surface.H>
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include "../../flstring.h"
@@ -441,28 +442,6 @@ static const struct wl_data_source_listener data_source_listener = {
   .action = data_source_handle_action,
 };
 
-/*
-#include <FL/Fl_Image_Surface.H>
-static struct wl_surface *defaultDragImage(Fl_Wayland_Screen_Driver *scr_driver) {
-  int width = 50, height = 40;
-  struct buffer *offscreen = Fl_Wayland_Graphics_Driver::create_shm_buffer(width, height, WL_SHM_FORMAT_ARGB8888, NULL);
-  Fl_Image_Surface *img_surf = new Fl_Image_Surface(width, height, 0, offscreen);
-  Fl_Surface_Device::push_current(img_surf);
-  fl_rectf(0,0,width,height,FL_YELLOW);
-  fl_font(FL_HELVETICA, 20);
-  fl_color(FL_BLACK);
-  char str[4];
-  int l = fl_utf8encode(0x1F69A, str); // the "Delivery truck" Unicode character
-  fl_draw(str, l, 1, 16);
-  Fl_Surface_Device::pop_current();
-  memcpy(offscreen->data, offscreen->draw_buffer, offscreen->data_size);
-  struct wl_surface *surface = wl_compositor_create_surface(scr_driver->wl_compositor);
-  wl_surface_attach(surface, offscreen->wl_buffer, 0, 0);
-  wl_surface_set_buffer_scale(surface, 1);
-  wl_surface_damage_buffer(surface, 0, 0, width, height);
-  wl_surface_commit(surface);
-  return surface;
-}*/
 
 int Fl_Wayland_Screen_Driver::dnd(int unused) {
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
@@ -474,7 +453,7 @@ int Fl_Wayland_Screen_Driver::dnd(int unused) {
   wl_data_source_offer(source, wld_plain_text_clipboard);
   wl_data_source_set_actions(source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
 
-  struct wl_surface *icon = NULL;// defaultDragImage(scr_driver); //TODO put an image in there
+  struct wl_surface *icon = NULL;
   scr_driver->xc_arrow = scr_driver->cache_cursor("dnd-copy");
   wl_data_device_start_drag(scr_driver->seat->data_device, source, scr_driver->seat->pointer_focus, icon, scr_driver->seat->serial);
   return 1;
@@ -1009,9 +988,42 @@ void Fl_Wayland_Window_Driver::set_icons() {
 ////////////////////////////////////////////////////////////////
 
 
-int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *image, int hotx, int hoty) {
-//TODO
-  return 0;
+int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int hoty) {
+  struct cursor_image { // copied from wayland-cursor.c of the Wayland project source code
+    struct wl_cursor_image image;
+    struct wl_cursor_theme *theme;
+    struct wl_buffer *buffer;
+    int offset; /* data offset of this image in the shm pool */
+  };
+// build a new wl_cursor and its image
+  struct wl_cursor *new_cursor = (struct wl_cursor*)malloc(sizeof(struct wl_cursor));
+  struct cursor_image *new_image = (struct cursor_image*)calloc(1, sizeof(struct cursor_image));
+  int scale = fl_xid(pWindow)->scale;
+  new_image->image.width = rgb->data_w() * scale;
+  new_image->image.height = rgb->data_h() * scale;
+  new_image->image.hotspot_x = hotx * scale;
+  new_image->image.hotspot_y = hoty * scale;
+  new_image->image.delay = 0;
+  new_image->offset = 0;
+  //create a Wayland buffer and have it used as an image of the new cursor
+  struct buffer *offscreen = Fl_Wayland_Graphics_Driver::create_shm_buffer(new_image->image.width, new_image->image.height, WL_SHM_FORMAT_ARGB8888, NULL);
+  new_image->buffer = offscreen->wl_buffer;
+  new_cursor->image_count = 1;
+  new_cursor->images = (struct wl_cursor_image**)malloc(sizeof(struct wl_cursor_image*));
+  new_cursor->images[0] = (struct wl_cursor_image*)new_image;
+  new_cursor->name = strdup("custom cursor");
+  // draw the rgb image to the cursor's drawing buffer
+  Fl_Image_Surface *img_surf = new Fl_Image_Surface(new_image->image.width, new_image->image.height, 0, offscreen);
+  Fl_Surface_Device::push_current(img_surf);
+  Fl_Wayland_Graphics_Driver *driver = (Fl_Wayland_Graphics_Driver*)img_surf->driver();
+  cairo_scale(driver->cr(), scale, scale);
+  ((Fl_RGB_Image*)rgb)->draw(0, 0);
+  Fl_Surface_Device::pop_current();
+  memcpy(offscreen->data, offscreen->draw_buffer, offscreen->data_size);
+  //have this new cursor used
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+  scr_driver->default_cursor(new_cursor);
+  return 1;
 }
 
 ////////////////////////////////////////////////////////////////
