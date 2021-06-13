@@ -376,11 +376,22 @@ fprintf(stderr, "Destination client requested unsupported MIME type: %s\n", mime
   }
 }
 
+static Fl_Window *fl_dnd_target_window = 0;
+
 static void data_source_handle_cancelled(void *data, struct wl_data_source *source) {
-  // An application has replaced the clipboard contents
+  // An application has replaced the clipboard contents or DnD finished
 //fprintf(stderr, "data_source_handle_cancelled: %p\n", source);
   wl_data_source_destroy(source);
   fl_i_own_selection[1] = 0;
+  if (data == 0) { // at end of DnD
+    Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+    scr_driver->xc_arrow = scr_driver->cache_cursor("left_ptr");
+    if (fl_dnd_target_window) {
+      Fl::handle(FL_DND_LEAVE, fl_dnd_target_window);
+      fl_dnd_target_window = 0;
+    }
+    Fl::pushed(0);
+  }
 }
 
 
@@ -441,7 +452,7 @@ static struct wl_surface *defaultDragImage(Fl_Wayland_Screen_Driver *scr_driver)
   fl_font(FL_HELVETICA, 20);
   fl_color(FL_BLACK);
   char str[4];
-  int l = fl_utf8encode(0x1F69A, str); // the "Delivery truck" Unicode character from "Apple Color Emoji" font
+  int l = fl_utf8encode(0x1F69A, str); // the "Delivery truck" Unicode character
   fl_draw(str, l, 1, 16);
   Fl_Surface_Device::pop_current();
   memcpy(offscreen->data, offscreen->draw_buffer, offscreen->data_size);
@@ -464,9 +475,9 @@ int Fl_Wayland_Screen_Driver::dnd(int unused) {
   wl_data_source_set_actions(source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
 
   struct wl_surface *icon = NULL;// defaultDragImage(scr_driver); //TODO put an image in there
+  scr_driver->xc_arrow = scr_driver->cache_cursor("dnd-copy");
   wl_data_device_start_drag(scr_driver->seat->data_device, source, scr_driver->seat->pointer_focus, icon, scr_driver->seat->serial);
-
-  return 0;
+  return 1;
 }
 
 
@@ -587,7 +598,6 @@ static void get_clipboard_or_dragged_text(struct wl_data_offer *offer) {
 }
 
 static struct wl_data_offer *current_drag_offer = NULL;
-static Fl_Window *fl_dnd_target_window = 0;
 static uint32_t fl_dnd_serial;
 
 static Fl_Window *surface_to_window(struct wl_surface *surface) {//TODO avoid duplication
@@ -638,9 +648,6 @@ static void data_device_handle_motion(void *data, struct wl_data_device *data_de
 
 static void data_device_handle_leave(void *data, struct wl_data_device *data_device) {
 //printf("Drag left our surface\n");
-  current_drag_offer = NULL;
-  Fl::handle(FL_DND_LEAVE, fl_dnd_target_window);
-  fl_dnd_target_window = NULL;
 }
 
 
