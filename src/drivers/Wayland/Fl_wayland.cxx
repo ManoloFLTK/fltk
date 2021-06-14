@@ -579,18 +579,10 @@ static void get_clipboard_or_dragged_text(struct wl_data_offer *offer) {
 static struct wl_data_offer *current_drag_offer = NULL;
 static uint32_t fl_dnd_serial;
 
-static Fl_Window *surface_to_window(struct wl_surface *surface) {//TODO avoid duplication
-  Fl_X *xp = Fl_X::first;
-  while (xp) {
-    if (xp->xid->wl_surface == surface || xp->xid->gl_wl_surface == surface) return xp->w;
-    xp = xp->next;
-  }
-  return NULL;
-}
 
 static void data_device_handle_enter(void *data, struct wl_data_device *data_device, uint32_t serial,
     struct wl_surface *surface, wl_fixed_t x, wl_fixed_t y, struct wl_data_offer *offer) {
-  Fl_Window *win = surface_to_window(surface);
+  Fl_Window *win = Fl_Wayland_Screen_Driver::surface_to_window(surface);
 //printf("Drag entered our surface %p(win=%p) at %dx%d\n", surface, win, wl_fixed_to_int(x), wl_fixed_to_int(y));
   if (win) {
     fl_dnd_target_window = win;

@@ -164,6 +164,7 @@ public:
   struct wl_cursor *default_cursor();
   void default_cursor(struct wl_cursor *cursor);
   struct wl_cursor *cache_cursor(const char *cursor_name);
+  static Fl_Window *surface_to_window(struct wl_surface *);
 //uint32_t get_serial();
 //struct wl_seat *get_wl_seat();
 //char  *get_seat_name();
