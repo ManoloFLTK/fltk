@@ -746,6 +746,7 @@ static void handle_configure(struct libdecor_frame *frame,
   state = libdecor_state_new(width, height);
   libdecor_frame_commit(frame, state, configuration);
   libdecor_state_free(state);
+  if (!first_config) window->fl_win->redraw();
   
   if (!window->fl_win->as_gl_window()) {
     driver->flush();
