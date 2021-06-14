@@ -183,7 +183,7 @@ void (*fl_unlock_function)() = nothing;
 // timeout, and >0 if any callbacks were done.
 int Fl_Wayland_Screen_Driver::poll_or_select_with_delay(double time_to_wait) {
   
-  wl_display_flush(fl_display);
+  if (fl_display) wl_display_flush(fl_display);
   
 #  if !USE_POLL
     fd_set fdt[3];
@@ -231,7 +231,7 @@ int Fl_Wayland_Screen_Driver::poll_or_select_with_delay(double time_to_wait) {
 }
 
 int Fl_Wayland_Screen_Driver::poll_or_select() {
-  wl_display_flush(fl_display);
+  if (fl_display) wl_display_flush(fl_display);
 
   if (!nfds) return 0; // nothing to select or poll
 #  if USE_POLL
