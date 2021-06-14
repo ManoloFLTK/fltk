@@ -989,7 +989,9 @@ void Fl_Wayland_Window_Driver::set_icons() {
 
 
 int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int hoty) {
-  struct cursor_image { // copied from wayland-cursor.c of the Wayland project source code
+  static struct wl_cursor *previous_custom_cursor = NULL;
+  static struct buffer *previous_offscreen = NULL;
+  struct cursor_image { // as in wayland-cursor.c of the Wayland project source code
     struct wl_cursor_image image;
     struct wl_cursor_theme *theme;
     struct wl_buffer *buffer;
@@ -1019,10 +1021,24 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
   cairo_scale(driver->cr(), scale, scale);
   ((Fl_RGB_Image*)rgb)->draw(0, 0);
   Fl_Surface_Device::pop_current();
+  delete img_surf;
   memcpy(offscreen->data, offscreen->draw_buffer, offscreen->data_size);
   //have this new cursor used
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   scr_driver->default_cursor(new_cursor);
+  //memorize new cursor
+  if (previous_custom_cursor) {
+    struct wld_window fake_xid;
+    new_image = (struct cursor_image*)previous_custom_cursor->images[0];
+    fake_xid.buffer = previous_offscreen;
+    Fl_Wayland_Graphics_Driver::buffer_release(&fake_xid);
+    free(new_image);
+    free(previous_custom_cursor->images);
+    free(previous_custom_cursor->name);
+    free(previous_custom_cursor);
+  }
+  previous_custom_cursor = new_cursor;
+  previous_offscreen = offscreen;
   return 1;
 }
 
