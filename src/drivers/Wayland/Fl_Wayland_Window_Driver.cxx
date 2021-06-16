@@ -691,13 +691,15 @@ static void handle_configure(struct libdecor_frame *frame,
   struct libdecor_state *state;
   bool first_config = false;
   Fl_Window_Driver *driver = Fl_Window_Driver::driver(window->fl_win);
-  
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+
   if (!window->xdg_toplevel) window->xdg_toplevel = libdecor_frame_get_xdg_toplevel(frame);
   if (!window->xdg_surface) window->xdg_surface = libdecor_frame_get_xdg_surface(frame);
   if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
     width = 0;
     height = 0;
-    first_config = true;
+    // With Weston, this doesn't allow to distinguish the 1st from the 2nd run of handle_configure
+    if (!scr_driver->using_weston) first_config = true;
     if (!window->fl_win->parent() && window->fl_win->as_gl_window())
       driver->wait_for_expose_value = 0;
   } else if (driver->size_range_set()) {
@@ -749,6 +751,7 @@ static void handle_configure(struct libdecor_frame *frame,
   if (!first_config) window->fl_win->redraw();
   
   if (!window->fl_win->as_gl_window()) {
+    if (scr_driver->using_weston && window->buffer) window->buffer->wl_buffer_ready = true;//dirty hack necessary for Weston
     driver->flush();
   } else if (window->fl_win->parent()) {
     driver->Fl_Window_Driver::flush();

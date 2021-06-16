@@ -31,6 +31,7 @@
 #include <dlfcn.h>
 #include <sys/time.h>
 #include <linux/input.h>
+#include <stdlib.h>
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-compose.h>
 #include <assert.h>
@@ -929,6 +930,7 @@ static void fd_callback(int unused, struct wl_display *display) {
 Fl_Wayland_Screen_Driver::Fl_Wayland_Screen_Driver() : Fl_Screen_Driver() {
   libdecor_context = NULL;
   seat = NULL;
+  using_weston = false;
   reset_cursor();
 }
 
@@ -949,6 +951,8 @@ void Fl_Wayland_Screen_Driver::open_display_platform() {
   fl_display = wl_display;
   wl_list_init(&seats);
   wl_list_init(&outputs);
+  const char *desktop_name = getenv("XDG_SESSION_DESKTOP");
+  using_weston = (desktop_name && strstr(desktop_name, "weston") != NULL);
 
   wl_registry = wl_display_get_registry(wl_display);
   wl_registry_add_listener(wl_registry, &registry_listener, NULL);
