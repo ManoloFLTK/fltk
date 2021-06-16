@@ -1050,6 +1050,7 @@ int Fl_Wayland_Window_Driver::set_cursor(Fl_Cursor c) {
       break;
     case FL_CURSOR_HAND:
       if (!scr_driver->xc_hand) scr_driver->xc_hand = scr_driver->cache_cursor("hand");
+      if (!scr_driver->xc_hand) scr_driver->xc_hand = scr_driver->cache_cursor("hand1");
       if (!scr_driver->xc_hand) return 0;
       scr_driver->default_cursor(scr_driver->xc_hand);
       break;
