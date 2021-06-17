@@ -689,9 +689,7 @@ static void handle_configure(struct libdecor_frame *frame,
   int width, height;
   enum libdecor_window_state window_state;
   struct libdecor_state *state;
-  bool first_config = false;
   Fl_Window_Driver *driver = Fl_Window_Driver::driver(window->fl_win);
-  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
 
   if (!window->xdg_toplevel) window->xdg_toplevel = libdecor_frame_get_xdg_toplevel(frame);
   if (!window->xdg_surface) window->xdg_surface = libdecor_frame_get_xdg_surface(frame);
@@ -699,7 +697,6 @@ static void handle_configure(struct libdecor_frame *frame,
     width = 0;
     height = 0;
     // With Weston, this doesn't allow to distinguish the 1st from the 2nd run of handle_configure
-    if (!scr_driver->using_weston) first_config = true;
     if (!window->fl_win->parent() && window->fl_win->as_gl_window())
       driver->wait_for_expose_value = 0;
   } else if (driver->size_range_set()) {
@@ -718,12 +715,9 @@ static void handle_configure(struct libdecor_frame *frame,
   }
   if (width < 128) width = 128; // enforce minimal size of decorated windows for libdecor
   if (height < 56) height = 56;
-  if (first_config) window->fl_win->Fl_Group::resize(0, 0, width, height);
-  else {
-    Fl_Wayland_Window_Driver::in_handle_configure = true;
-    window->fl_win->resize(0, 0, width, height);
-    Fl_Wayland_Window_Driver::in_handle_configure = false;
-  }
+  Fl_Wayland_Window_Driver::in_handle_configure = true;
+  window->fl_win->resize(0, 0, width, height);
+  Fl_Wayland_Window_Driver::in_handle_configure = false;
   
   if (width != window->configured_width || height != window->configured_height) {
     if (window->buffer) {
@@ -748,10 +742,10 @@ static void handle_configure(struct libdecor_frame *frame,
   state = libdecor_state_new(width, height);
   libdecor_frame_commit(frame, state, configuration);
   libdecor_state_free(state);
-  if (!first_config) window->fl_win->redraw();
+  window->fl_win->redraw();
   
   if (!window->fl_win->as_gl_window()) {
-    if (scr_driver->using_weston && window->buffer) window->buffer->wl_buffer_ready = true;//dirty hack necessary for Weston
+    if (window->buffer) window->buffer->wl_buffer_ready = true; // dirty hack necessary for Weston
     driver->flush();
   } else if (window->fl_win->parent()) {
     driver->Fl_Window_Driver::flush();
