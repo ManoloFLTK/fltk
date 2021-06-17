@@ -319,9 +319,13 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
     struct wl_surface *surf = xid->gl_wl_surface ? xid->gl_wl_surface : xid->wl_surface;
     struct wl_callback *callback = wl_surface_frame(surf);
     wl_surface_commit(surf);
-    bool done = false;
-    wl_callback_add_listener(callback, &surface_frame_listener, &done);
-    while (!done) wl_display_dispatch(fl_display); // wait for arrival of frame event
+    extern bool not_using_weston;
+    if (!not_using_weston && Fl_Wayland_Window_Driver::in_handle_configure) eglSwapInterval(egl_display, 1);
+    else {
+      bool done = false;
+      wl_callback_add_listener(callback, &surface_frame_listener, &done);
+      while (!done) wl_display_dispatch(fl_display); // wait for arrival of frame event
+    }
     if (eglSwapBuffers(egl_display, egl_surface)) {
       //fprintf(stderr, "Swapped buffers for surface=%p display=%p\n", egl_surface, egl_display);
       cached_context = 0;

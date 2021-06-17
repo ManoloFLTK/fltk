@@ -680,6 +680,7 @@ static struct wl_surface_listener surface_listener = {
 };
 
 bool Fl_Wayland_Window_Driver::in_handle_configure = false;
+bool not_using_weston = false; //TODO: try to get rid of that
 
 static void handle_configure(struct libdecor_frame *frame,
      struct libdecor_configuration *configuration, void *user_data)
@@ -699,8 +700,11 @@ static void handle_configure(struct libdecor_frame *frame,
     // With Weston, this doesn't allow to distinguish the 1st from the 2nd run of handle_configure
     if (!window->fl_win->parent() && window->fl_win->as_gl_window())
       driver->wait_for_expose_value = 0;
-  } else if (driver->size_range_set()) {
-    if (width < driver->minw() || height < driver->minh()) return;
+  } else {
+    not_using_weston = true;
+    if (driver->size_range_set()) {
+      if (width < driver->minw() || height < driver->minh()) return;
+    }
   }
 
   int tmp;
@@ -730,7 +734,7 @@ static void handle_configure(struct libdecor_frame *frame,
   if (!libdecor_configuration_get_window_state(configuration, &window_state))
     window_state = LIBDECOR_WINDOW_STATE_NONE;
 
-//fprintf(stderr, "handle_configure fl_win=%p pos:%dx%d size:%dx%d state=%x wait_for_expose_value=%d\n", window->fl_win, window->fl_win->x(), window->fl_win->y(), width,height,window_state,driver->wait_for_expose_value);
+//fprintf(stderr, "handle_configure fl_win=%p pos:%dx%d size:%dx%d state=%x wait_for_expose_value=%d not_using_weston=%d\n", window->fl_win, window->fl_win->x(), window->fl_win->y(), width,height,window_state,driver->wait_for_expose_value,not_using_weston);
 
 /* We would like to do FL_HIDE when window is minimized but :
  "There is no way to know if the surface is currently minimized, nor is there any way to
@@ -744,11 +748,15 @@ static void handle_configure(struct libdecor_frame *frame,
   libdecor_state_free(state);
   window->fl_win->redraw();
   
+  if (window->buffer) window->buffer->wl_buffer_ready = true; // dirty hack necessary for Weston
   if (!window->fl_win->as_gl_window()) {
-    if (window->buffer) window->buffer->wl_buffer_ready = true; // dirty hack necessary for Weston
     driver->flush();
   } else if (window->fl_win->parent()) {
-    driver->Fl_Window_Driver::flush();
+    driver->Fl_Window_Driver::flush(); // GL subwindow
+  } else {
+    Fl_Wayland_Window_Driver::in_handle_configure = true;
+    driver->Fl_Window_Driver::flush(); // top-level GL window
+    Fl_Wayland_Window_Driver::in_handle_configure = false;
   }
 }
 
