@@ -109,7 +109,6 @@ public:
   };
   struct libdecor *libdecor_context;
   struct xdg_wm_base *xdg_wm_base;
-  bool using_weston;
   
   Fl_Wayland_Screen_Driver();
   virtual APP_SCALING_CAPABILITY rescalable() { return NO_APP_SCALING; }
