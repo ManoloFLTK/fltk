@@ -1071,18 +1071,8 @@ void Fl_Wayland_Screen_Driver::screen_dpi(float &h, float &v, int n)
 
 
 void Fl_Wayland_Screen_Driver::beep(int type)
-{ //TODO
-  switch (type) {
-    case FL_BEEP_DEFAULT :
-    case FL_BEEP_ERROR :
-      if (!fl_display) open_display();
-      //XBell(fl_display, 100);
-      break;
-    default :
-      if (!fl_display) open_display();
-      //XBell(fl_display, 50);
-      break;
-  }
+{
+  fprintf(stderr, "\007");
 }
 
 
