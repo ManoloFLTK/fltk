@@ -39,8 +39,7 @@ struct libdecor_frame {
 struct libdecor_plugin_private;
 
 struct libdecor_plugin {
-	struct libdecor_plugin_interface *iface;
-	struct libdecor_plugin_private *private;
+	struct libdecor_plugin_private *priv;
 };
 
 typedef struct libdecor_plugin * (* libdecor_plugin_constructor)(struct libdecor *context);
@@ -54,12 +53,20 @@ struct libdecor_plugin_priority {
 	int priority;
 };
 
+enum libdecor_plugin_capabilities {
+	LIBDECOR_PLUGIN_CAPABILITY_BASE = 1 << 0,
+};
+
 struct libdecor_plugin_description {
 	/* API version the plugin is compatible with. */
 	int api_version;
 
 	/* Human readable string describing the plugin. */
 	char *description;
+
+	/* A plugin has a bitmask of capabilities. The plugin loader can use this
+	 * to load a plugin with the right capabilities. */
+	enum libdecor_plugin_capabilities capabilities;
 
 	/*
 	 * The priorities field points to a list of per desktop priorities.
@@ -152,6 +159,9 @@ void
 libdecor_frame_dismiss_popup(struct libdecor_frame *frame,
 			     const char *seat_name);
 
+void
+libdecor_frame_toplevel_commit(struct libdecor_frame *frame);
+
 struct wl_display *
 libdecor_get_wl_display(struct libdecor *context);
 
@@ -172,5 +182,18 @@ libdecor_state_get_content_height (struct libdecor_state *state);
 
 enum libdecor_window_state
 libdecor_state_get_window_state(struct libdecor_state *state);
+
+bool
+libdecor_configuration_get_window_size(struct libdecor_configuration *configuration,
+				       int *width,
+				       int *height);
+
+int
+libdecor_plugin_init(struct libdecor_plugin *plugin,
+		     struct libdecor *context,
+		     struct libdecor_plugin_interface *iface);
+
+void
+libdecor_plugin_release(struct libdecor_plugin *plugin);
 
 #endif /* LIBDECOR_PLUGIN_H */

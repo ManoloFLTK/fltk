@@ -249,8 +249,6 @@ struct libdecor_frame_cairo {
 	/* store pre-processed shadow tile */
 	cairo_surface_t *shadow_blur;
 
-	PangoFontDescription *font;
-
 	struct wl_list link;
 };
 
@@ -276,6 +274,8 @@ struct libdecor_plugin_cairo {
 
 	char *cursor_theme_name;
 	int cursor_size;
+
+	PangoFontDescription *font;
 };
 
 static const char *libdecor_cairo_proxy_tag = "libdecor-cairo";
@@ -397,9 +397,12 @@ libdecor_plugin_cairo_destroy(struct libdecor_plugin *plugin)
 
 	wl_shm_destroy(plugin_cairo->wl_shm);
 
+	pango_font_description_free(plugin_cairo->font);
+
 	wl_compositor_destroy(plugin_cairo->wl_compositor);
 	wl_subcompositor_destroy(plugin_cairo->wl_subcompositor);
 
+	libdecor_plugin_release(&plugin_cairo->plugin);
 	free(plugin_cairo);
 }
 
@@ -465,12 +468,6 @@ libdecor_frame_cairo_new(struct libdecor_plugin_cairo *plugin_cairo)
 	cairo_fill(cr);
 	cairo_destroy(cr);
 	blur_surface(frame_cairo->shadow_blur, 64);
-
-	/* define a sens-serif bold font at symbol size */
-	frame_cairo->font = pango_font_description_new();
-	pango_font_description_set_family(frame_cairo->font, "sans");
-	pango_font_description_set_weight(frame_cairo->font, PANGO_WEIGHT_BOLD);
-	pango_font_description_set_size(frame_cairo->font, SYM_DIM * PANGO_SCALE);
 
 	return frame_cairo;
 }
@@ -719,8 +716,7 @@ libdecor_plugin_cairo_frame_free(struct libdecor_plugin *plugin,
 	}
 
 	free(frame_cairo->title);
-
-	pango_font_description_free(frame_cairo->font);
+	frame_cairo->title = NULL;
 
 	frame_cairo->decoration_type = DECORATION_TYPE_NONE;
 
@@ -1143,7 +1139,7 @@ draw_title_text(struct libdecor_frame_cairo *frame_cairo,
 	pango_layout_set_text(layout,
 			      libdecor_frame_get_title((struct libdecor_frame*) frame_cairo),
 			      -1);
-	pango_layout_set_font_description(layout, frame_cairo->font);
+	pango_layout_set_font_description(layout, frame_cairo->plugin_cairo->font);
 	pango_layout_get_size(layout, &text_extents_width, &text_extents_height);
 
 	/* set text position and dimensions */
@@ -1775,11 +1771,15 @@ libdecor_plugin_cairo_frame_property_changed(struct libdecor_plugin *plugin,
 		if (!streql(frame_cairo->title, new_title))
 			redraw_needed = true;
 	}
-	free(frame_cairo->title);
-	if (new_title)
-		frame_cairo->title = strdup(new_title);
-	else
+
+	if (frame_cairo->title) {
+		free(frame_cairo->title);
 		frame_cairo->title = NULL;
+	}
+
+	if (new_title) {
+		frame_cairo->title = strdup(new_title);
+	}
 
 	if (frame_cairo->capabilities != libdecor_frame_get_capabilities(frame)) {
 		frame_cairo->capabilities = libdecor_frame_get_capabilities(frame);
@@ -2773,7 +2773,9 @@ libdecor_plugin_new(struct libdecor *context)
 	struct wl_display *wl_display;
 
 	plugin_cairo = zalloc(sizeof *plugin_cairo);
-	plugin_cairo->plugin.iface = &cairo_plugin_iface;
+	libdecor_plugin_init(&plugin_cairo->plugin,
+			     context,
+			     &cairo_plugin_iface);
 	plugin_cairo->context = context;
 
 	wl_list_init(&plugin_cairo->visible_frame_list);
@@ -2786,6 +2788,12 @@ libdecor_plugin_new(struct libdecor *context)
 		plugin_cairo->cursor_theme_name = NULL;
 		plugin_cairo->cursor_size = 24;
 	}
+
+	/* define a sens-serif bold font at symbol size */
+	plugin_cairo->font = pango_font_description_new();
+	pango_font_description_set_family(plugin_cairo->font, "sans");
+	pango_font_description_set_weight(plugin_cairo->font, PANGO_WEIGHT_BOLD);
+	pango_font_description_set_size(plugin_cairo->font, SYM_DIM * PANGO_SCALE);
 
 	wl_display = libdecor_get_wl_display(context);
 	plugin_cairo->wl_registry = wl_display_get_registry(wl_display);
@@ -2808,6 +2816,7 @@ static struct libdecor_plugin_priority priorities[] = {
 LIBDECOR_EXPORT const struct libdecor_plugin_description
 libdecor_plugin_description = {
 	.api_version = LIBDECOR_PLUGIN_API_VERSION,
+	.capabilities = LIBDECOR_PLUGIN_CAPABILITY_BASE,
 	.description = "libdecor plugin using Cairo",
 	.priorities = priorities,
 	.constructor = libdecor_plugin_new,
