@@ -35,6 +35,8 @@
 
 extern "C" {
   uchar *fl_libdecor_titlebar_buffer(struct libdecor_frame *frame, int *w, int *h, int *stride);
+  bool libdecor_configuration_get_window_size(struct libdecor_configuration *configuration,
+               int *width, int *height);
 }
 
 #define fl_max(a,b) ((a) > (b) ? (a) : (b))
