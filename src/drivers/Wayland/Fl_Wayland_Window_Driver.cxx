@@ -33,6 +33,10 @@
 #include <string.h>
 #include <sys/mman.h>
 
+extern "C" {
+  uchar *fl_libdecor_titlebar_buffer(struct libdecor_frame *frame, int *w, int *h, int *stride);
+}
+
 #define fl_max(a,b) ((a) > (b) ? (a) : (b))
 
 Window fl_window;
@@ -302,28 +306,23 @@ void Fl_Wayland_Window_Driver::capture_titlebar_and_borders(Fl_RGB_Image*& top, 
   top = left = bottom = right = NULL;
   if (pWindow->decorated_h() == h()) return;
   int htop = pWindow->decorated_h() - pWindow->h();
-// reproduce the target window's titlebar
-  Fl_Image_Surface *surf = new Fl_Image_Surface(pWindow->w(), htop, 1);
-  Fl_Surface_Device::push_current(surf);
-  fl_color(FL_BLACK);
-  fl_rectf(0, 0, pWindow->w(), htop);
-  fl_color(FL_WHITE);
-  Fl::set_font(FL_SCREEN_BOLD, "sans Bold");
-  fl_font(FL_SCREEN_BOLD, 20);
-  double w = fl_width(pWindow->label());
-  fl_draw(pWindow->label(), pWindow->w()/2 - w/2, htop - fl_descent() - 1);
-  int X = pWindow->w()-1.1*htop;
-  fl_line(X, htop-5, X+htop-10, 5);
-  fl_line(X,5, X+htop-10,htop-5);
-  X -= 1.2*htop;
-  if (!pWindow->resizable()) fl_color(fl_gray_ramp(4));
-  fl_rect(X, 5, htop-10,htop-10);
-  fl_color(FL_WHITE);
-  X -= 1.2*htop;
-  fl_xyline(X, htop-5, X+htop-10);
-  top = surf->image();
-  Fl_Surface_Device::pop_current();
-  delete surf;
+  struct wld_window *wwin = fl_xid(pWindow);
+  int w, h, stride;
+  uchar *cairo_data = fl_libdecor_titlebar_buffer(wwin->frame, &w, &h, &stride);
+
+  uchar *data = new uchar[w * h * 3];
+  uchar *p = data;
+  for (int j = 0; j < h; j++) {
+    uchar *q = cairo_data + j * stride;
+    for (int i = 0; i < w; i++) {
+      *p++ = *(q+2); // R
+      *p++ = *(q+1); // G
+      *p++ = *q;     // B
+      q += 4;
+    }
+  }
+  top = new Fl_RGB_Image(data, w, h, 3);
+  top->alloc_array = 1;
   top->scale(pWindow->w(), htop);
 }
 

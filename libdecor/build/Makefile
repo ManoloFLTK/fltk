@@ -17,8 +17,8 @@ libdecor.o : ../src/libdecor.c xdg-shell-protocol.c xdg-decoration-protocol.c co
 libdecor-fallback.o : ../src/libdecor-fallback.c
 	$(CC) $(CFLAGS) -c  ../src/libdecor-fallback.c
 
-libdecor-cairo.o : ../src/plugins/cairo/libdecor-cairo.c
-	$(CC) $(CFLAGS) -c  ../src/plugins/cairo/libdecor-cairo.c -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 `pkg-config --cflags pangocairo`
+fl_libdecor-cairo.o : fl_libdecor-cairo.c
+	$(CC) $(CFLAGS) -c  fl_libdecor-cairo.c -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 `pkg-config --cflags pangocairo`
 
 libdecor-cairo-blur.o : ../src/plugins/cairo/libdecor-cairo-blur.c
 	$(CC) $(CFLAGS) -c  ../src/plugins/cairo/libdecor-cairo-blur.c -D_GNU_SOURCE
@@ -44,9 +44,9 @@ xdg-shell-protocol.o : xdg-shell-protocol.c
 	$(CC) $(CFLAGS) -c xdg-shell-protocol.c
 	
 #this shared lib is used by Wayland client programs and also as a plugin (for the Wayland composer ?)
-../../lib/libdecor-0.1.so : libdecor.o libdecor-cairo-blur.o libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
+../../lib/libdecor-0.1.so : libdecor.o libdecor-cairo-blur.o fl_libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
 		xdg-shell-protocol.o cursor-settings.o
-	$(CC) -shared  libdecor.o libdecor-cairo-blur.o libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
+	$(CC) -shared  libdecor.o libdecor-cairo-blur.o fl_libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
 		xdg-shell-protocol.o cursor-settings.o -o ../../lib/libdecor-0.1.so -lcairo
 
 demo : ../../lib/libdecor-0.1.so ../demo/demo.c  
