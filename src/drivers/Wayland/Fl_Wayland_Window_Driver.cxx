@@ -34,7 +34,7 @@
 #include <sys/mman.h>
 
 extern "C" {
-  uchar *fl_libdecor_titlebar_buffer(struct libdecor_frame *frame, int *w, int *h, int *stride);
+  uchar *fl_libdecor_cairo_titlebar_buffer(struct libdecor_frame *frame, int *w, int *h, int *stride);
   bool libdecor_configuration_get_window_size(struct libdecor_configuration *configuration,
                int *width, int *height);
 }
@@ -309,21 +309,20 @@ void Fl_Wayland_Window_Driver::capture_titlebar_and_borders(Fl_RGB_Image*& top, 
   if (pWindow->decorated_h() == h()) return;
   int htop = pWindow->decorated_h() - pWindow->h();
   struct wld_window *wwin = fl_xid(pWindow);
-  int w, h, stride;
-  uchar *cairo_data = fl_libdecor_titlebar_buffer(wwin->frame, &w, &h, &stride);
-
-  uchar *data = new uchar[w * h * 3];
+  int width, height, stride;
+  uchar *cairo_data = fl_libdecor_cairo_titlebar_buffer(wwin->frame, &width, &height, &stride);
+  uchar *data = new uchar[width * height * 3];
   uchar *p = data;
-  for (int j = 0; j < h; j++) {
+  for (int j = 0; j < height; j++) {
     uchar *q = cairo_data + j * stride;
-    for (int i = 0; i < w; i++) {
+    for (int i = 0; i < width; i++) {
       *p++ = *(q+2); // R
       *p++ = *(q+1); // G
       *p++ = *q;     // B
       q += 4;
     }
   }
-  top = new Fl_RGB_Image(data, w, h, 3);
+  top = new Fl_RGB_Image(data, width, height, 3);
   top->alloc_array = 1;
   top->scale(pWindow->w(), htop);
 }

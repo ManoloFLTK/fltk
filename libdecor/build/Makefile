@@ -17,7 +17,7 @@ libdecor.o : ../src/libdecor.c xdg-shell-protocol.c xdg-decoration-protocol.c co
 libdecor-fallback.o : ../src/libdecor-fallback.c
 	$(CC) $(CFLAGS) -c  ../src/libdecor-fallback.c
 
-fl_libdecor-cairo.o : fl_libdecor-cairo.c
+fl_libdecor-cairo.o : fl_libdecor-cairo.c ../src/plugins/cairo/libdecor-cairo.c
 	$(CC) $(CFLAGS) -c  fl_libdecor-cairo.c -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 `pkg-config --cflags pangocairo`
 
 libdecor-cairo-blur.o : ../src/plugins/cairo/libdecor-cairo-blur.c
