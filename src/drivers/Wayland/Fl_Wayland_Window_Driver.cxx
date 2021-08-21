@@ -982,8 +982,8 @@ fprintf(stderr, "makeWindow: xdg_wm_base_get_xdg_surface=%p\n", new_window->xdg_
     Fl_X::first = xp;
   }
   
-  if (pWindow->modal()) {
-    Fl::modal_ = pWindow; /*fl_fix_focus();*/
+  if (pWindow->modal() || pWindow->non_modal()) {
+    if (pWindow->modal()) Fl::modal_ = pWindow;
     if (new_window->frame && first_xid && first_xid->frame) {
      libdecor_frame_set_parent(new_window->frame, first_xid->frame);
     } else if (new_window->xdg_toplevel && first_xid && first_xid->xdg_toplevel) {
