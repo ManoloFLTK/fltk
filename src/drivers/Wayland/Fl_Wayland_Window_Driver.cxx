@@ -681,7 +681,6 @@ static struct wl_surface_listener surface_listener = {
 };
 
 bool Fl_Wayland_Window_Driver::in_handle_configure = false;
-bool not_using_weston = false; //TODO: try to get rid of that
 
 static void handle_configure(struct libdecor_frame *frame,
      struct libdecor_configuration *configuration, void *user_data)
@@ -702,7 +701,6 @@ static void handle_configure(struct libdecor_frame *frame,
     if (!window->fl_win->parent() && window->fl_win->as_gl_window())
       driver->wait_for_expose_value = 0;
   } else {
-    not_using_weston = true;
     if (driver->size_range_set()) {
       if (width < driver->minw() || height < driver->minh()) return;
     }
@@ -714,8 +712,8 @@ static void handle_configure(struct libdecor_frame *frame,
 //    fprintf(stderr, "decorated size=%dx%d ", tmp, window->decorated_height);
   }
   if (width == 0) {
-    width = window->fl_win->w();
-    height = window->fl_win->h();
+    width = window->floating_width;
+    height = window->floating_height;
     driver->wait_for_expose_value = 0;// necessary for Weston
   }
   if (width < 128) width = 128; // enforce minimal size of decorated windows for libdecor
@@ -735,7 +733,7 @@ static void handle_configure(struct libdecor_frame *frame,
   if (!libdecor_configuration_get_window_state(configuration, &window_state))
     window_state = LIBDECOR_WINDOW_STATE_NONE;
 
-//fprintf(stderr, "handle_configure fl_win=%p pos:%dx%d size:%dx%d state=%x wait_for_expose_value=%d not_using_weston=%d\n", window->fl_win, window->fl_win->x(), window->fl_win->y(), width,height,window_state,driver->wait_for_expose_value,not_using_weston);
+//fprintf(stderr, "handle_configure fl_win=%p pos:%dx%d size:%dx%d state=%x wait_for_expose_value=%d \n", window->fl_win, window->fl_win->x(), window->fl_win->y(), width,height,window_state,driver->wait_for_expose_value);
 
 /* We would like to do FL_HIDE when window is minimized but :
  "There is no way to know if the surface is currently minimized, nor is there any way to
@@ -748,6 +746,12 @@ static void handle_configure(struct libdecor_frame *frame,
   libdecor_frame_commit(frame, state, configuration);
   libdecor_state_free(state);
   window->fl_win->redraw();
+  
+  if (libdecor_frame_is_floating(frame)) { // store floating dimensions
+    window->floating_width = width;
+    window->floating_height = height;
+    //fprintf(stderr,"set floating_width+height %dx%d\n",width,height);
+  }
   
   if (window->buffer) window->buffer->wl_buffer_ready = true; // dirty hack necessary for Weston
   if (!window->fl_win->as_gl_window()) {
@@ -930,6 +934,8 @@ fprintf(stderr, "makeWindow:%p wl_compositor_create_surface=%p scale=%d\n", pWin
     }
     libdecor_frame_set_min_content_size(new_window->frame, 128, 56);// libdecor wants width ≥ 128 & height ≥ 56
     libdecor_frame_map(new_window->frame);
+    new_window->floating_width = pWindow->w();
+    new_window->floating_height = pWindow->h();
     if (pWindow->as_gl_window()) { // a top-level GL window: create a subsurface for the GL part
       new_window->gl_wl_surface = wl_compositor_create_surface(scr_driver->wl_compositor);
       new_window->subsurface = wl_subcompositor_get_subsurface(scr_driver->wl_subcompositor, new_window->gl_wl_surface, new_window->wl_surface);
