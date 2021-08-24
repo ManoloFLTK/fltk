@@ -681,6 +681,7 @@ static struct wl_surface_listener surface_listener = {
 };
 
 bool Fl_Wayland_Window_Driver::in_handle_configure = false;
+bool not_using_weston = false; // used for GL windows
 
 static void handle_configure(struct libdecor_frame *frame,
      struct libdecor_configuration *configuration, void *user_data)
@@ -701,6 +702,7 @@ static void handle_configure(struct libdecor_frame *frame,
     if (!window->fl_win->parent() && window->fl_win->as_gl_window())
       driver->wait_for_expose_value = 0;
   } else {
+    not_using_weston = true;
     if (driver->size_range_set()) {
       if (width < driver->minw() || height < driver->minh()) return;
     }
