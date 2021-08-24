@@ -709,10 +709,16 @@ static void handle_configure(struct libdecor_frame *frame,
   }
 
   int tmp;
+  static int titlebar_height = 0;
   if (libdecor_configuration_get_window_size(configuration, &tmp, &window->decorated_height) ) {
     driver->wait_for_expose_value = 0;
+    if (!titlebar_height) titlebar_height = window->decorated_height - height;
 //    fprintf(stderr, "decorated size=%dx%d ", tmp, window->decorated_height);
+  } else if (titlebar_height) {
+    // necessary when decorated window is unmaximized
+    window->decorated_height = window->floating_height + titlebar_height;
   }
+  
   if (width == 0) {
     width = window->floating_width;
     height = window->floating_height;
