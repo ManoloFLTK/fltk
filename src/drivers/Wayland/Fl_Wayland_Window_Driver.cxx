@@ -681,7 +681,8 @@ static struct wl_surface_listener surface_listener = {
 };
 
 bool Fl_Wayland_Window_Driver::in_handle_configure = false;
-bool not_using_weston = false; // used for GL windows
+bool Fl_Wayland_Window_Driver::using_weston = false;
+static bool weston_was_configured = false;
 
 static void handle_configure(struct libdecor_frame *frame,
      struct libdecor_configuration *configuration, void *user_data)
@@ -695,14 +696,21 @@ static void handle_configure(struct libdecor_frame *frame,
 
   if (!window->xdg_toplevel) window->xdg_toplevel = libdecor_frame_get_xdg_toplevel(frame);
   if (!window->xdg_surface) window->xdg_surface = libdecor_frame_get_xdg_surface(frame);
+    
+  if (!libdecor_configuration_get_window_state(configuration, &window_state))
+    window_state = LIBDECOR_WINDOW_STATE_NONE;
+
   if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
     width = 0;
     height = 0;
-    // With Weston, this doesn't allow to distinguish the 1st from the 2nd run of handle_configure
-    if (!window->fl_win->parent() && window->fl_win->as_gl_window())
-      driver->wait_for_expose_value = 0;
+    if (!weston_was_configured && window_state != LIBDECOR_WINDOW_STATE_NONE) { // characterizes Weston
+      weston_was_configured = true;
+      Fl_Wayland_Window_Driver::using_weston = true;
+fprintf(stderr, "Running the Weston composer\n");
+    }
+    if (Fl_Wayland_Window_Driver::using_weston && window_state != LIBDECOR_WINDOW_STATE_NONE) driver->wait_for_expose_value = 0;
   } else {
-    not_using_weston = true;
+    if (!weston_was_configured) weston_was_configured = true;
     if (driver->size_range_set()) {
       if (width < driver->minw() || height < driver->minh()) return;
     }
@@ -722,7 +730,6 @@ static void handle_configure(struct libdecor_frame *frame,
   if (width == 0) {
     width = window->floating_width;
     height = window->floating_height;
-    driver->wait_for_expose_value = 0;// necessary for Weston
   }
   if (width < 128) width = 128; // enforce minimal size of decorated windows for libdecor
   if (height < 56) height = 56;
@@ -737,10 +744,6 @@ static void handle_configure(struct libdecor_frame *frame,
   }
   window->configured_width = width;
   window->configured_height = height;
-
-  if (!libdecor_configuration_get_window_state(configuration, &window_state))
-    window_state = LIBDECOR_WINDOW_STATE_NONE;
-
 //fprintf(stderr, "handle_configure fl_win=%p pos:%dx%d size:%dx%d state=%x wait_for_expose_value=%d \n", window->fl_win, window->fl_win->x(), window->fl_win->y(), width,height,window_state,driver->wait_for_expose_value);
 
 /* We would like to do FL_HIDE when window is minimized but :
