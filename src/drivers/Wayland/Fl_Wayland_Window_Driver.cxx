@@ -848,7 +848,6 @@ static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel
   }
   window->configured_width = width;
   window->configured_height = height;
-  Fl_Window_Driver::driver(window->fl_win)->wait_for_expose_value = 0;
   /*if (window->fl_win->as_gl_window()) {
     Fl_Window_Driver::driver(window->fl_win)->Fl_Window_Driver::flush();
   } else {
@@ -1163,5 +1162,15 @@ void Fl_Wayland_Window_Driver::update_scale()
       window->fl_win->damage(FL_DAMAGE_ALL);
       Fl_Window_Driver::driver(window->fl_win)->flush();
     }
+  }
+}
+
+
+void Fl_Wayland_Window_Driver::use_border() {
+  if (!shown() || pWindow->parent()) return;
+  struct libdecor_frame *frame = fl_xid(pWindow)->frame;
+  if (frame) {
+    libdecor_frame_set_visibility(frame, pWindow->border());
+    pWindow->redraw();
   }
 }
