@@ -353,7 +353,7 @@ static Fl_Gl_Overlay_Plugin Gl_Overlay_Plugin;
 
 
 void Fl_Wayland_Gl_Window_Driver::resize(int is_a_resize, int W, int H) {
-  if (egl_window && !busy) {
+  if (egl_window && (pWindow->parent() || !busy) ) {
     struct wld_window *win = fl_xid(pWindow);
     int wld_scale = win->scale;
     wl_egl_window_resize(egl_window, W * wld_scale, H * wld_scale, 0, 0);
