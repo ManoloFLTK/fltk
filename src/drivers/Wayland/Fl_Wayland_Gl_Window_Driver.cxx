@@ -30,6 +30,8 @@
 
 class Fl_Wayland_Gl_Window_Driver : public Fl_Gl_Window_Driver {
   friend class Fl_Gl_Window_Driver;
+private:
+  bool busy;
 protected:
   Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win);
   virtual float pixels_per_unit();
@@ -78,6 +80,7 @@ Fl_Wayland_Gl_Window_Driver::Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win) : Fl
   if (egl_display == EGL_NO_DISPLAY) init();
   egl_window = NULL;
   egl_surface = NULL;
+  busy = false;
 }
 
 
@@ -272,7 +275,7 @@ int Fl_Wayland_Gl_Window_Driver::mode_(int m, const int *a) {
 
 static void surface_frame_done(void *data, struct wl_callback *cb, uint32_t time) {
   wl_callback_destroy(cb);
-  *(bool*)data = true;
+  *(bool*)data = false;
 }
 
 static const struct wl_callback_listener surface_frame_listener = {
@@ -319,11 +322,12 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
     struct wl_surface *surf = xid->gl_wl_surface ? xid->gl_wl_surface : xid->wl_surface;
     struct wl_callback *callback = wl_surface_frame(surf);
     wl_surface_commit(surf);
-    if (Fl_Wayland_Window_Driver::using_weston && Fl_Wayland_Window_Driver::in_handle_configure) eglSwapInterval(egl_display, 1);
-    else {
-      bool done = false;
-      wl_callback_add_listener(callback, &surface_frame_listener, &done);
-      while (!done) wl_display_dispatch(fl_display); // wait for arrival of frame event
+    if (Fl_Wayland_Window_Driver::using_weston && Fl_Wayland_Window_Driver::in_handle_configure) {
+     eglSwapInterval(egl_display, 1);
+    } else {
+      busy = true;
+      wl_callback_add_listener(callback, &surface_frame_listener, &busy);
+      while (busy) wl_display_dispatch(fl_display); // wait for arrival of frame event
     }
     if (eglSwapBuffers(egl_display, egl_surface)) {
       //fprintf(stderr, "Swapped buffers for surface=%p display=%p\n", egl_surface, egl_display);
@@ -349,7 +353,7 @@ static Fl_Gl_Overlay_Plugin Gl_Overlay_Plugin;
 
 
 void Fl_Wayland_Gl_Window_Driver::resize(int is_a_resize, int W, int H) {
-  if (egl_window) {
+  if (egl_window && !busy) {
     struct wld_window *win = fl_xid(pWindow);
     int wld_scale = win->scale;
     wl_egl_window_resize(egl_window, W * wld_scale, H * wld_scale, 0, 0);
