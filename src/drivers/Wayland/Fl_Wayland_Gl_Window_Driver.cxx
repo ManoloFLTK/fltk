@@ -201,7 +201,7 @@ void Fl_Wayland_Gl_Window_Driver::set_gl_context(Fl_Window* w, GLContext context
     cached_context = context;
     cached_window = w;
     if (eglMakeCurrent(egl_display, egl_surface, egl_surface, (EGLContext)context)) {
-//fprintf(stderr, "EGLContext %p made current\n", context);
+fprintf(stderr, "EGLContext %p made current\n", context);
     } else {
       fprintf(stderr, "Made current failed\n");
     }
@@ -244,7 +244,8 @@ Fl_Gl_Window_Driver *Fl_Gl_Window_Driver::newGlWindowDriver(Fl_Gl_Window *w)
 void Fl_Wayland_Gl_Window_Driver::make_current_before() {
   if (!egl_window) {
     struct wld_window *win = fl_xid(pWindow);
-    struct wl_surface *surface = pWindow->parent() ? win->wl_surface : win->gl_wl_surface;
+    //struct wl_surface *surface = pWindow->parent() ? win->wl_surface : win->gl_wl_surface;
+    struct wl_surface *surface = win->wl_surface;
     egl_window = wl_egl_window_create(surface, pWindow->pixel_w(), pWindow->pixel_h());
     if (egl_window == EGL_NO_SURFACE) {
       fprintf(stderr, "Can't create egl window\n");
@@ -253,7 +254,7 @@ void Fl_Wayland_Gl_Window_Driver::make_current_before() {
       //fprintf(stderr, "Created egl window=%p\n", egl_window);
     }
     egl_surface = eglCreateWindowSurface(egl_display, egl_conf, egl_window, NULL);
-//fprintf(stderr, "Created egl surface=%p at scale=%d\n", egl_surface, win->scale);
+fprintf(stderr, "Created egl surface=%p at scale=%d\n", egl_surface, win->scale);
     wl_surface_set_buffer_scale(surface, win->scale);
     wl_surface_commit(surface);
     wl_display_roundtrip(fl_display);
@@ -314,25 +315,27 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
     glRasterPos3f(pos[0], pos[1], pos[2]);              // restore original glRasterPos
     if (!overlay_buffer) return; // don't call eglSwapBuffers until overlay has been drawn
   }
-  if (egl_surface) {
-    // Make eglSwapBuffers non-blocking, we manage frame callbacks manually
-    eglSwapInterval(egl_display, 0);
-    // Register a frame callback to know when we can draw the next frame
-    Window xid = fl_xid(pWindow);
-    struct wl_surface *surf = xid->gl_wl_surface ? xid->gl_wl_surface : xid->wl_surface;
-    struct wl_callback *callback = wl_surface_frame(surf);
-    wl_surface_commit(surf);
-    if (Fl_Wayland_Window_Driver::using_weston && Fl_Wayland_Window_Driver::in_handle_configure) {
+
+  if (egl_surface && !Fl_Wayland_Window_Driver::in_handle_configure) {
+    if ( !pWindow->parent() ) {
      eglSwapInterval(egl_display, 1);
     } else {
+      eglSwapInterval(egl_display, 0);
+      // Register a frame callback to know when we can draw the next frame
+      Window xid = fl_xid(pWindow);
+      struct wl_surface *surf = xid->wl_surface;
+      struct wl_callback *callback = wl_surface_frame(surf);
+      wl_surface_commit(surf);
       busy = true;
+fprintf(stderr, "busy=true\n");
       wl_callback_add_listener(callback, &surface_frame_listener, &busy);
       while (busy) wl_display_dispatch(fl_display); // wait for arrival of frame event
+fprintf(stderr, "busy=false\n");
     }
     if (eglSwapBuffers(egl_display, egl_surface)) {
-      //fprintf(stderr, "Swapped buffers for surface=%p display=%p\n", egl_surface, egl_display);
-      cached_context = 0;
+      fprintf(stderr, "Swapped buffers for surface=%p display=%p\n", egl_surface, egl_display);
     } else {
+      cached_context = 0;
       fprintf(stderr, "Swapped buffers failed\n");
     }
   }
@@ -354,7 +357,7 @@ static Fl_Gl_Overlay_Plugin Gl_Overlay_Plugin;
 
 void Fl_Wayland_Gl_Window_Driver::resize(int is_a_resize, int W, int H) {
   if (egl_window) {
-    if (!pWindow->parent() && busy) return;
+    if (pWindow->parent() && busy) return;
     while (busy) wl_display_dispatch(fl_display);
     struct wld_window *win = fl_xid(pWindow);
     int wld_scale = win->scale;
