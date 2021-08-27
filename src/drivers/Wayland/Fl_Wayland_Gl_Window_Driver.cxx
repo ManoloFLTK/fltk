@@ -244,7 +244,6 @@ Fl_Gl_Window_Driver *Fl_Gl_Window_Driver::newGlWindowDriver(Fl_Gl_Window *w)
 void Fl_Wayland_Gl_Window_Driver::make_current_before() {
   if (!egl_window) {
     struct wld_window *win = fl_xid(pWindow);
-    //struct wl_surface *surface = pWindow->parent() ? win->wl_surface : win->gl_wl_surface;
     struct wl_surface *surface = win->wl_surface;
     egl_window = wl_egl_window_create(surface, pWindow->pixel_w(), pWindow->pixel_h());
     if (egl_window == EGL_NO_SURFACE) {
@@ -357,8 +356,9 @@ static Fl_Gl_Overlay_Plugin Gl_Overlay_Plugin;
 
 void Fl_Wayland_Gl_Window_Driver::resize(int is_a_resize, int W, int H) {
   if (egl_window) {
-    //if (pWindow->parent() && busy) return;
-    while (busy) wl_display_dispatch(fl_display);
+    if (!Fl_Wayland_Window_Driver::using_weston || !pWindow->parent() || !busy || !Fl_Wayland_Window_Driver::in_handle_configure) {
+      while (busy) wl_display_dispatch(fl_display);
+    }
     struct wld_window *win = fl_xid(pWindow);
     int wld_scale = win->scale;
     wl_egl_window_resize(egl_window, W * wld_scale, H * wld_scale, 0, 0);

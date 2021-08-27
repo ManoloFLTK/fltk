@@ -53,7 +53,6 @@ struct Fl_Window_Driver::shape_data_type {
 
 struct wld_window {
   struct wl_surface *wl_surface;
-  //struct wl_surface *gl_wl_surface;
   struct wl_subsurface *subsurface;
   struct buffer *buffer;
   struct libdecor_frame *frame;

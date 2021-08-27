@@ -432,15 +432,11 @@ void Fl_Wayland_Window_Driver::hide() {
   struct wld_window *wld_win = ip->xid;
   if (wld_win) { // this test makes sure ip->xid has not been destroyed already
     Fl_Wayland_Graphics_Driver::buffer_release(wld_win);
-//fprintf(stderr, "Before hide: sub=%p gl=%p frame=%p xdg=%p top=%p pop=%p surf=%p\n", wld_win->subsurface, wld_win->gl_wl_surface, wld_win->frame, wld_win->xdg_surface, wld_win->xdg_toplevel, wld_win->xdg_popup, wld_win->wl_surface);
+//fprintf(stderr, "Before hide: sub=%p frame=%p xdg=%p top=%p pop=%p surf=%p\n", wld_win->subsurface,  wld_win->frame, wld_win->xdg_surface, wld_win->xdg_toplevel, wld_win->xdg_popup, wld_win->wl_surface);
     if (wld_win->subsurface) {
       wl_subsurface_destroy(wld_win->subsurface);
       wld_win->subsurface = NULL;
     }
-    /*if (wld_win->gl_wl_surface) {
-      wl_surface_destroy(wld_win->gl_wl_surface);
-      wld_win->gl_wl_surface = NULL;
-    }*/
     if (wld_win->frame) {
       libdecor_frame_unref(wld_win->frame);
       wld_win->frame = NULL;
@@ -464,7 +460,7 @@ void Fl_Wayland_Window_Driver::hide() {
       wl_surface_destroy(wld_win->wl_surface);
       wld_win->wl_surface = NULL;
     }
-//fprintf(stderr, "After hide: sub=%p gl=%p frame=%p xdg=%p top=%p pop=%p surf=%p\n", wld_win->subsurface, wld_win->gl_wl_surface, wld_win->frame, wld_win->xdg_surface, wld_win->xdg_toplevel, wld_win->xdg_popup, wld_win->wl_surface);
+//fprintf(stderr, "After hide: sub=%p frame=%p xdg=%p top=%p pop=%p surf=%p\n", wld_win->subsurface,  wld_win->frame, wld_win->xdg_surface, wld_win->xdg_toplevel, wld_win->xdg_popup, wld_win->wl_surface);
   }
   delete ip;
 }
@@ -767,12 +763,10 @@ fprintf(stderr, "Running the Weston composer\n");
   if (window->buffer) window->buffer->wl_buffer_ready = true; // dirty hack necessary for Weston
   if (!window->fl_win->as_gl_window()) {
     driver->flush();
-/*  } else if (window->fl_win->parent()) {
-    driver->Fl_Window_Driver::flush(); // GL subwindow*/
   } else {
-    Fl_Wayland_Window_Driver::in_handle_configure = true;
+    //Fl_Wayland_Window_Driver::in_handle_configure = true;
     driver->Fl_Window_Driver::flush(); // GL window
-    Fl_Wayland_Window_Driver::in_handle_configure = false;
+    //Fl_Wayland_Window_Driver::in_handle_configure = false;
   }
 }
 
@@ -848,11 +842,6 @@ static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel
   }
   window->configured_width = width;
   window->configured_height = height;
-  /*if (window->fl_win->as_gl_window()) {
-    Fl_Window_Driver::driver(window->fl_win)->Fl_Window_Driver::flush();
-  } else {
-    Fl_Window_Driver::driver(window->fl_win)->flush();
-  }*/
 }
 
 
@@ -946,13 +935,6 @@ fprintf(stderr, "makeWindow:%p wl_compositor_create_surface=%p scale=%d\n", pWin
     libdecor_frame_map(new_window->frame);
     new_window->floating_width = pWindow->w();
     new_window->floating_height = pWindow->h();
-    /*if (pWindow->as_gl_window()) { // a top-level GL window: create a subsurface for the GL part
-      new_window->gl_wl_surface = wl_compositor_create_surface(scr_driver->wl_compositor);
-      new_window->subsurface = wl_subcompositor_get_subsurface(scr_driver->wl_subcompositor, new_window->gl_wl_surface, new_window->wl_surface);
-      wl_subsurface_set_position(new_window->subsurface, 0, 0);
-      wl_subsurface_set_desync(new_window->subsurface);
-      wl_subsurface_place_above(new_window->subsurface, new_window->wl_surface);
-    }*/
 
   } else if (pWindow->parent()) { // for subwindows (GL or non-GL)
     struct wld_window *parent = fl_xid(pWindow->window());
