@@ -700,6 +700,10 @@ static void handle_configure(struct libdecor_frame *frame,
     width = 0;
     height = 0;
     if (!weston_was_configured && window_state != LIBDECOR_WINDOW_STATE_NONE) { // characterizes Weston
+// Weston, on purpose, doesn't set the window width x height when xdg_toplevel_configure runs twice
+// during window creation (see https://gitlab.freedesktop.org/wayland/wayland-protocols/-/issues/6).
+// Consequently, libdecor_configuration_get_content_size() returns false twice.
+// In contrast, Gnome sets the window width x height at the 2nd xdg_toplevel_configure run.
       weston_was_configured = true;
       Fl_Wayland_Window_Driver::using_weston = true;
 fprintf(stderr, "Running the Weston composer\n");
