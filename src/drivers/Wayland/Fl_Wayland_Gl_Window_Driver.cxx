@@ -315,17 +315,21 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
   }
 
   if (egl_surface) {
-    eglSwapInterval(egl_display, 0);
-    // Register a frame callback to know when we can draw the next frame
-    Window xid = fl_xid(pWindow);
-    struct wl_surface *surf = xid->wl_surface;
-    struct wl_callback *callback = wl_surface_frame(surf);
-    wl_surface_commit(surf);
-    busy = true;
-//fprintf(stderr, "busy=true\n");
-    wl_callback_add_listener(callback, &surface_frame_listener, &busy);
-    while (busy) wl_display_dispatch(fl_display); // wait for arrival of frame event
-//fprintf(stderr, "busy=false\n");
+    if ( !pWindow->parent() ) {
+     eglSwapInterval(egl_display, 1);
+    } else {
+      eglSwapInterval(egl_display, 0);
+      // Register a frame callback to know when we can draw the next frame
+      Window xid = fl_xid(pWindow);
+      struct wl_surface *surf = xid->wl_surface;
+      struct wl_callback *callback = wl_surface_frame(surf);
+      wl_surface_commit(surf);
+      busy = true;
+      //fprintf(stderr, "busy=true\n");
+      wl_callback_add_listener(callback, &surface_frame_listener, &busy);
+      while (busy) wl_display_dispatch(fl_display); // wait for arrival of frame event
+      //fprintf(stderr, "busy=false\n");
+    }
     if (eglSwapBuffers(egl_display, egl_surface)) {
       //fprintf(stderr, "Swapped buffers for surface=%p display=%p\n", egl_surface, egl_display);
     } else {
