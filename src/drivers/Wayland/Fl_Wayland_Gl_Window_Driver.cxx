@@ -51,7 +51,6 @@ protected:
   virtual void gl_start();
   virtual Fl_RGB_Image* capture_gl_rectangle(int x, int y, int w, int h);
   char *alpha_mask_for_string(const char *str, int n, int w, int h, Fl_Fontsize fs);
-  virtual int flush_begin(char& valid_f_);
 public:
   //static GLContext create_gl_context(XVisualInfo* vis);
   static EGLDisplay egl_display;
@@ -386,21 +385,6 @@ Fl_RGB_Image* Fl_Wayland_Gl_Window_Driver::capture_gl_rectangle(int x, int y, in
   Fl_RGB_Image *rgb = Fl_Gl_Window_Driver::capture_gl_rectangle(x, y, w, h);
   Fl_Surface_Device::pop_current();
   return rgb;
-}
-
-
-int Fl_Wayland_Gl_Window_Driver::flush_begin(char& valid_f_) {
-  if (!pWindow->parent()) {
-    Window window = fl_xid(pWindow);
-    if (!window->buffer) { // a fresh top-level GL window: give it its buffer
-      window->buffer = Fl_Wayland_Graphics_Driver::create_shm_buffer(
-                    pWindow->w() * window->scale, pWindow->h() * window->scale,
-                    WL_SHM_FORMAT_ARGB8888, window);
-      wl_surface_damage_buffer(window->wl_surface, 0, 0, pWindow->w() * window->scale, pWindow->h() * window->scale);
-      Fl_Wayland_Graphics_Driver::buffer_commit(window);
-    }
-  }
-  return 0;
 }
 
 #endif // HAVE_GL
