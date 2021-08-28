@@ -48,7 +48,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Install prerequisites
-      run: sudo apt-get update -y && sudo apt-get install -y libasound2-dev libglu1-mesa-dev libwayland-dev wayland-protocols libdbus-1-dev libxkbcommon-dev libegl-dev libpangocairo-1.0-0 libopengl-dev
+      run: sudo apt-get update -y && sudo apt-get install -y libasound2-dev libglu1-mesa-dev libwayland-dev wayland-protocols libdbus-1-dev libxkbcommon-dev libegl-dev libpangocairo-1.0-0 libopengl-dev libpango1.0-dev
 
     - name: Create configure file
       shell: bash
