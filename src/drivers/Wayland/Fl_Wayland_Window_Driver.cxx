@@ -885,9 +885,6 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
   new_window = (struct wld_window *)calloc(1, sizeof *new_window);
   new_window->fl_win = pWindow;
   new_window->scale = 1;
-  // for Weston, pre-estimate decorated_height
-  new_window->decorated_height = pWindow->h();
-  if (!pWindow->parent()) new_window->decorated_height += 24; // can be changed later
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   wl_list_for_each(output, &(scr_driver->outputs), link) {
     new_window->scale = MAX(new_window->scale, output->scale);
@@ -937,6 +934,8 @@ fprintf(stderr, "makeWindow:%p wl_compositor_create_surface=%p scale=%d\n", pWin
     libdecor_frame_map(new_window->frame);
     new_window->floating_width = pWindow->w();
     new_window->floating_height = pWindow->h();
+    // for Weston, pre-estimate decorated_height
+    new_window->decorated_height = pWindow->h() + 24; // can be changed later
 
   } else if (pWindow->parent()) { // for subwindows (GL or non-GL)
     struct wld_window *parent = fl_xid(pWindow->window());
