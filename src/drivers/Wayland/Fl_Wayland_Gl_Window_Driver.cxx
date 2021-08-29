@@ -268,6 +268,7 @@ float Fl_Wayland_Gl_Window_Driver::pixels_per_unit()
 
 
 int Fl_Wayland_Gl_Window_Driver::mode_(int m, const int *a) {
+  mode(m);
   return 1;
 }
 
