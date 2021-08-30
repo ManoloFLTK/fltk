@@ -27,6 +27,13 @@
 #include <EGL/egl.h>
 #include <FL/gl.h>
 
+/* Implementation note about OpenGL drawing on the Wayland platform
+ 
+After eglCreateWindowSurface() with attributes {EGL_RENDER_BUFFER, EGL_SINGLE_BUFFER, EGL_NONE},
+eglQueryContext() reports that EGL_RENDER_BUFFER equals EGL_BACK_BUFFER.
+This experiment suggests that the platform only supports double-buffer drawing.
+Consequently, FL_DOUBLE is enforced in all Fl_Gl_Window::mode_ values under Wayland.
+*/
 
 class Fl_Wayland_Gl_Window_Driver : public Fl_Gl_Window_Driver {
   friend class Fl_Gl_Window_Driver;
@@ -35,7 +42,8 @@ private:
 protected:
   Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win);
   virtual float pixels_per_unit();
-  virtual void make_current_before();
+  void before_show(int& need_after);
+  virtual void after_show();
   virtual int mode_(int m, const int *a);
   virtual void swap_buffers();
   virtual void resize(int is_a_resize, int w, int h);
@@ -47,14 +55,11 @@ protected:
   virtual void make_overlay_current();
   virtual void redraw_overlay();
   virtual void waitGL();
-  virtual void gl_visual(Fl_Gl_Choice*); // support for Fl::gl_visual()
   virtual void gl_start();
   virtual Fl_RGB_Image* capture_gl_rectangle(int x, int y, int w, int h);
   char *alpha_mask_for_string(const char *str, int n, int w, int h, Fl_Fontsize fs);
 public:
-  //static GLContext create_gl_context(XVisualInfo* vis);
   static EGLDisplay egl_display;
-  static EGLConfig egl_conf;
   static EGLint configs_count;
   void init();
   struct wl_egl_window *egl_window;
@@ -65,13 +70,14 @@ public:
 class Fl_Wayland_Gl_Choice : public Fl_Gl_Choice {
   friend class Fl_Wayland_Gl_Window_Driver;
 private:
+  EGLConfig egl_conf;
 public:
   Fl_Wayland_Gl_Choice(int m, const int *alistp, Fl_Gl_Choice *n) : Fl_Gl_Choice(m, alistp, n) {
+  egl_conf = 0;
   }
 };
 
 EGLDisplay Fl_Wayland_Gl_Window_Driver::egl_display = EGL_NO_DISPLAY;
-EGLConfig Fl_Wayland_Gl_Window_Driver::egl_conf = 0;
 EGLint Fl_Wayland_Gl_Window_Driver::configs_count = 0;
 
 
@@ -138,6 +144,7 @@ char *Fl_Wayland_Gl_Window_Driver::alpha_mask_for_string(const char *str, int n,
 
 Fl_Gl_Choice *Fl_Wayland_Gl_Window_Driver::find(int m, const int *alistp)
 {
+  m |= FL_DOUBLE;
   Fl_Wayland_Gl_Choice *g = (Fl_Wayland_Gl_Choice*)Fl_Gl_Window_Driver::find_begin(m, alistp);
   if (g) return g;
   
@@ -164,17 +171,17 @@ Fl_Gl_Choice *Fl_Wayland_Gl_Window_Driver::find(int m, const int *alistp)
     fprintf(stderr, "failed to choose an EGL config\n");
     exit(1);
   }
+  
+  g = new Fl_Wayland_Gl_Choice(m, alistp, first);
   for (int i = 0; i < n; i++) {
     eglGetConfigAttrib(egl_display, configs[i], EGL_BUFFER_SIZE, &size);
     printf("Buffer size for config %d is %d\n", i, size);
     eglGetConfigAttrib(egl_display, configs[i], EGL_RED_SIZE, &size);
     printf("Red size for config %d is %d\n", i, size);
     // just choose the first one
-    egl_conf = configs[i];
+    g->egl_conf = configs[i];
     break;
   }
-
-  g = new Fl_Wayland_Gl_Choice(m, alistp, first);
   first = g;
   return g;
 }
@@ -185,7 +192,7 @@ GLContext Fl_Wayland_Gl_Window_Driver::create_gl_context(Fl_Window* window, cons
   if (context_list && nContext) shared_ctx = context_list[0];
 
   static const EGLint context_attribs[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
-  GLContext ctx = (GLContext)eglCreateContext(egl_display, egl_conf, shared_ctx?shared_ctx:EGL_NO_CONTEXT, context_attribs);
+  GLContext ctx = (GLContext)eglCreateContext(egl_display, ((Fl_Wayland_Gl_Choice*)g)->egl_conf, shared_ctx?shared_ctx:EGL_NO_CONTEXT, context_attribs);
 //fprintf(stderr, "eglCreateContext=%p shared_ctx=%p\n", ctx, shared_ctx);
   if (ctx)
     add_context(ctx);
@@ -240,7 +247,11 @@ Fl_Gl_Window_Driver *Fl_Gl_Window_Driver::newGlWindowDriver(Fl_Gl_Window *w)
 }
 
 
-void Fl_Wayland_Gl_Window_Driver::make_current_before() {
+void Fl_Wayland_Gl_Window_Driver::before_show(int& need_after) {
+  need_after = 1;
+}
+
+void Fl_Wayland_Gl_Window_Driver::after_show() {
   if (!egl_window) {
     struct wld_window *win = fl_xid(pWindow);
     struct wl_surface *surface = win->wl_surface;
@@ -251,7 +262,8 @@ void Fl_Wayland_Gl_Window_Driver::make_current_before() {
     } else {
       //fprintf(stderr, "Created egl window=%p\n", egl_window);
     }
-    egl_surface = eglCreateWindowSurface(egl_display, egl_conf, egl_window, NULL);
+    Fl_Wayland_Gl_Choice *g = (Fl_Wayland_Gl_Choice*)this->g();
+    egl_surface = eglCreateWindowSurface(egl_display, g->egl_conf, egl_window, NULL);
 fprintf(stderr, "Created egl surface=%p at scale=%d\n", egl_surface, win->scale);
     wl_surface_set_buffer_scale(surface, win->scale);
     wl_surface_commit(surface);
@@ -268,8 +280,7 @@ float Fl_Wayland_Gl_Window_Driver::pixels_per_unit()
 
 
 int Fl_Wayland_Gl_Window_Driver::mode_(int m, const int *a) {
-  // TODO
-  //mode(m);
+  mode(m | FL_DOUBLE);
   return 1;
 }
 
@@ -372,10 +383,6 @@ char Fl_Wayland_Gl_Window_Driver::swap_type() {
 }
 
 void Fl_Wayland_Gl_Window_Driver::waitGL() {
-}
-
-
-void Fl_Wayland_Gl_Window_Driver::gl_visual(Fl_Gl_Choice *c) {
 }
 
 void Fl_Wayland_Gl_Window_Driver::gl_start() {
