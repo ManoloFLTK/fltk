@@ -167,6 +167,10 @@ Fl_Gl_Choice *Fl_Wayland_Gl_Window_Driver::find(int m, const int *alistp)
   
   static EGLConfig *configs = (void**)calloc(configs_count, sizeof(EGLConfig));
   eglChooseConfig(egl_display, config_attribs, configs, configs_count, &n);
+  if (n == 0 && (m & FL_MULTISAMPLE)) {
+    config_attribs[13] = 0;
+    eglChooseConfig(egl_display, config_attribs, configs, configs_count, &n);
+  }
   if (n == 0) {
     fprintf(stderr, "failed to choose an EGL config\n");
     exit(1);
