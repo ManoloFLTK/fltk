@@ -42,8 +42,7 @@ private:
 protected:
   Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win);
   virtual float pixels_per_unit();
-  void before_show(int& need_after);
-  virtual void after_show();
+  virtual void make_current_before();
   virtual int mode_(int m, const int *a);
   virtual void swap_buffers();
   virtual void resize(int is_a_resize, int w, int h);
@@ -251,11 +250,7 @@ Fl_Gl_Window_Driver *Fl_Gl_Window_Driver::newGlWindowDriver(Fl_Gl_Window *w)
 }
 
 
-void Fl_Wayland_Gl_Window_Driver::before_show(int& need_after) {
-  need_after = 1;
-}
-
-void Fl_Wayland_Gl_Window_Driver::after_show() {
+void Fl_Wayland_Gl_Window_Driver::make_current_before() {
   if (!egl_window) {
     struct wld_window *win = fl_xid(pWindow);
     struct wl_surface *surface = win->wl_surface;
