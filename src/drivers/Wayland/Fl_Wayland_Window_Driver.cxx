@@ -750,8 +750,14 @@ fprintf(stderr, "Running the Weston composer\n");
  "There is no way to know if the surface is currently minimized, nor is there any way to
  unset minimization on this surface. If you are looking to throttle redrawing when minimized,
  please instead use the wl_surface.frame event" */
-  if (window_state == LIBDECOR_WINDOW_STATE_NONE) Fl::handle(FL_UNFOCUS, window->fl_win);
-  else if (window_state == LIBDECOR_WINDOW_STATE_ACTIVE) Fl::handle(FL_FOCUS, window->fl_win);
+  if (window_state == LIBDECOR_WINDOW_STATE_NONE) {
+    if (Fl_Wayland_Window_Driver::using_weston) libdecor_frame_set_visibility(window->frame, false);
+    Fl::handle(FL_UNFOCUS, window->fl_win);
+  }
+  else if (window_state == LIBDECOR_WINDOW_STATE_ACTIVE) {
+    if (!libdecor_frame_is_visible(window->frame)) libdecor_frame_set_visibility(window->frame, true);
+    Fl::handle(FL_FOCUS, window->fl_win);
+  }
 
   state = libdecor_state_new(width, height);
   libdecor_frame_commit(frame, state, configuration);
