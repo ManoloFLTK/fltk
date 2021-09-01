@@ -39,6 +39,7 @@ class Fl_Wayland_Gl_Window_Driver : public Fl_Gl_Window_Driver {
   friend class Fl_Gl_Window_Driver;
 private:
   bool busy;
+  int count_swaps; // count calls to eglSwapBuffers(). Useful only for Weston and top-level GL windows.
 protected:
   Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win);
   virtual float pixels_per_unit();
@@ -85,6 +86,7 @@ Fl_Wayland_Gl_Window_Driver::Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win) : Fl
   egl_window = NULL;
   egl_surface = NULL;
   busy = false;
+  count_swaps = 0;
 }
 
 
@@ -104,7 +106,7 @@ void Fl_Wayland_Gl_Window_Driver::init() {
     fprintf(stderr, "Can't initialise egl display\n");
     exit(1);
   }
-  printf("EGL major: %d, minor %d\n", major, minor);
+  //printf("EGL major: %d, minor %d\n", major, minor);
   
   eglGetConfigs(egl_display, NULL, 0, &configs_count);
   printf("EGL has %d configs\n", configs_count);
@@ -147,7 +149,7 @@ Fl_Gl_Choice *Fl_Wayland_Gl_Window_Driver::find(int m, const int *alistp)
   Fl_Wayland_Gl_Choice *g = (Fl_Wayland_Gl_Choice*)Fl_Gl_Window_Driver::find_begin(m, alistp);
   if (g) return g;
   
-  EGLint n, size;
+  EGLint n;
   EGLint config_attribs[] = {
     EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
     EGL_RED_SIZE, 8,
@@ -176,7 +178,8 @@ Fl_Gl_Choice *Fl_Wayland_Gl_Window_Driver::find(int m, const int *alistp)
   }
   
   g = new Fl_Wayland_Gl_Choice(m, alistp, first);
-  for (int i = 0; i < n; i++) {
+  /*for (int i = 0; i < n; i++) {
+    EGLint size;
     eglGetConfigAttrib(egl_display, configs[i], EGL_BUFFER_SIZE, &size);
     printf("Buffer size for config %d is %d\n", i, size);
     eglGetConfigAttrib(egl_display, configs[i], EGL_RED_SIZE, &size);
@@ -184,7 +187,9 @@ Fl_Gl_Choice *Fl_Wayland_Gl_Window_Driver::find(int m, const int *alistp)
     // just choose the first one
     g->egl_conf = configs[i];
     break;
-  }
+  }*/
+  // just choose the first config
+  g->egl_conf = configs[0];
   first = g;
   return g;
 }
@@ -327,7 +332,8 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
   }
 
   if (egl_surface) {
-    if ( !pWindow->parent() ) {
+    count_swaps++;
+    if ( Fl_Wayland_Window_Driver::using_weston && count_swaps <= 3 ? false : !pWindow->parent()) {
      eglSwapInterval(egl_display, 1);
     } else {
       eglSwapInterval(egl_display, 0);
