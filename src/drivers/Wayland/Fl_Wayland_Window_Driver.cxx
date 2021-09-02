@@ -680,6 +680,13 @@ bool Fl_Wayland_Window_Driver::in_handle_configure = false;
 bool Fl_Wayland_Window_Driver::using_weston = false;
 static bool weston_was_configured = false;
 
+extern "C" {
+// need add -rdynamic in LDFLAGS so it's visible by dlsym()
+  bool fl_libdecor_using_weston(void) {
+    return Fl_Wayland_Window_Driver::using_weston;
+  };
+}
+
 static void handle_configure(struct libdecor_frame *frame,
      struct libdecor_configuration *configuration, void *user_data)
 {
@@ -751,7 +758,6 @@ fprintf(stderr, "Running the Weston composer\n");
  unset minimization on this surface. If you are looking to throttle redrawing when minimized,
  please instead use the wl_surface.frame event" */
   if (window_state == LIBDECOR_WINDOW_STATE_NONE) {
-    if (Fl_Wayland_Window_Driver::using_weston) libdecor_frame_set_visibility(window->frame, false);
     Fl::handle(FL_UNFOCUS, window->fl_win);
   }
   else if (window_state == LIBDECOR_WINDOW_STATE_ACTIVE) {
