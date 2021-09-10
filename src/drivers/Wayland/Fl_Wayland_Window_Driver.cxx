@@ -37,6 +37,7 @@ extern "C" {
   uchar *fl_libdecor_cairo_titlebar_buffer(struct libdecor_frame *frame, int *w, int *h, int *stride);
   bool libdecor_configuration_get_window_size(struct libdecor_configuration *configuration,
                int *width, int *height);
+  bool fl_libdecor_using_ssd(struct libdecor_frame *frame);
 }
 
 #define fl_max(a,b) ((a) > (b) ? (a) : (b))
@@ -359,6 +360,28 @@ void Fl_Wayland_Window_Driver::make_current() {
   if (Fl::cairo_autolink_context()) Fl::cairo_make_current(pWindow);
 #endif
 }
+
+/*
+// attempt to use frame callbacks for KDE
+static void surface_frame_done(void *data, struct wl_callback *cb, uint32_t time) {
+  wl_callback_destroy(cb);
+  *(bool*)data = false;
+}
+
+static const struct wl_callback_listener surface_frame_listener = {
+  .done = surface_frame_done,
+};
+
+static void commit_when_possible(Window xid) {
+      struct wl_surface *surf = xid->wl_surface;
+      Fl_Wayland_Graphics_Driver::buffer_commit(xid);
+      struct wl_callback *callback = wl_surface_frame(surf);
+      xid->busy = true;
+//fprintf(stderr, "busy(%p)=true\n",xid);
+      wl_callback_add_listener(callback, &surface_frame_listener, &xid->busy);
+      while (xid->busy) wl_display_dispatch(fl_display); // wait for arrival of frame event
+//fprintf(stderr, "busy(%p)=false\n",xid);
+}*/
 
 
 void Fl_Wayland_Window_Driver::flush() {
@@ -706,14 +729,18 @@ static void handle_configure(struct libdecor_frame *frame,
   if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
     width = 0;
     height = 0;
-    if (!weston_was_configured && window_state != LIBDECOR_WINDOW_STATE_NONE) { // characterizes Weston
-// Weston, on purpose, doesn't set the window width x height when xdg_toplevel_configure runs twice
+    if (!weston_was_configured && window_state != LIBDECOR_WINDOW_STATE_NONE) {
+// Weston and KDE, on purpose, don't set the window width x height when xdg_toplevel_configure runs twice
 // during window creation (see https://gitlab.freedesktop.org/wayland/wayland-protocols/-/issues/6).
 // Consequently, libdecor_configuration_get_content_size() returns false twice.
 // In contrast, Gnome sets the window width x height at the 2nd xdg_toplevel_configure run.
       weston_was_configured = true;
-      Fl_Wayland_Window_Driver::using_weston = true;
-fprintf(stderr, "Running the Weston composer\n");
+      if (fl_libdecor_using_ssd(frame)) {
+        fprintf(stderr, "Using SSD\n");
+      } else {
+        Fl_Wayland_Window_Driver::using_weston = true;
+        fprintf(stderr, "Running the Weston composer\n");
+      }
     }
     if (Fl_Wayland_Window_Driver::using_weston && window_state != LIBDECOR_WINDOW_STATE_NONE) driver->wait_for_expose_value = 0;
   } else {
@@ -725,7 +752,10 @@ fprintf(stderr, "Running the Weston composer\n");
 
   int tmp;
   static int titlebar_height = 0;
-  if (libdecor_configuration_get_window_size(configuration, &tmp, &window->decorated_height) ) {
+  if (fl_libdecor_using_ssd(frame) && height == 0) {
+    driver->wait_for_expose_value = 0;
+    window->decorated_height = window->floating_height;
+  } else if ( libdecor_configuration_get_window_size(configuration, &tmp, &window->decorated_height) ) {
     driver->wait_for_expose_value = 0;
     if (!titlebar_height) titlebar_height = window->decorated_height - height;
 //    fprintf(stderr, "decorated size=%dx%d ", tmp, window->decorated_height);
@@ -1165,7 +1195,8 @@ void Fl_Wayland_Window_Driver::use_border() {
   if (!shown() || pWindow->parent()) return;
   struct libdecor_frame *frame = fl_xid(pWindow)->frame;
   if (frame) {
+    if (fl_libdecor_using_ssd(frame)) return Fl_Window_Driver::use_border();
     libdecor_frame_set_visibility(frame, pWindow->border());
     pWindow->redraw();
-  }
+  } else Fl_Window_Driver::use_border();
 }

@@ -32,6 +32,10 @@
 
 extern unsigned fl_cmap[256]; // defined in fl_color.cxx
 
+extern "C" {
+  bool fl_libdecor_using_ssd(struct libdecor_frame *frame);
+}
+
 
 static int create_anonymous_file(off_t size)
 {
@@ -112,7 +116,8 @@ void Fl_Wayland_Graphics_Driver::buffer_commit(struct wld_window *window) {
   wl_surface_set_buffer_scale(window->wl_surface, window->scale);
   wl_surface_commit(window->wl_surface);
   window->buffer->draw_buffer_needs_commit = false;
-  window->buffer->wl_buffer_ready = false;
+  if (!fl_libdecor_using_ssd(window->frame)) window->buffer->wl_buffer_ready = false;
+//fprintf(stderr,"buffer_commit %s\n", window->fl_win->parent()?"child":"top");
 }
 
 
