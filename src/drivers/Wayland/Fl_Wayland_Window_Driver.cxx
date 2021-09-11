@@ -877,6 +877,7 @@ static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel
   // runs for borderless top-level windows
   struct wld_window *window = (struct wld_window*)data;
 //fprintf(stderr, "xdg_toplevel_configure: surface=%p size: %dx%d\n", window->wl_surface, width, height);
+  if (window->configured_width) Fl_Window_Driver::driver(window->fl_win)->wait_for_expose_value = 0;
   if (width == 0 || height == 0) {
     width = window->fl_win->w();
     height = window->fl_win->h();
