@@ -854,7 +854,6 @@ static void xdg_surface_configure(void *data, struct xdg_surface *xdg_surface, u
   struct wld_window *window = (struct wld_window*)data;
   xdg_surface_ack_configure(xdg_surface, serial);
 //fprintf(stderr, "xdg_surface_configure: surface=%p\n", window->wl_surface);
-  Fl_Window_Driver::driver(window->fl_win)->wait_for_expose_value = 0;
   
   if (window->fl_win->w() != window->configured_width || window->fl_win->h() != window->configured_height) {
     if (window->buffer) {
@@ -902,6 +901,8 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener = {
 
 
 static void popup_configure(void *data, struct xdg_popup *xdg_popup, int32_t x, int32_t y, int32_t width, int32_t height) {
+  struct wld_window *window = (struct wld_window*)data;
+  Fl_Window_Driver::driver(window->fl_win)->wait_for_expose_value = 0;
 }
 
 static void popup_done(void *data, struct xdg_popup *xdg_popup) {
