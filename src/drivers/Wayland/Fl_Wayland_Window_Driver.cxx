@@ -752,8 +752,10 @@ static void handle_configure(struct libdecor_frame *frame,
 
   int tmp;
   static int titlebar_height = 0;
+// under KDE, libdecor_configuration_get_window_size() always returns false,
+// and we set the titlebar height to 0
   if (fl_libdecor_using_ssd(frame) && height == 0) {
-    driver->wait_for_expose_value = 0;
+    if (window->configured_width) driver->wait_for_expose_value = 0;
     window->decorated_height = window->floating_height;
   } else if ( libdecor_configuration_get_window_size(configuration, &tmp, &window->decorated_height) ) {
     driver->wait_for_expose_value = 0;

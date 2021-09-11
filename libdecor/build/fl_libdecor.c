@@ -19,5 +19,10 @@ LIBDECOR_EXPORT void libdecor_frame_set_minimized(struct libdecor_frame *frame)
 
 bool fl_libdecor_using_ssd(struct libdecor_frame *frame)
 {
-  return frame ? (frame->priv->decoration_mode == ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE) : false;
+  static bool retval = true /*important*/, done = false;
+  if (!done && frame) {
+    done = true;
+    retval = (frame->priv->decoration_mode == ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+  }
+  return retval;
 }
