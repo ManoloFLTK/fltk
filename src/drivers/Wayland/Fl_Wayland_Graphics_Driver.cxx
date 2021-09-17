@@ -93,7 +93,7 @@ struct buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int heig
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   struct wl_shm_pool *pool = wl_shm_create_pool(scr_driver->wl_shm, fd, size);
   buffer->wl_buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride, format);
-  if (window) wl_buffer_add_listener(buffer->wl_buffer, &buffer_listener, window);
+  if (window && !fl_libdecor_using_ssd(window->frame)) wl_buffer_add_listener(buffer->wl_buffer, &buffer_listener, window);
   wl_shm_pool_destroy(pool);
   close(fd);
   buffer->data = data;

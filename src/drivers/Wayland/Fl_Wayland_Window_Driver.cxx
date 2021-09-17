@@ -328,6 +328,26 @@ void Fl_Wayland_Window_Driver::capture_titlebar_and_borders(Fl_RGB_Image*& top, 
   top->scale(pWindow->w(), htop);
 }
 
+// used only with SSD
+static void surface_frame_done(void *data, struct wl_callback *cb, uint32_t time);
+
+static const struct wl_callback_listener surface_frame_listener = {
+  .done = surface_frame_done,
+};
+
+static void surface_frame_done(void *data, struct wl_callback *cb, uint32_t time) {
+  Window window = (Window)data;
+//fprintf(stderr,"surface_frame_done:  destroy cb=%p draw_buffer_needs_commit=%d\n", cb, window->buffer->draw_buffer_needs_commit);
+  wl_callback_destroy(cb);
+  window->buffer->cb = NULL;
+  if (window->buffer->draw_buffer_needs_commit) {
+    window->buffer->cb = wl_surface_frame(window->wl_surface);
+//fprintf(stderr,"surface_frame_done: new cb=%p \n", window->buffer->cb);
+    wl_callback_add_listener(window->buffer->cb, &surface_frame_listener, window);
+    Fl_Wayland_Graphics_Driver::buffer_commit(window);
+  }
+}
+
 
 // make drawing go into this window (called by subclass flush() impl.)
 void Fl_Wayland_Window_Driver::make_current() {
@@ -343,6 +363,13 @@ void Fl_Wayland_Window_Driver::make_current() {
     if (!window->buffer->draw_buffer_needs_commit) {
       wl_surface_damage_buffer(window->wl_surface, 0, 0, pWindow->w() * window->scale, pWindow->h() * window->scale);
 //fprintf(stderr, "direct make_current calls damage_buffer\n");
+    } else if (fl_libdecor_using_ssd(window->frame)) {
+      if (!window->buffer->cb) {
+        window->buffer->cb = wl_surface_frame(window->wl_surface);
+//fprintf(stderr, "direct make_current: new cb=%p\n", window->buffer->cb);
+        wl_callback_add_listener(window->buffer->cb, &surface_frame_listener, window);
+        Fl_Wayland_Graphics_Driver::buffer_commit(window);
+      }
     } else if (window->buffer->wl_buffer_ready) {
 //fprintf(stderr, "direct make_current calls buffer_commit\n");
       Fl_Wayland_Graphics_Driver::buffer_commit(window);
@@ -360,28 +387,6 @@ void Fl_Wayland_Window_Driver::make_current() {
   if (Fl::cairo_autolink_context()) Fl::cairo_make_current(pWindow);
 #endif
 }
-
-/*
-// attempt to use frame callbacks for KDE
-static void surface_frame_done(void *data, struct wl_callback *cb, uint32_t time) {
-  wl_callback_destroy(cb);
-  *(bool*)data = false;
-}
-
-static const struct wl_callback_listener surface_frame_listener = {
-  .done = surface_frame_done,
-};
-
-static void commit_when_possible(Window xid) {
-      struct wl_surface *surf = xid->wl_surface;
-      Fl_Wayland_Graphics_Driver::buffer_commit(xid);
-      struct wl_callback *callback = wl_surface_frame(surf);
-      xid->busy = true;
-//fprintf(stderr, "busy(%p)=true\n",xid);
-      wl_callback_add_listener(callback, &surface_frame_listener, &xid->busy);
-      while (xid->busy) wl_display_dispatch(fl_display); // wait for arrival of frame event
-//fprintf(stderr, "busy(%p)=false\n",xid);
-}*/
 
 
 void Fl_Wayland_Window_Driver::flush() {
