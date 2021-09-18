@@ -928,8 +928,12 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
         xdg_surface_set_window_geometry(fl_win->xdg_surface, 0, 0, W, H);
       }
     } else {
-      //XMoveWindow(fl_display, fl_xid(pWindow), rint(X*s), rint(Y*s));
-      // Wayland doesn't seem to provide a reliable way for the app to set the window position on screen
+     if (!in_handle_configure && fl_win->xdg_toplevel) {
+      // Wayland doesn't seem to provide a reliable way for the app to set the window position on screen.
+      // This is functional when the move is mouse-driven.
+      Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+      xdg_toplevel_move(fl_win->xdg_toplevel, scr_driver->seat->wl_seat, scr_driver->seat->serial);
+      }
     }
   }
 }
