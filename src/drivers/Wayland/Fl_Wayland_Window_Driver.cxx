@@ -706,7 +706,7 @@ static struct wl_surface_listener surface_listener = {
 
 bool Fl_Wayland_Window_Driver::in_handle_configure = false;
 bool Fl_Wayland_Window_Driver::using_weston = false;
-static bool weston_was_configured = false;
+static bool compositor_was_identified = false;
 
 extern "C" {
 // need add -rdynamic in LDFLAGS so it's visible by dlsym()
@@ -734,12 +734,12 @@ static void handle_configure(struct libdecor_frame *frame,
   if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
     width = 0;
     height = 0;
-    if (!weston_was_configured && window_state != LIBDECOR_WINDOW_STATE_NONE) {
+    if (!compositor_was_identified && window_state != LIBDECOR_WINDOW_STATE_NONE) {
 // Weston and KDE, on purpose, don't set the window width x height when xdg_toplevel_configure runs twice
 // during window creation (see https://gitlab.freedesktop.org/wayland/wayland-protocols/-/issues/6).
 // Consequently, libdecor_configuration_get_content_size() returns false twice.
 // In contrast, Gnome sets the window width x height at the 2nd xdg_toplevel_configure run.
-      weston_was_configured = true;
+      compositor_was_identified = true;
       if (fl_libdecor_using_ssd(frame)) {
         fprintf(stderr, "Using SSD\n");
       } else {
@@ -749,7 +749,7 @@ static void handle_configure(struct libdecor_frame *frame,
     }
     if (Fl_Wayland_Window_Driver::using_weston && window_state != LIBDECOR_WINDOW_STATE_NONE) driver->wait_for_expose_value = 0;
   } else {
-    if (!weston_was_configured) weston_was_configured = true;
+    if (!compositor_was_identified) compositor_was_identified = true;
     if (driver->size_range_set()) {
       if (width < driver->minw() || height < driver->minh()) return;
     }
