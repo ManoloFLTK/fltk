@@ -170,8 +170,6 @@ public:
 //char  *get_seat_name();
   struct xkb_keymap *get_xkb_keymap();
   static bool own_output(struct wl_output *output);
-  //static bool using_weston; // true means the Weston composer is used
-  //static bool using_kde; // true means the KDE composer is used
   typedef enum {MUTTER, WESTON, KDE} compositor_name;
   static compositor_name compositor; // identifies the used Wayland compositor
 };

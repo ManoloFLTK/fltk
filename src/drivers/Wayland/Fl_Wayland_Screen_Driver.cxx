@@ -40,7 +40,7 @@ extern "C" {
   bool libdecor_get_cursor_settings(char **theme, int *size);
 }
 
-Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::MUTTER;
+Fl_Wayland_Screen_Driver::compositor_name Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::MUTTER;
 
 #define fl_max(a,b) ((a) > (b) ? (a) : (b))
 
@@ -887,10 +887,10 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
       xdg_wm_base_add_listener(scr_driver->xdg_wm_base, &xdg_wm_base_listener, NULL);
   } else if (strcmp(interface, "weston_desktop_shell") == 0) {
     Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::WESTON;
-    fprintf(stderr, "Running the Weston composer\n");
+    fprintf(stderr, "Running the Weston compositor\n");
   } else if (strcmp(interface, "org_kde_plasma_shell") == 0) {
     Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::KDE;
-    fprintf(stderr, "Running the KDE composer\n");
+    fprintf(stderr, "Running the KDE compositor\n");
   }
 }
 

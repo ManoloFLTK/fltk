@@ -43,7 +43,7 @@ xdg-decoration-protocol.o : xdg-decoration-protocol.c
 xdg-shell-protocol.o : xdg-shell-protocol.c
 	$(CC) $(CFLAGS) -c xdg-shell-protocol.c
 	
-#this shared lib is used by Wayland client programs and also as a plugin (for the Wayland composer ?)
+#this shared lib is used by Wayland client programs and also as a plugin (for the Wayland compositor ?)
 ../../lib/libdecor-0.1.so : fl_libdecor.o libdecor-cairo-blur.o fl_libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
 		xdg-shell-protocol.o cursor-settings.o
 	$(CC) -shared  fl_libdecor.o libdecor-cairo-blur.o fl_libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
