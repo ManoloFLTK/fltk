@@ -1134,20 +1134,3 @@ static int unused = prepare_print_button();
 #endif // USE_PRINT_BUTTON
 
 #endif // !defined(FL_DOXYGEN)
-
-/* code to use a wl_callback object :
- 
-static void sync_with_composer(void *data, struct wl_callback *wl_callback, uint32_t callback_data) {
-  *(bool*)data = true;
-}
-
-struct wl_callback_listener sync_listener = {
-  sync_with_composer
-};
-
-struct wl_callback *cb = wl_display_sync(fl_display);
-static bool done = false;
-wl_callback_add_listener(cb, &sync_listener, &done);
-while (!done) wl_display_dispatch(fl_display);
-
-*/
