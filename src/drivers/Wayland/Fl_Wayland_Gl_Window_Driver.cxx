@@ -333,7 +333,8 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
 
   if (egl_surface) {
     count_swaps++;
-    if ( Fl_Wayland_Window_Driver::using_weston && count_swaps <= 3 ? false : !pWindow->parent()) {
+    if ( Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON && count_swaps >= 2 && count_swaps <= 3 ?
+        false : !pWindow->parent() ) {
      eglSwapInterval(egl_display, 1);
     } else {
       eglSwapInterval(egl_display, 0);
@@ -373,7 +374,7 @@ static Fl_Gl_Overlay_Plugin Gl_Overlay_Plugin;
 
 void Fl_Wayland_Gl_Window_Driver::resize(int is_a_resize, int W, int H) {
   if (egl_window) {
-    if (!Fl_Wayland_Window_Driver::using_weston || !pWindow->parent() || !busy || !Fl_Wayland_Window_Driver::in_handle_configure) {
+    if (Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::WESTON || !pWindow->parent() || !busy || !Fl_Wayland_Window_Driver::in_handle_configure) {
       while (busy) wl_display_dispatch(fl_display);
     }
     struct wld_window *win = fl_xid(pWindow);

@@ -32,10 +32,6 @@
 
 extern unsigned fl_cmap[256]; // defined in fl_color.cxx
 
-extern "C" {
-  bool fl_libdecor_using_ssd(struct libdecor_frame *frame);
-}
-
 
 static int create_anonymous_file(off_t size)
 {
@@ -93,7 +89,7 @@ struct buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int heig
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   struct wl_shm_pool *pool = wl_shm_create_pool(scr_driver->wl_shm, fd, size);
   buffer->wl_buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride, format);
-  if (window && !fl_libdecor_using_ssd(window->frame)) wl_buffer_add_listener(buffer->wl_buffer, &buffer_listener, window);
+  if (window && Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::KDE) wl_buffer_add_listener(buffer->wl_buffer, &buffer_listener, window);
   wl_shm_pool_destroy(pool);
   close(fd);
   buffer->data = data;
@@ -116,7 +112,7 @@ void Fl_Wayland_Graphics_Driver::buffer_commit(struct wld_window *window) {
   wl_surface_set_buffer_scale(window->wl_surface, window->scale);
   wl_surface_commit(window->wl_surface);
   window->buffer->draw_buffer_needs_commit = false;
-  if (!fl_libdecor_using_ssd(window->frame)) window->buffer->wl_buffer_ready = false;
+  if (Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::KDE) window->buffer->wl_buffer_ready = false;
 //fprintf(stderr,"buffer_commit %s\n", window->fl_win->parent()?"child":"top");
 }
 

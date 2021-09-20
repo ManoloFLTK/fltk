@@ -76,7 +76,6 @@ private:
   static bool in_flush; // useful for progressive window drawing
 public:
   static bool in_handle_configure; // distinguish OS and user window resize
-  static bool using_weston; // true means the Weston composer is used
   struct window_output {
     Fl_Wayland_Screen_Driver::output* output;
     struct wl_list link;

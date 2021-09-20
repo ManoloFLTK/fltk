@@ -37,7 +37,6 @@ extern "C" {
   uchar *fl_libdecor_cairo_titlebar_buffer(struct libdecor_frame *frame, int *w, int *h, int *stride);
   bool libdecor_configuration_get_window_size(struct libdecor_configuration *configuration,
                int *width, int *height);
-  bool fl_libdecor_using_ssd(struct libdecor_frame *frame);
 }
 
 #define fl_max(a,b) ((a) > (b) ? (a) : (b))
@@ -363,7 +362,7 @@ void Fl_Wayland_Window_Driver::make_current() {
     if (!window->buffer->draw_buffer_needs_commit) {
       wl_surface_damage_buffer(window->wl_surface, 0, 0, pWindow->w() * window->scale, pWindow->h() * window->scale);
 //fprintf(stderr, "direct make_current calls damage_buffer\n");
-    } else if (fl_libdecor_using_ssd(window->frame)) {
+    } else if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KDE) {
       if (!window->buffer->cb) {
         window->buffer->cb = wl_surface_frame(window->wl_surface);
 //fprintf(stderr, "direct make_current: new cb=%p\n", window->buffer->cb);
@@ -705,13 +704,11 @@ static struct wl_surface_listener surface_listener = {
 };
 
 bool Fl_Wayland_Window_Driver::in_handle_configure = false;
-bool Fl_Wayland_Window_Driver::using_weston = false;
-static bool compositor_was_identified = false;
 
 extern "C" {
 // need add -rdynamic in LDFLAGS so it's visible by dlsym()
   bool fl_libdecor_using_weston(void) {
-    return Fl_Wayland_Window_Driver::using_weston;
+    return Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON;
   };
 }
 
@@ -731,25 +728,15 @@ static void handle_configure(struct libdecor_frame *frame,
   if (!libdecor_configuration_get_window_state(configuration, &window_state))
     window_state = LIBDECOR_WINDOW_STATE_NONE;
 
+  // Weston and KDE, on purpose, don't set the window width x height when xdg_toplevel_configure runs twice
+  // during window creation (see https://gitlab.freedesktop.org/wayland/wayland-protocols/-/issues/6).
+  // Consequently, libdecor_configuration_get_content_size() returns false twice.
+  // In contrast, Gnome sets the window width x height at the 2nd xdg_toplevel_configure run.
   if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
     width = 0;
     height = 0;
-    if (!compositor_was_identified && window_state != LIBDECOR_WINDOW_STATE_NONE) {
-// Weston and KDE, on purpose, don't set the window width x height when xdg_toplevel_configure runs twice
-// during window creation (see https://gitlab.freedesktop.org/wayland/wayland-protocols/-/issues/6).
-// Consequently, libdecor_configuration_get_content_size() returns false twice.
-// In contrast, Gnome sets the window width x height at the 2nd xdg_toplevel_configure run.
-      compositor_was_identified = true;
-      if (fl_libdecor_using_ssd(frame)) {
-        fprintf(stderr, "Using SSD\n");
-      } else {
-        Fl_Wayland_Window_Driver::using_weston = true;
-        fprintf(stderr, "Running the Weston composer\n");
-      }
-    }
-    if (Fl_Wayland_Window_Driver::using_weston && window_state != LIBDECOR_WINDOW_STATE_NONE) driver->wait_for_expose_value = 0;
+    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON && window_state != LIBDECOR_WINDOW_STATE_NONE) driver->wait_for_expose_value = 0;
   } else {
-    if (!compositor_was_identified) compositor_was_identified = true;
     if (driver->size_range_set()) {
       if (width < driver->minw() || height < driver->minh()) return;
     }
@@ -759,7 +746,7 @@ static void handle_configure(struct libdecor_frame *frame,
   static int titlebar_height = 0;
 // under KDE, libdecor_configuration_get_window_size() always returns false,
 // and we set the titlebar height to 0
-  if (fl_libdecor_using_ssd(frame) && height == 0) {
+  if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KDE && height == 0) {
     if (window->configured_width) driver->wait_for_expose_value = 0;
     window->decorated_height = window->floating_height;
   } else if ( libdecor_configuration_get_window_size(configuration, &tmp, &window->decorated_height) ) {
@@ -1204,7 +1191,7 @@ void Fl_Wayland_Window_Driver::use_border() {
   if (!shown() || pWindow->parent()) return;
   struct libdecor_frame *frame = fl_xid(pWindow)->frame;
   if (frame) {
-    if (fl_libdecor_using_ssd(frame)) return Fl_Window_Driver::use_border();
+    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KDE) return Fl_Window_Driver::use_border();
     libdecor_frame_set_visibility(frame, pWindow->border());
     pWindow->redraw();
   } else Fl_Window_Driver::use_border();
