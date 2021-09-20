@@ -735,7 +735,9 @@ static void handle_configure(struct libdecor_frame *frame,
   if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
     width = 0;
     height = 0;
-    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON && window_state != LIBDECOR_WINDOW_STATE_NONE) driver->wait_for_expose_value = 0;
+    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON) {
+      driver->wait_for_expose_value = 0;
+    }
   } else {
     if (driver->size_range_set()) {
       if (width < driver->minw() || height < driver->minh()) return;
