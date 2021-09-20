@@ -39,7 +39,6 @@ class Fl_Wayland_Gl_Window_Driver : public Fl_Gl_Window_Driver {
   friend class Fl_Gl_Window_Driver;
 private:
   bool busy;
-  int count_swaps; // count calls to eglSwapBuffers(). Useful only for Weston and top-level GL windows.
 protected:
   Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win);
   virtual float pixels_per_unit();
@@ -86,7 +85,6 @@ Fl_Wayland_Gl_Window_Driver::Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win) : Fl
   egl_window = NULL;
   egl_surface = NULL;
   busy = false;
-  count_swaps = 0;
 }
 
 
@@ -332,9 +330,7 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
   }
 
   if (egl_surface) {
-    count_swaps++;
-    if ( Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON && count_swaps >= 2 && count_swaps <= 3 ?
-        false : !pWindow->parent() ) {
+    if ( !pWindow->parent() ) {
      eglSwapInterval(egl_display, 1);
     } else {
       eglSwapInterval(egl_display, 0);
