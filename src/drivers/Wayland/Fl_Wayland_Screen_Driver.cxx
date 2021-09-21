@@ -40,7 +40,6 @@ extern "C" {
   bool libdecor_get_cursor_settings(char **theme, int *size);
 }
 
-Fl_Wayland_Screen_Driver::compositor_name Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::MUTTER;
 
 #define fl_max(a,b) ((a) > (b) ? (a) : (b))
 
@@ -48,6 +47,56 @@ struct pointer_output {
   Fl_Wayland_Screen_Driver::output* output;
   struct wl_list link;
 };
+
+/* Implementation note about support of 3 Wayland compositors: Mutter, Weston, KDE.
+ 
+- About CSD and SSD :
+ * Mutter and Weston use CSD (client-side decoration) which means that libdecor.so draws all window
+ titlebars and responds to resize, minimization and maximization events.
+ * KDE uses SSD (server-side decoration) which means the OS draws titlebars according to its own rules
+ and triggers resize, minimization and maximization events.
+ 
+- Function registry_handle_global() runs early after fl_open_display() and sets public static variable
+ Fl_Wayland_Screen_Driver::compositor to either Fl_Wayland_Screen_Driver::MUTTER, ::WESTON, or ::KDE.
+ 
+- Specific operations for WESTON:
+ * When a libdecor-framed window is minimized under Weston, the frame remains on display. To avoid
+ that, function libdecor_frame_set_minimized() is modified so it turns off the frame's visibility, with
+ function libdecor_frame_set_visibility(), when the window is minimized. That's implemented in file
+ libdecor/build/fl_libdecor.c. The modified libdecor_frame_set_minimized() function, part of libdecor.so,
+ needs access to variable Fl_Wayland_Screen_Driver::compositor, part of libfltk.a. This is achieved
+ calling dlsym() for FLTK function fl_libdecor_using_weston() which returns whteher the running compositor
+ is Weston. Noticeably, for a function in libfltk.a to be visible by dlsym() in libdecor.so,
+ it's necessary to add "-rdynamic" to LDFLAGS, the link command flags for FLTK executables.
+ * Weston calls handle_configure() only once if a framed window is created in inactive state (e.g.,
+ the second clock of test/clock). Thus, under Weston, the window's wait_for_expose_value is set to 0
+ by the first call to handle_configure(), whereas it's done at the 2nd handle_configure with other
+ compositors.
+ * There's also a difference in Fl_Wayland_Gl_Window_Driver::resize() under Weston.
+ 
+- Synchronization between drawing to buffer and committing buffer to screen.
+ Before committing a new graphics scene for display, Wayland requires to make sure the compositor is
+ ready for that. FLTK uses 2 different means for that, depending on the running compositor.
+ * Under Mutter and Weston:
+ FLTK attaches a wl_buffer_listener to each wl_buffer object, which the compositor runs when the buffer
+ becomes ready for commit. FLTK uses a very simple buffer listener function that turns TRUE a boolean
+ variable called wl_buffer_ready. Function Fl_Wayland_Window_Driver::flush() reads that variable
+ and commits the new drawing scene only when it's TRUE. Function Fl_Wayland_Window_Driver::make_current()
+ also consults wl_buffer_ready when it's called outside Fl::flush() and commits the drawing scene only
+ if wl_buffer_ready is TRUE. When a wl_buffer is committed, wl_buffer_ready is turned FALSE.
+ * Under KDE:
+ The above mechanism doesn't work with the KDE compositor because, for some unknown reason, it doesn't
+ call the buffer listener function. Thus, FLTK uses another synchronization means: frame callbacks.
+ At this point, a frame callback is created when an app calls Fl_Wayland_Window_Driver::make_current()
+ directly. This directs a callback listener function, called surface_frame_done, to be called by the
+ compositor when it's ready to commit a new graphics scene. This function schedules a new frame callback
+ and commits the buffer to the display.
+ 
+ - Support of Fl_Window::border(int) :
+ FLTK uses libdecor_frame_set_visibility() to show or hide a toplevel window's frame. This doesn't work
+ with KDE which uses Server-Side Decoration. In that case, FLTK hides and re-shows the window to toggle
+ between presence and absence of a window's frame.
+*/
 
 
 /* Implementation note about screen-related information
@@ -84,6 +133,8 @@ struct pointer_output {
    - surface_leave() removes the adequate record from the list
    - Fl_Wayland_Window_Driver::update_scale() sets the scale info of the records for a given window
  */
+
+Fl_Wayland_Screen_Driver::compositor_name Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::MUTTER;
 
 static void xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base, uint32_t serial)
 {
