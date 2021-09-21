@@ -56,7 +56,7 @@ struct pointer_output {
  * KDE uses SSD (server-side decoration) which means the OS draws titlebars according to its own rules
  and triggers resize, minimization and maximization events.
  
-- Function registry_handle_global() runs early after fl_open_display() and sets public static variable
+- Function registry_handle_global() runs within fl_open_display() and sets public static variable
  Fl_Wayland_Screen_Driver::compositor to either Fl_Wayland_Screen_Driver::MUTTER, ::WESTON, or ::KDE.
  
 - Specific operations for WESTON:
@@ -65,7 +65,7 @@ struct pointer_output {
  function libdecor_frame_set_visibility(), when the window is minimized. That's implemented in file
  libdecor/build/fl_libdecor.c. The modified libdecor_frame_set_minimized() function, part of libdecor.so,
  needs access to variable Fl_Wayland_Screen_Driver::compositor, part of libfltk.a. This is achieved
- calling dlsym() for FLTK function fl_libdecor_using_weston() which returns whteher the running compositor
+ calling dlsym() for FLTK function fl_libdecor_using_weston() which returns whether the running compositor
  is Weston. Noticeably, for a function in libfltk.a to be visible by dlsym() in libdecor.so,
  it's necessary to add "-rdynamic" to LDFLAGS, the link command flags for FLTK executables.
  * Weston calls handle_configure() only once if a framed window is created in inactive state (e.g.,
