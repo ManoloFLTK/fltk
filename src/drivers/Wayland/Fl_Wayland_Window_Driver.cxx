@@ -362,7 +362,8 @@ void Fl_Wayland_Window_Driver::make_current() {
     if (!window->buffer->draw_buffer_needs_commit) {
       wl_surface_damage_buffer(window->wl_surface, 0, 0, pWindow->w() * window->scale, pWindow->h() * window->scale);
 //fprintf(stderr, "direct make_current calls damage_buffer\n");
-    } else if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KDE) {
+    }
+    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KDE) {
       if (!window->buffer->cb) {
         window->buffer->cb = wl_surface_frame(window->wl_surface);
 //fprintf(stderr, "direct make_current: new cb=%p\n", window->buffer->cb);
