@@ -1014,7 +1014,6 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
       LIBS="$($PKGCONFIG --libs wayland-cursor) $($PKGCONFIG --libs wayland-client) $($PKGCONFIG --libs xkbcommon) $LIBS"
       CFLAGS="$CFLAGS -D__WAYLAND__"
       CXXFLAGS="$CXXFLAGS -D__WAYLAND__ -I../libdecor/src"
-      LDFLAGS="$LDFLAGS -rdynamic" # forces FLTK symbols to be visible by dlsym() in libdecor.so
       DSOFLAGS="$LIBS $DSOFLAGS"
       enable_pango=yes
       LIBDECORDIR="libdecor/build"

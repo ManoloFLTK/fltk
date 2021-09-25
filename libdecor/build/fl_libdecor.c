@@ -4,15 +4,15 @@
 
 #include <dlfcn.h>
 
-static bool using_weston() {
-	typedef bool (*using_f)();
-	using_f sym = (using_f)dlsym(NULL, "fl_libdecor_using_weston");
-//fprintf(stderr, "dlsym(fl_libdecor_using_weston)=%p result=%d\n", sym, sym?sym():2);
-	return sym ? sym() : false;
-}
-
 LIBDECOR_EXPORT void libdecor_frame_set_minimized(struct libdecor_frame *frame)
 {
-	if (using_weston()) libdecor_frame_set_visibility(frame, false);
-	libdecor_frame_set_minimized_orig(frame);
+  typedef bool (*using_f)();
+  static using_f sym = NULL;
+  static bool using_weston = false;
+  if (!sym) {
+    sym = (using_f)dlsym(NULL, "fl_libdecor_using_weston");
+    if (sym) using_weston = sym();
+  }
+  if (using_weston) libdecor_frame_set_visibility(frame, false);
+  libdecor_frame_set_minimized_orig(frame);
 }

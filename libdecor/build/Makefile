@@ -17,6 +17,9 @@ fl_libdecor.o : fl_libdecor.c ../src/libdecor.c xdg-shell-protocol.c xdg-decorat
 libdecor-fallback.o : ../src/libdecor-fallback.c
 	$(CC) $(CFLAGS) -c  ../src/libdecor-fallback.c
 
+fl_libdecor_extra.o : fl_libdecor_extra.cxx
+  g++ -c fl_libdecor_extra.cxx -I../../
+
 fl_libdecor-cairo.o : fl_libdecor-cairo.c ../src/plugins/cairo/libdecor-cairo.c
 	$(CC) $(CFLAGS) -c  fl_libdecor-cairo.c -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 `pkg-config --cflags pangocairo`
 
@@ -44,16 +47,22 @@ xdg-shell-protocol.o : xdg-shell-protocol.c
 	$(CC) $(CFLAGS) -c xdg-shell-protocol.c
 	
 #this shared lib is used by Wayland client programs and also as a plugin (for the Wayland compositor ?)
-../../lib/libdecor-0.1.so : fl_libdecor.o libdecor-cairo-blur.o fl_libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
+../../lib/libdecor-0.1.so : fl_libdecor.o fl_libdecor_extra.o libdecor-cairo-blur.o fl_libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
 		xdg-shell-protocol.o cursor-settings.o
-	$(CC) -shared  fl_libdecor.o libdecor-cairo-blur.o fl_libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
+	$(CC) -shared  fl_libdecor.o fl_libdecor_extra.o libdecor-cairo-blur.o fl_libdecor-cairo.o libdecor-fallback.o xdg-decoration-protocol.o \
 		xdg-shell-protocol.o cursor-settings.o -o ../../lib/libdecor-0.1.so -lcairo
 
-demo : ../../lib/libdecor-0.1.so ../demo/demo.c  
-	$(CC)  -o demo ../demo/demo.c  xdg-decoration-protocol.o xdg-shell-protocol.o -D_GNU_SOURCE -I../src -I. -L../../lib -ldecor-0.1  -lwayland-cursor -lwayland-client -lxkbcommon -lpangocairo-1.0 -ldl -ldbus-1 -Wl,-rpath,$(BUILD) -no-pie
+demo.o : ../demo/demo.c
+	$(CC)  -c ../demo/demo.c -D_GNU_SOURCE -I../src -I.
+	
+demo : ../../lib/libdecor-0.1.so demo.o
+	g++  -o demo demo.o  -L../../lib -ldecor-0.1  -lfltk -pthread -lm -lwayland-cursor -lwayland-client -lxkbcommon -lpangocairo-1.0 -lpango-1.0 -lcairo -lgobject-2.0 -ldl -ldbus-1 -Wl,-rpath,$(BUILD) -no-pie
 
-egl : ../../lib/libdecor-0.1.so ../demo/egl.c  
-	$(CC)  -o egl ../demo/egl.c  xdg-decoration-protocol.o xdg-shell-protocol.o -D_GNU_SOURCE -I../src -I. -L../../lib -ldecor-0.1 -lEGL -lGLU -lOpenGL -lwayland-egl  -lwayland-cursor -lwayland-client -lpangocairo-1.0 -ldbus-1 -lm -Wl,-rpath,$(BUILD) -no-pie
+egl : ../demo/egl.c
+	$(CC)  -c ../demo/egl.c -D_GNU_SOURCE -I../src -I.
+
+egl : ../../lib/libdecor-0.1.so egl.o
+	g++  -o egl egl.o -L../../lib -ldecor-0.1 -lfltk -lEGL -lGLU -lOpenGL -lwayland-egl -lwayland-cursor -lwayland-client -lxkbcommon -lpangocairo-1.0 -lpango-1.0 -lcairo -lgobject-2.0 -ldl -ldbus-1 -lm -Wl,-rpath,$(BUILD) -no-pie
 
 clean:
 	rm *.o ../../lib/libdecor-0.1.so

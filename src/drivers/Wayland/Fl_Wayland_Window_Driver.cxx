@@ -706,12 +706,6 @@ static struct wl_surface_listener surface_listener = {
 
 bool Fl_Wayland_Window_Driver::in_handle_configure = false;
 
-extern "C" {
-// need add -rdynamic in LDFLAGS so it's visible by dlsym()
-  bool fl_libdecor_using_weston(void) {
-    return Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON;
-  };
-}
 
 static void handle_configure(struct libdecor_frame *frame,
      struct libdecor_configuration *configuration, void *user_data)
