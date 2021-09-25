@@ -2,16 +2,16 @@
 #include "../src/libdecor.c"
 #undef libdecor_frame_set_minimized
 
-#include <dlfcn.h>
+extern bool fl_libdecor_using_weston(void);
 
 LIBDECOR_EXPORT void libdecor_frame_set_minimized(struct libdecor_frame *frame)
 {
-  typedef bool (*using_f)();
-  static using_f sym = NULL;
+  static bool done = false;
   static bool using_weston = false;
-  if (!sym) {
-    sym = (using_f)dlsym(NULL, "fl_libdecor_using_weston");
-    if (sym) using_weston = sym();
+  if (!done) {
+    done = true;
+    using_weston = fl_libdecor_using_weston();
+//fprintf(stderr, "fl_libdecor_using_weston=%p using_weston=%d\n",fl_libdecor_using_weston,using_weston);
   }
   if (using_weston) libdecor_frame_set_visibility(frame, false);
   libdecor_frame_set_minimized_orig(frame);

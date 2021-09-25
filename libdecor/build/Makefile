@@ -50,10 +50,10 @@ xdg-shell-protocol.o : xdg-shell-protocol.c
 		xdg-shell-protocol.o cursor-settings.o -o ../../lib/libdecor-0.1.so -lcairo
 	
 demo : ../../lib/libdecor-0.1.so ../demo/demo.c
-	$(CC)  -o demo ../demo/demo.c  xdg-decoration-protocol.o xdg-shell-protocol.o -D_GNU_SOURCE -I../src -I. -L../../lib -ldecor-0.1  -lwayland-cursor -lwayland-client -lxkbcommon -lpangocairo-1.0 -ldl -ldbus-1 -Wl,-rpath,$(BUILD) -no-pie
+	$(CC)  -o demo ../demo/demo.c  xdg-decoration-protocol.o xdg-shell-protocol.o -D_GNU_SOURCE -I../src -I. -L../../lib -ldecor-0.1  -lwayland-cursor -lwayland-client -lxkbcommon -lpangocairo-1.0 -ldl -ldbus-1 -Wl,-rpath,$(BUILD) -no-pie -Xlinker --defsym=fl_libdecor_using_weston=0
 
 egl : ../../lib/libdecor-0.1.so ../demo/egl.c
-	$(CC)  -o egl ../demo/egl.c  xdg-decoration-protocol.o xdg-shell-protocol.o -D_GNU_SOURCE -I../src -I. -L../../lib -ldecor-0.1 -lEGL -lGLU -lOpenGL -lwayland-egl  -lwayland-cursor -lwayland-client -lpangocairo-1.0 -ldbus-1 -lm -Wl,-rpath,$(BUILD) -no-pie
+	$(CC)  -o egl ../demo/egl.c  xdg-decoration-protocol.o xdg-shell-protocol.o -D_GNU_SOURCE -I../src -I. -L../../lib -ldecor-0.1 -lEGL -lGLU -lOpenGL -lwayland-egl  -lwayland-cursor -lwayland-client -lpangocairo-1.0 -ldbus-1 -lm -Wl,-rpath,$(BUILD) -no-pie -Xlinker --defsym=fl_libdecor_using_weston=0
 
 clean:
 	rm *.o ../../lib/libdecor-0.1.so
