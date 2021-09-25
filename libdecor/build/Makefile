@@ -18,7 +18,7 @@ libdecor-fallback.o : ../src/libdecor-fallback.c
 	$(CC) $(CFLAGS) -c  ../src/libdecor-fallback.c
 
 fl_libdecor_extra.o : fl_libdecor_extra.cxx
-  g++ -c fl_libdecor_extra.cxx -I../../
+	g++ -c fl_libdecor_extra.cxx -I../../
 
 fl_libdecor-cairo.o : fl_libdecor-cairo.c ../src/plugins/cairo/libdecor-cairo.c
 	$(CC) $(CFLAGS) -c  fl_libdecor-cairo.c -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 `pkg-config --cflags pangocairo`
@@ -58,11 +58,11 @@ demo.o : ../demo/demo.c
 demo : ../../lib/libdecor-0.1.so demo.o
 	g++  -o demo demo.o  -L../../lib -ldecor-0.1  -lfltk -pthread -lm -lwayland-cursor -lwayland-client -lxkbcommon -lpangocairo-1.0 -lpango-1.0 -lcairo -lgobject-2.0 -ldl -ldbus-1 -Wl,-rpath,$(BUILD) -no-pie
 
-egl : ../demo/egl.c
+egl.o : ../demo/egl.c
 	$(CC)  -c ../demo/egl.c -D_GNU_SOURCE -I../src -I.
 
 egl : ../../lib/libdecor-0.1.so egl.o
-	g++  -o egl egl.o -L../../lib -ldecor-0.1 -lfltk -lEGL -lGLU -lOpenGL -lwayland-egl -lwayland-cursor -lwayland-client -lxkbcommon -lpangocairo-1.0 -lpango-1.0 -lcairo -lgobject-2.0 -ldl -ldbus-1 -lm -Wl,-rpath,$(BUILD) -no-pie
+	g++  -o egl egl.o -L../../lib -ldecor-0.1 -lfltk -pthread -lEGL -lGLU -lOpenGL -lwayland-egl -lwayland-cursor -lwayland-client -lxkbcommon -lpangocairo-1.0 -lpango-1.0 -lcairo -lgobject-2.0 -ldl -ldbus-1 -lm -Wl,-rpath,$(BUILD) -no-pie
 
 clean:
 	rm *.o ../../lib/libdecor-0.1.so
