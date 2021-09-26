@@ -65,7 +65,7 @@ struct pointer_output {
  function libdecor_frame_set_visibility(), when the window is minimized. That's implemented in file
  libdecor/build/fl_libdecor.c. The modified libdecor_frame_set_minimized() function, part of libdecor.so,
  needs access to variable Fl_Wayland_Screen_Driver::compositor, part of libfltk.a. This is achieved
- calling dlsym() for FLTK function fl_libdecor_using_weston() which returns whether the running compositor
+ calling FLTK function fl_libdecor_using_weston() which returns whether the running compositor
  is Weston.
  * Weston calls handle_configure() only once if a framed window is created in inactive state (e.g.,
  the second clock of test/clock). Thus, under Weston, the window's wait_for_expose_value is set to 0
