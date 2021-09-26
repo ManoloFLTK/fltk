@@ -74,6 +74,7 @@ These packages are necessary, in addition to those for usual X11-based platforms
 - libdbus-1-dev
 - libxkbcommon-dev
 - libegl-dev
+- libopengl0
 
 
 4 DOCUMENT HISTORY
