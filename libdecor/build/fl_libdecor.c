@@ -25,9 +25,6 @@ LIBDECOR_EXPORT void libdecor_frame_set_minimized(struct libdecor_frame *frame)
 
 LIBDECOR_EXPORT void libdecor_frame_unref(struct libdecor_frame *frame)
 {
-  struct libdecor_frame_private *frame_priv = frame->priv;
-  if (frame_priv->ref_count == 1) {
-    wl_list_remove(&frame->link);
-  }
+  if (frame->priv->ref_count == 1) wl_list_remove(&frame->link);
   libdecor_frame_unref_orig(frame);
 }
