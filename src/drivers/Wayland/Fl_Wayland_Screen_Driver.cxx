@@ -417,12 +417,12 @@ static void pointer_axis(void *data,
   if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL) {
     Fl::e_dx = delta;
     Fl::e_dy = 0;
-    Fl::handle(FL_MOUSEWHEEL, win);
+    Fl::handle(FL_MOUSEWHEEL, win->top_window());
   }
   if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL) {
     Fl::e_dx = 0;
     Fl::e_dy = delta;
-    Fl::handle(FL_MOUSEWHEEL, win);
+    Fl::handle(FL_MOUSEWHEEL, win->top_window());
   }
 }
 
