@@ -23,7 +23,7 @@ CONTENTS
 The support of the Wayland platform is work in progress of the FLTK library.
 This work is quite advanced, though : all test/ and examples/ programs build and run.
 It requires a Wayland-equipped OS which means Linux.
-The code has been tested on Debian and Ubuntu.
+The code has been tested on Debian and Ubuntu with 3 distinct compositors: mutter, weston, and KDE.
 
 
 2 WAYLAND SUPPORT FOR FLTK
@@ -74,7 +74,9 @@ These packages are necessary, in addition to those for usual X11-based platforms
 - libdbus-1-dev
 - libxkbcommon-dev
 - libegl-dev
-- libopengl0
+- libopengl-dev
+- libpango1.0-dev
+- libcairo2-dev
 
 
 4 DOCUMENT HISTORY
