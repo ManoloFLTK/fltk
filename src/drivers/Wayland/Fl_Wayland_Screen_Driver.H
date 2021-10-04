@@ -168,7 +168,7 @@ public:
 //uint32_t get_serial();
 //struct wl_seat *get_wl_seat();
 //char  *get_seat_name();
-  struct xkb_keymap *get_xkb_keymap();
+//struct xkb_keymap *get_xkb_keymap();
   static bool own_output(struct wl_output *output);
   typedef enum {MUTTER, WESTON, KDE} compositor_name;
   static compositor_name compositor; // identifies the used Wayland compositor

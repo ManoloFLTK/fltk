@@ -71,7 +71,6 @@ struct pointer_output {
  the second clock of test/clock). Thus, under Weston, the window's wait_for_expose_value is set to 0
  by the first call to handle_configure(), whereas it's done at the 2nd handle_configure with other
  compositors.
- * There's also a difference in Fl_Wayland_Gl_Window_Driver::resize() under Weston.
  
 - Synchronization between drawing to buffer and committing buffer to screen.
  Before committing a new graphics scene for display, Wayland requires to make sure the compositor is
@@ -1438,8 +1437,8 @@ struct wl_seat*Fl_Wayland_Screen_Driver::get_wl_seat() {
 
 char *Fl_Wayland_Screen_Driver::get_seat_name() {
   return seat->name;
-}*/
+}
 
 struct xkb_keymap *Fl_Wayland_Screen_Driver::get_xkb_keymap() {
   return seat->xkb_keymap;
-}
+}*/
