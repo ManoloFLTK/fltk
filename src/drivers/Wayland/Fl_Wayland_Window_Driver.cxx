@@ -1177,6 +1177,7 @@ void Fl_Wayland_Window_Driver::update_scale()
   if (scale != window->scale) {
     window->scale = scale;
     if (window->buffer || window->fl_win->as_gl_window()) {
+      Fl_Wayland_Graphics_Driver::buffer_release(window);
       window->fl_win->damage(FL_DAMAGE_ALL);
       Fl_Window_Driver::driver(window->fl_win)->flush();
     }
