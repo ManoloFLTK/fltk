@@ -56,4 +56,4 @@ egl : ../../lib/libdecor-0.1.so ../demo/egl.c
 	$(CC)  -o egl ../demo/egl.c  xdg-decoration-protocol.o xdg-shell-protocol.o -D_GNU_SOURCE -I../src -I. -L../../lib -ldecor-0.1 -lEGL -lGLU -lOpenGL -lwayland-egl  -lwayland-cursor -lwayland-client -lpangocairo-1.0 -ldbus-1 -lm -Wl,-rpath,$(BUILD) -no-pie -Xlinker --defsym=fl_libdecor_using_weston=0
 
 clean:
-	rm *.o xdg-* demo egl ../../lib/libdecor-0.1.so
+	rm *.o xdg-*.c xdg-*.h config.h demo egl ../../lib/libdecor-0.1.so
