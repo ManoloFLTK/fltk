@@ -1188,9 +1188,10 @@ void Fl_Wayland_Window_Driver::update_scale()
 void Fl_Wayland_Window_Driver::use_border() {
   if (!shown() || pWindow->parent()) return;
   struct libdecor_frame *frame = fl_xid(pWindow)->frame;
-  if (frame) {
-    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KDE) return Fl_Window_Driver::use_border();
+  if (frame && Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::KDE) {
     libdecor_frame_set_visibility(frame, pWindow->border());
     pWindow->redraw();
-  } else Fl_Window_Driver::use_border();
+  } else {
+    Fl_Window_Driver::use_border();
+  }
 }
