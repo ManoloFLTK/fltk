@@ -43,6 +43,7 @@ Fl_Copy_Surface_Driver *Fl_Copy_Surface_Driver::newCopySurfaceDriver(int w, int 
 Fl_Wayland_Copy_Surface_Driver::Fl_Wayland_Copy_Surface_Driver(int w, int h) : Fl_Copy_Surface_Driver(w, h) {
   img_surf = new Fl_Image_Surface(w, h);
   driver(img_surf->driver());
+  driver()->scale( fl_window ? fl_window->scale : 1 );
 }
 
 
@@ -58,7 +59,7 @@ Fl_Wayland_Copy_Surface_Driver::~Fl_Wayland_Copy_Surface_Driver() {
 
 void Fl_Wayland_Copy_Surface_Driver::set_current() {
   Fl_Surface_Device::set_current();
-  ((Fl_Wayland_Graphics_Driver*)driver())->activate(img_surf->offscreen(), fl_window?fl_window->scale:1);
+  ((Fl_Wayland_Graphics_Driver*)driver())->activate(img_surf->offscreen(), driver()->scale());
 }
 
 

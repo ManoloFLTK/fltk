@@ -88,7 +88,7 @@ private:
 public:
   Fl_Wayland_Graphics_Driver();
   ~Fl_Wayland_Graphics_Driver();
-  void activate(struct buffer *buffer, int scale);
+  void activate(struct buffer *buffer, float scale);
   void font(Fl_Font fnum, Fl_Fontsize s);
   Fl_Font font() { return Fl_Graphics_Driver::font(); }
   void draw(const char* s, int nBytes, int x, int y) { draw(s, nBytes, float(x), float(y)); }

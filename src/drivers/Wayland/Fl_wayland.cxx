@@ -900,6 +900,7 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
   if (shown()) {
     struct wld_window *fl_win = fl_xid(pWindow);
     if (is_a_resize) {
+      float f = Fl::screen_scale(pWindow->screen_num());
       if (!pWindow->resizable()) pWindow->size_range(w(), h(), w(), h());
       if (fl_win->frame) { // a decorated window
         if (fl_win->buffer) {
@@ -908,24 +909,20 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
         fl_win->configured_width = W;
         fl_win->configured_height = H;
         if (!in_handle_configure && fl_win->xdg_toplevel) {
-          struct libdecor_state *state = libdecor_state_new(W, H);
+          struct libdecor_state *state = libdecor_state_new(W * f, H * f);
           libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
           libdecor_state_free(state);
         }
       } else if (fl_win->subsurface) { // a subwindow
-        wl_subsurface_set_position(fl_win->subsurface, X, Y);
-        if (W != fl_win->configured_width || H != fl_win->configured_height) {
-          if (!pWindow->as_gl_window()) Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
-        }
+        wl_subsurface_set_position(fl_win->subsurface, X * f, Y * f);
+        if (!pWindow->as_gl_window()) Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
         fl_win->configured_width = W;
         fl_win->configured_height = H;
       } else if (fl_win->xdg_surface) { // a window without border
-        if (W != fl_win->configured_width || H != fl_win->configured_height) {
-          if (!pWindow->as_gl_window()) Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
-        }
+        if (!pWindow->as_gl_window()) Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
         fl_win->configured_width = W;
         fl_win->configured_height = H;
-        xdg_surface_set_window_geometry(fl_win->xdg_surface, 0, 0, W, H);
+        xdg_surface_set_window_geometry(fl_win->xdg_surface, 0, 0, W * f, H * f);
       }
     } else {
      if (!in_handle_configure && fl_win->xdg_toplevel) {

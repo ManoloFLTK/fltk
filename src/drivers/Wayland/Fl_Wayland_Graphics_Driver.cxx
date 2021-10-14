@@ -174,7 +174,7 @@ Fl_Wayland_Graphics_Driver::~Fl_Wayland_Graphics_Driver() {
 }
 
 
-void Fl_Wayland_Graphics_Driver::activate(struct buffer *buffer, int scale) {
+void Fl_Wayland_Graphics_Driver::activate(struct buffer *buffer, float scale) {
   if (dummy_pango_layout_) {
     cairo_surface_t *surf = cairo_get_target(cairo_);
     cairo_destroy(cairo_);

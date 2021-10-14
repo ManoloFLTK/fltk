@@ -21,7 +21,6 @@
 #include <FL/Fl_Image_Surface.H>
 
 class Fl_Wayland_Image_Surface_Driver : public Fl_Image_Surface_Driver {
-  int wld_scale;
   virtual void end_current();
 public:
   Fl_Wayland_Image_Surface_Driver(int w, int h, int high_res, Fl_Offscreen off);
@@ -39,15 +38,12 @@ Fl_Image_Surface_Driver *Fl_Image_Surface_Driver::newImageSurfaceDriver(int w, i
 
 Fl_Wayland_Image_Surface_Driver::Fl_Wayland_Image_Surface_Driver(int w, int h, int high_res, Fl_Offscreen off) : Fl_Image_Surface_Driver(w, h, high_res, off) {
   float d = 1;
-  wld_scale = 1;
   if (!off) {
     fl_open_display();
     if (fl_window) {
-      wld_scale = fl_window->scale; //TODO: take it from the display
-      w *= wld_scale;
-      h *= wld_scale;
+      d = fl_window->scale;
     }
-    d = fl_graphics_driver->scale();
+    d *= fl_graphics_driver->scale();
     if (d != 1 && high_res) {
       w = int(w*d);
       h = int(h*d);
@@ -60,7 +56,7 @@ Fl_Wayland_Image_Surface_Driver::Fl_Wayland_Image_Surface_Driver(int w, int h, i
     Fl_Wayland_Graphics_Driver::cairo_init(offscreen, w, h, offscreen->stride, CAIRO_FORMAT_RGB24);
   }
   driver(new Fl_Wayland_Graphics_Driver());
-  if (d != 1 && high_res) ((Fl_Wayland_Graphics_Driver*)driver())->scale(d);
+  if (d != 1 && high_res) driver()->scale(d);
 }
 
 
@@ -74,7 +70,7 @@ Fl_Wayland_Image_Surface_Driver::~Fl_Wayland_Image_Surface_Driver() {
 
 void Fl_Wayland_Image_Surface_Driver::set_current() {
   Fl_Surface_Device::set_current();
-  ((Fl_Wayland_Graphics_Driver*)fl_graphics_driver)->activate(offscreen, wld_scale);
+  ((Fl_Wayland_Graphics_Driver*)fl_graphics_driver)->activate(offscreen, driver()->scale());
 }
 
 void Fl_Wayland_Image_Surface_Driver::end_current() {

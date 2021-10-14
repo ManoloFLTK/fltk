@@ -308,9 +308,10 @@ static void pointer_enter(void *data,
   seat->serial = serial;
   Fl_Window *win = Fl_Wayland_Screen_Driver::surface_to_window(surface);
   if (win) {
-    Fl::e_x = wl_fixed_to_int(surface_x);
+    float f = Fl::screen_scale(win->screen_num());
+    Fl::e_x = wl_fixed_to_int(surface_x) / f;
     Fl::e_x_root = Fl::e_x + win->x();
-    Fl::e_y = wl_fixed_to_int(surface_y);
+    Fl::e_y = wl_fixed_to_int(surface_y) / f;
     Fl::e_y_root = Fl::e_y + win->y();
     set_event_xy(win);
     Fl::handle(FL_ENTER, win);
@@ -345,14 +346,15 @@ static void pointer_motion(void *data,
   struct seat *seat = (struct seat*)data;
   Fl_Window *win = Fl_Wayland_Screen_Driver::surface_to_window(seat->pointer_focus);
   if (!win) return;
-  Fl::e_x = wl_fixed_to_int(surface_x);
+  float f = Fl::screen_scale(win->screen_num());
+  Fl::e_x = wl_fixed_to_int(surface_x) / f;
   Fl::e_x_root = Fl::e_x + win->x();
   // If there's an active grab() and the pointer is in a window other than the grab(),
   // make e_x_root too large to be in any window
   if (Fl::grab() && !Fl::grab()->menu_window() && Fl::grab() != win) {
     Fl::e_x_root = 1000000;
   }
-  Fl::e_y = wl_fixed_to_int(surface_y);
+  Fl::e_y = wl_fixed_to_int(surface_y) / f;
   Fl::e_y_root = Fl::e_y + win->y();
 //fprintf(stderr, "FL_MOVE on win=%p to x:%dx%d root:%dx%d\n", win, Fl::e_x, Fl::e_y, Fl::e_x_root, Fl::e_y_root);
   fl_event_time = time;
