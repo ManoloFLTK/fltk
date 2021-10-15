@@ -941,7 +941,7 @@ fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.2f\n", pWindow, new
   // put transient scale win at center of top window by making it a child of top
     Fl_Window *top = Fl::first_window()->top_window();
     Fl_Window *next = Fl::next_window(top);
-    if (next && next->top_window() == top) { // top window contains a subwindow: next
+    if (next && next->user_data() != &Fl_Screen_Driver::transient_scale_display && next->top_window() == top) { // top window contains a subwindow: next
       // if subwin contains the center of top window, make transient win a child of subwin
       if (next->x() <= top->w()/2 && next->x()+next->w() > top->w()/2 && 
         next->y() <= top->h()/2 && next->y()+next->h() > top->h()/2) top = next;
