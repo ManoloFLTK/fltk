@@ -89,7 +89,7 @@ void Fl_Wayland_Window_Driver::decorated_win_size(int &w, int &h)
   w = win->w();
   h = win->h();
   if (!win->shown() || win->parent() || !win->border() || !win->visible()) return;
-  h = fl_xid(win)->decorated_height;
+  h = fl_xid(win)->decorated_height / Fl::screen_scale(win->screen_num());
 }
 
 
@@ -710,6 +710,7 @@ static struct wl_surface_listener surface_listener = {
 };
 
 bool Fl_Wayland_Window_Driver::in_handle_configure = false;
+int Fl_Wayland_Window_Driver::titlebar_height = 0;
 
 static void handle_configure(struct libdecor_frame *frame,
      struct libdecor_configuration *configuration, void *user_data)
@@ -745,7 +746,6 @@ static void handle_configure(struct libdecor_frame *frame,
   }
 
   int tmp;
-  static int titlebar_height = 0;
 // under KDE, libdecor_configuration_get_window_size() always returns false,
 // and we set the titlebar height to 0
   if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KDE && height == 0) {
@@ -753,11 +753,11 @@ static void handle_configure(struct libdecor_frame *frame,
     window->decorated_height = window->floating_height;
   } else if ( libdecor_configuration_get_window_size(configuration, &tmp, &window->decorated_height) ) {
     driver->wait_for_expose_value = 0;
-    if (!titlebar_height) titlebar_height = window->decorated_height - height;
+    if (!Fl_Wayland_Window_Driver::titlebar_height) Fl_Wayland_Window_Driver::titlebar_height = window->decorated_height - height;
 //    fprintf(stderr, "decorated size=%dx%d ", tmp, window->decorated_height);
-  } else if (titlebar_height) {
+  } else if (Fl_Wayland_Window_Driver::titlebar_height) {
     // necessary to position menus after when decorated window is unmaximized
-    window->decorated_height = window->floating_height + titlebar_height;
+    window->decorated_height = window->floating_height + Fl_Wayland_Window_Driver::titlebar_height;
   }
   
   if (width == 0) {
@@ -934,8 +934,21 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
   wl_list_init(&new_window->outputs);
 
   new_window->wl_surface = wl_compositor_create_surface(scr_driver->wl_compositor);
-fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.1f\n", pWindow, new_window->scale, Fl::screen_scale(0));
+fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.2f\n", pWindow, new_window->scale, Fl::screen_scale(0));
   wl_surface_add_listener(new_window->wl_surface, &surface_listener, new_window);
+  
+  if (pWindow->user_data() == &Fl_Screen_Driver::transient_scale_display && Fl::first_window()) {
+  // put transient scale win at center of top window by making it a child of top
+    Fl_Window *top = Fl::first_window()->top_window();
+    Fl_Window *next = Fl::next_window(top);
+    if (next && next->top_window() == top) { // top window contains a subwindow: next
+      // if subwin contains the center of top window, make transient win a child of subwin
+      if (next->x() <= top->w()/2 && next->x()+next->w() > top->w()/2 && 
+        next->y() <= top->h()/2 && next->y()+next->h() > top->h()/2) top = next;
+      }
+    top->add(pWindow);
+    pWindow->position( (top->w()-pWindow->w())/2 ,  (top->h()-pWindow->h())/2 );
+  }
   
   if (pWindow->menu_window() || pWindow->tooltip_window()) { // a menu window or tooltip
     new_window->xdg_surface = xdg_wm_base_get_xdg_surface(scr_driver->xdg_wm_base, new_window->wl_surface);
@@ -949,9 +962,9 @@ fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.1f\n", pWindow, new
     Fl_Window *parent_win = target->top_window();
     struct xdg_surface *parent = fl_xid(parent_win)->xdg_surface;
     float f = Fl::screen_scale(parent_win->screen_num());
-    int y_offset = parent_win->decorated_h() - parent_win->h() * f;
+    int y_offset = parent_win->decorated_h() - parent_win->h();
 //fprintf(stderr, "menu parent_win=%p pos:%dx%d size:%dx%d y_offset=%d\n", parent_win, pWindow->x(), pWindow->y(), pWindow->w(), pWindow->h(), y_offset);
-    xdg_positioner_set_anchor_rect(positioner, pWindow->x() * f, pWindow->y() * f + y_offset, 1, 1);
+    xdg_positioner_set_anchor_rect(positioner, pWindow->x() * f, (pWindow->y() + y_offset) * f, 1, 1);
     xdg_positioner_set_size(positioner, pWindow->w() * f , pWindow->h() * f );
     xdg_positioner_set_anchor(positioner, XDG_POSITIONER_ANCHOR_TOP_LEFT);
     xdg_positioner_set_gravity(positioner, XDG_POSITIONER_GRAVITY_BOTTOM_RIGHT);
@@ -979,7 +992,7 @@ fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.1f\n", pWindow, new
     new_window->floating_width = pWindow->w() * f;
     new_window->floating_height = pWindow->h() * f;
     // for Weston, pre-estimate decorated_height
-    new_window->decorated_height = pWindow->h() + 24; // can be changed later
+    new_window->decorated_height = pWindow->h() * f + 24; // can be changed later
 
   } else if (pWindow->parent()) { // for subwindows (GL or non-GL)
     struct wld_window *parent = fl_xid(pWindow->window());
