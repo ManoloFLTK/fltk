@@ -912,7 +912,6 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
           struct libdecor_state *state = libdecor_state_new(W * f, H * f);
           libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
           libdecor_state_free(state);
-          fl_win->decorated_height = f * pWindow->h() + titlebar_height;
         }
       } else if (fl_win->subsurface) { // a subwindow
         wl_subsurface_set_position(fl_win->subsurface, X * f, Y * f);

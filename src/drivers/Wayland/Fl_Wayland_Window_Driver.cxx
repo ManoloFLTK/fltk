@@ -89,7 +89,7 @@ void Fl_Wayland_Window_Driver::decorated_win_size(int &w, int &h)
   w = win->w();
   h = win->h();
   if (!win->shown() || win->parent() || !win->border() || !win->visible()) return;
-  h = fl_xid(win)->decorated_height / Fl::screen_scale(win->screen_num());
+  h = win->h() + titlebar_height / Fl::screen_scale(win->screen_num());
 }
 
 
@@ -745,21 +745,18 @@ static void handle_configure(struct libdecor_frame *frame,
     }
   }
 
-  int tmp;
+  int tmpW, tmpH;
 // under KDE, libdecor_configuration_get_window_size() always returns false,
 // and we set the titlebar height to 0
   if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KDE && height == 0) {
     if (window->configured_width) driver->wait_for_expose_value = 0;
-    window->decorated_height = window->floating_height;
-  } else if ( libdecor_configuration_get_window_size(configuration, &tmp, &window->decorated_height) ) {
-    driver->wait_for_expose_value = 0;
-    if (!Fl_Wayland_Window_Driver::titlebar_height) Fl_Wayland_Window_Driver::titlebar_height = window->decorated_height - height;
-//    fprintf(stderr, "decorated size=%dx%d ", tmp, window->decorated_height);
-  } else if (Fl_Wayland_Window_Driver::titlebar_height) {
-    // necessary to position menus after when decorated window is unmaximized
-    window->decorated_height = window->floating_height + Fl_Wayland_Window_Driver::titlebar_height;
   }
-  
+  if ( libdecor_configuration_get_window_size(configuration, &tmpW, &tmpH) ) {
+    driver->wait_for_expose_value = 0;
+    Fl_Wayland_Window_Driver::titlebar_height = tmpH - height;
+    //fprintf(stderr, "titlebar_height=%d ", Fl_Wayland_Window_Driver::titlebar_height);
+  }
+    
   if (width == 0) {
     width = window->floating_width;
     height = window->floating_height;
@@ -991,8 +988,6 @@ fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.2f\n", pWindow, new
     float f = Fl::screen_scale(pWindow->screen_num());
     new_window->floating_width = pWindow->w() * f;
     new_window->floating_height = pWindow->h() * f;
-    // for Weston, pre-estimate decorated_height
-    new_window->decorated_height = pWindow->h() * f + 24; // can be changed later
 
   } else if (pWindow->parent()) { // for subwindows (GL or non-GL)
     struct wld_window *parent = fl_xid(pWindow->window());

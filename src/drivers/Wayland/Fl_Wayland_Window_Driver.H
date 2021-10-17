@@ -63,7 +63,6 @@ struct wld_window {
   int configured_height;
   int floating_width;
   int floating_height;
-  int decorated_height;
   struct wl_list outputs;
   int scale;
   Fl_Window *fl_win;
