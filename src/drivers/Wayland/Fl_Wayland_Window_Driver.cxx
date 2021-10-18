@@ -783,13 +783,14 @@ static void handle_configure(struct libdecor_frame *frame,
   if (window_state == LIBDECOR_WINDOW_STATE_NONE) {
     Fl::handle(FL_UNFOCUS, window->fl_win);
   }
-  else if (window_state == LIBDECOR_WINDOW_STATE_ACTIVE) {
+  else if (window_state & LIBDECOR_WINDOW_STATE_ACTIVE) {
     if (!window->fl_win->border()) libdecor_frame_set_visibility(window->frame, false);
     else if (!libdecor_frame_is_visible(window->frame)) libdecor_frame_set_visibility(window->frame, true);
     Fl::handle(FL_FOCUS, window->fl_win);
   }
 
-  state = libdecor_state_new(int(int(width/f)*f), int(int(height/f)*f));
+  if (window_state & LIBDECOR_WINDOW_STATE_MAXIMIZED) state = libdecor_state_new(width, height);
+  else state = libdecor_state_new(int(int(width/f)*f), int(int(height/f)*f));
   libdecor_frame_commit(frame, state, configuration);
   libdecor_state_free(state);
   window->fl_win->redraw();
@@ -959,9 +960,8 @@ fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.2f\n", pWindow, new
     while (parent_win && parent_win->menu_window()) parent_win = Fl::next_window(parent_win);
     struct xdg_surface *parent = fl_xid(parent_win)->xdg_surface;
     float f = Fl::screen_scale(parent_win->screen_num());
-    int y_offset = parent_win->decorated_h() - parent_win->h();
-//fprintf(stderr, "menu parent_win=%p pos:%dx%d size:%dx%d y_offset=%d\n", parent_win, pWindow->x(), pWindow->y(), pWindow->w(), pWindow->h(), y_offset);
-    xdg_positioner_set_anchor_rect(positioner, pWindow->x() * f, (pWindow->y() + y_offset) * f, 1, 1);
+//fprintf(stderr, "menu parent_win=%p pos:%dx%d size:%dx%d titlebar_height=%d\n", parent_win, pWindow->x(), pWindow->y(), pWindow->w(), pWindow->h(), titlebar_height);
+    xdg_positioner_set_anchor_rect(positioner, pWindow->x() * f, pWindow->y() * f + titlebar_height, 1, 1);
     xdg_positioner_set_size(positioner, pWindow->w() * f , pWindow->h() * f );
     xdg_positioner_set_anchor(positioner, XDG_POSITIONER_ANCHOR_TOP_LEFT);
     xdg_positioner_set_gravity(positioner, XDG_POSITIONER_GRAVITY_BOTTOM_RIGHT);
