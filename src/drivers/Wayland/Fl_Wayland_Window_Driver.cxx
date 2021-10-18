@@ -953,10 +953,10 @@ fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.2f\n", pWindow, new
     struct xdg_positioner *positioner = xdg_wm_base_create_positioner(scr_driver->xdg_wm_base);
     //xdg_positioner_get_version(positioner) <== gives 1 under Debian
     Fl_Widget *target = pWindow->tooltip_window() ? Fl_Tooltip::current() : Fl::pushed();
-    if (!target) {
-      target = Fl::belowmouse()->top_window();
-    }
+    if (!target) target = Fl::belowmouse()
+    if (!target) target = Fl::first_window();
     Fl_Window *parent_win = target->top_window();
+    while (parent_win && parent_win->menu_window()) parent_win = Fl::next_window(parent_win);
     struct xdg_surface *parent = fl_xid(parent_win)->xdg_surface;
     float f = Fl::screen_scale(parent_win->screen_num());
     int y_offset = parent_win->decorated_h() - parent_win->h();
