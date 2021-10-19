@@ -330,7 +330,7 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
   }
 
   if (egl_surface) {
-    if ( !pWindow->parent() ) {
+    if (!pWindow->parent() && (Fl_Wayland_Window_Driver::in_handle_configure || busy)) {
      eglSwapInterval(egl_display, 1);
     } else {
       eglSwapInterval(egl_display, 0);

@@ -805,7 +805,9 @@ static void handle_configure(struct libdecor_frame *frame,
   if (!window->fl_win->as_gl_window()) {
     driver->flush();
   } else {
+    Fl_Wayland_Window_Driver::in_handle_configure = true;
     driver->Fl_Window_Driver::flush(); // GL window
+    Fl_Wayland_Window_Driver::in_handle_configure = false;
   }
 }
 
