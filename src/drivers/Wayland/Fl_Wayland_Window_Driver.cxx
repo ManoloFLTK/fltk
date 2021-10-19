@@ -1076,14 +1076,15 @@ int Fl_Wayland_Window_Driver::screen_num() {
 int Fl_Wayland_Window_Driver::set_cursor(Fl_Cursor c) {
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
 
-  //cursor names seem to be the files of directory /usr/share/icons/Adwaita/cursors/
+  // Cursor names are the files of directory /usr/share/icons/XXXX/cursors/
+  // where XXXX is the name of the current 'cursor theme'.
   switch (c) {
     case FL_CURSOR_ARROW:
       if (!scr_driver->xc_arrow) scr_driver->xc_arrow = scr_driver->cache_cursor("left_ptr");
       scr_driver->default_cursor(scr_driver->xc_arrow);
       break;
     case FL_CURSOR_NS:
-      if (!scr_driver->xc_ns) scr_driver->xc_ns = scr_driver->cache_cursor("ns-resize");
+      if (!scr_driver->xc_ns) scr_driver->xc_ns = scr_driver->cache_cursor("sb_v_double_arrow");
       if (!scr_driver->xc_ns) return 0;
       scr_driver->default_cursor(scr_driver->xc_ns);
       break;
