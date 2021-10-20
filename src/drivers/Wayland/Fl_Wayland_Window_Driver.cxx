@@ -391,6 +391,15 @@ void Fl_Wayland_Window_Driver::make_current() {
 }
 
 
+static void frame_ready(void *data, struct wl_callback *cb, uint32_t time) {
+  *((bool*)data) = true;
+}
+
+static const struct wl_callback_listener frame_ready_listener = {
+  .done = frame_ready,
+};
+
+
 void Fl_Wayland_Window_Driver::flush() {
   if (!pWindow->damage()) return;
   if (pWindow->as_gl_window()) {
@@ -427,9 +436,20 @@ void Fl_Wayland_Window_Driver::flush() {
   Fl_Wayland_Window_Driver::in_flush = true;
   Fl_Window_Driver::flush();
   Fl_Wayland_Window_Driver::in_flush = false;
-  pWindow->clear_damage();
-  if (window->buffer->wl_buffer_ready) {
+  
+  if ( Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::KDE) {
+    while (!window->buffer->wl_buffer_ready) {
+      wl_display_dispatch(fl_display);
+    }
     Fl_Wayland_Graphics_Driver::buffer_commit(window);
+  } else {
+    if (!in_handle_configure) {
+      wl_callback* cb = wl_surface_frame(window->wl_surface);
+      bool ready = false;
+      wl_callback_add_listener(cb, &frame_ready_listener, &ready);
+      Fl_Wayland_Graphics_Driver::buffer_commit(window);
+      while (!ready) { wl_display_dispatch(fl_display); }
+    } else Fl_Wayland_Graphics_Driver::buffer_commit(window);
   }
 }
 
@@ -802,13 +822,13 @@ static void handle_configure(struct libdecor_frame *frame,
   }
   
   if (window->buffer) window->buffer->wl_buffer_ready = true; // dirty hack necessary for Weston
+  Fl_Wayland_Window_Driver::in_handle_configure = true;
   if (!window->fl_win->as_gl_window()) {
     driver->flush();
   } else {
-    Fl_Wayland_Window_Driver::in_handle_configure = true;
     driver->Fl_Window_Driver::flush(); // GL window
-    Fl_Wayland_Window_Driver::in_handle_configure = false;
   }
+  Fl_Wayland_Window_Driver::in_handle_configure = false;
 }
 
 
