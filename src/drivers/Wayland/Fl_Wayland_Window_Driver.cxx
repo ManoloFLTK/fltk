@@ -340,6 +340,7 @@ static void surface_frame_done(void *data, struct wl_callback *cb, uint32_t time
   wl_callback_destroy(cb);
   window->buffer->cb = NULL;
   if (window->buffer->draw_buffer_needs_commit) {
+    wl_surface_damage_buffer(window->wl_surface, 0, 0, 1000000, 1000000);
     window->buffer->cb = wl_surface_frame(window->wl_surface);
 //fprintf(stderr,"surface_frame_done: new cb=%p \n", window->buffer->cb);
     wl_callback_add_listener(window->buffer->cb, &surface_frame_listener, window);
@@ -360,22 +361,12 @@ void Fl_Wayland_Window_Driver::make_current() {
   float scale = Fl::screen_scale(pWindow->screen_num()) * window->scale;
 
   // to support progressive drawing
-  if ( (!Fl_Wayland_Window_Driver::in_flush) && window && window->buffer) {
-    if (!window->buffer->draw_buffer_needs_commit) {
-      wl_surface_damage_buffer(window->wl_surface, 0, 0, pWindow->w() * scale, pWindow->h() * scale);
-//fprintf(stderr, "direct make_current calls damage_buffer\n");
-    }
-    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KDE) {
-      if (!window->buffer->cb) {
-        window->buffer->cb = wl_surface_frame(window->wl_surface);
-//fprintf(stderr, "direct make_current: new cb=%p\n", window->buffer->cb);
-        wl_callback_add_listener(window->buffer->cb, &surface_frame_listener, window);
-        Fl_Wayland_Graphics_Driver::buffer_commit(window);
-      }
-    } else if (window->buffer->wl_buffer_ready) {
-//fprintf(stderr, "direct make_current calls buffer_commit\n");
-      Fl_Wayland_Graphics_Driver::buffer_commit(window);
-    }
+  if ( (!Fl_Wayland_Window_Driver::in_flush) && window && window->buffer && (!window->buffer->cb)) {
+    wl_surface_damage_buffer(window->wl_surface, 0, 0, pWindow->w() * scale, pWindow->h() * scale);
+    window->buffer->cb = wl_surface_frame(window->wl_surface);
+    //fprintf(stderr, "direct make_current: new cb=%p\n", window->buffer->cb);
+    wl_callback_add_listener(window->buffer->cb, &surface_frame_listener, window);
+    Fl_Wayland_Graphics_Driver::buffer_commit(window);
   }
 
   fl_graphics_driver->clip_region(0);
@@ -392,10 +383,11 @@ void Fl_Wayland_Window_Driver::make_current() {
 
 
 static void frame_ready(void *data, struct wl_callback *cb, uint32_t time) {
-  *((bool*)data) = true;
+  wl_callback_destroy(cb);
+  *((bool*)data) = false;
 }
 
-static const struct wl_callback_listener frame_ready_listener = {
+const struct wl_callback_listener Fl_Wayland_Window_Driver::frame_ready_listener = {
   .done = frame_ready,
 };
 
@@ -418,7 +410,7 @@ void Fl_Wayland_Window_Driver::flush() {
   Fl_X *i = Fl_X::i(pWindow);
   Fl_Region r = i->region;
   float f = Fl::screen_scale(pWindow->screen_num());
-  if (r && window->buffer && window->buffer->wl_buffer_ready) {
+  if (r && window->buffer) {
     for (int i = 0; i < r->count; i++) {
       int left = r->rects[i].x * window->scale * f;
       int top = r->rects[i].y * window->scale * f;
@@ -437,20 +429,11 @@ void Fl_Wayland_Window_Driver::flush() {
   Fl_Window_Driver::flush();
   Fl_Wayland_Window_Driver::in_flush = false;
   
-  if ( Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::KDE) {
-    while (!window->buffer->wl_buffer_ready) {
-      wl_display_dispatch(fl_display);
-    }
-    Fl_Wayland_Graphics_Driver::buffer_commit(window);
-  } else {
-    if (!in_handle_configure) {
-      wl_callback* cb = wl_surface_frame(window->wl_surface);
-      bool ready = false;
-      wl_callback_add_listener(cb, &frame_ready_listener, &ready);
-      Fl_Wayland_Graphics_Driver::buffer_commit(window);
-      while (!ready) { wl_display_dispatch(fl_display); }
-    } else Fl_Wayland_Graphics_Driver::buffer_commit(window);
-  }
+  wl_callback* cb = wl_surface_frame(window->wl_surface);
+  bool busy = true;
+  wl_callback_add_listener(cb, &frame_ready_listener, &busy);
+  Fl_Wayland_Graphics_Driver::buffer_commit(window);
+  while (busy) { wl_display_dispatch(fl_display); }
 }
 
 
@@ -821,7 +804,6 @@ static void handle_configure(struct libdecor_frame *frame,
     //fprintf(stderr,"set floating_width+height %dx%d\n",width,height);
   }
   
-  if (window->buffer) window->buffer->wl_buffer_ready = true; // dirty hack necessary for Weston
   Fl_Wayland_Window_Driver::in_handle_configure = true;
   if (!window->fl_win->as_gl_window()) {
     driver->flush();

@@ -105,6 +105,7 @@ public:
   Fl_Wayland_Window_Driver(Fl_Window*);
   virtual ~Fl_Wayland_Window_Driver();
   static void redraw(struct wld_window *window);
+  static const struct wl_callback_listener frame_ready_listener;
 
   static inline Fl_Wayland_Window_Driver* driver(const Fl_Window *w) {return (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(w);}
 #if  USE_XFT

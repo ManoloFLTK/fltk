@@ -74,21 +74,15 @@ struct pointer_output {
  
 - Synchronization between drawing to buffer and committing buffer to screen.
  Before committing a new graphics scene for display, Wayland requires to make sure the compositor is
- ready for that. FLTK uses 2 different means for that, depending on the running compositor.
- * Under Mutter and Weston:
- FLTK attaches a wl_buffer_listener to each wl_buffer object, which the compositor runs when the buffer
- becomes ready for commit. FLTK uses a very simple buffer listener function that turns TRUE a boolean
- variable called wl_buffer_ready. Function Fl_Wayland_Window_Driver::flush() reads that variable
- and commits the new drawing scene only when it's TRUE. Function Fl_Wayland_Window_Driver::make_current()
- also consults wl_buffer_ready when it's called outside Fl::flush() and commits the drawing scene only
- if wl_buffer_ready is TRUE. When a wl_buffer is committed, wl_buffer_ready is turned FALSE.
- * Under KDE:
- The above mechanism doesn't work with the KDE compositor because, for some unknown reason, it doesn't
- call the buffer listener function. Thus, FLTK uses another synchronization means: frame callbacks.
- At this point, a frame callback is created when an app calls Fl_Wayland_Window_Driver::make_current()
+ ready for commit. FLTK uses frame callbacks for that.
+ A frame callback is created when an app calls Fl_Wayland_Window_Driver::make_current()
  directly. This directs a callback listener function, called surface_frame_done, to be called by the
  compositor when it's ready to commit a new graphics scene. This function schedules a new frame callback
  and commits the buffer to the display.
+ A frame callback is also created by Fl_Wayland_Window_Driver::flush() when a window redraw operation
+ is needed. FLTK processes wayland events until the compositor is ready for commit and then commits
+ the new window content.
+ A frame callback is also created before calling eglSwapBuffers() for all GL redraws.
  
  - Support of Fl_Window::border(int) :
  FLTK uses libdecor_frame_set_visibility() to show or hide a toplevel window's frame. This doesn't work

@@ -287,16 +287,6 @@ int Fl_Wayland_Gl_Window_Driver::mode_(int m, const int *a) {
 }
 
 
-static void surface_frame_done(void *data, struct wl_callback *cb, uint32_t time) {
-  wl_callback_destroy(cb);
-  *(bool*)data = false;
-}
-
-static const struct wl_callback_listener surface_frame_listener = {
-  .done = surface_frame_done,
-};
-
-
 void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
   if (overlay()) {
     static bool overlay_buffer = true;
@@ -340,10 +330,8 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
       struct wl_callback *callback = wl_surface_frame(surf);
       wl_surface_commit(surf);
       busy = true;
-      //fprintf(stderr, "busy=true\n");
-      wl_callback_add_listener(callback, &surface_frame_listener, &busy);
+      wl_callback_add_listener(callback, &Fl_Wayland_Window_Driver::frame_ready_listener, &busy);
       while (busy) wl_display_dispatch(fl_display); // wait for arrival of frame event
-      //fprintf(stderr, "busy=false\n");
     }
     if (eglSwapBuffers(egl_display, egl_surface)) {
       //fprintf(stderr, "Swapped buffers for surface=%p display=%p\n", egl_surface, egl_display);

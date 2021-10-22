@@ -72,8 +72,7 @@ struct buffer {
   int stride;
   int width;
   unsigned char *draw_buffer;
-  bool wl_buffer_ready;   // used with CSD
-  struct wl_callback *cb; // used with SSD
+  struct wl_callback *cb;
   bool draw_buffer_needs_commit;
   cairo_t *cairo_;
   PangoLayout *pango_layout_;

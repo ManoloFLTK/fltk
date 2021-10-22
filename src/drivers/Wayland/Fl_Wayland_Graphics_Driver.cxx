@@ -51,21 +51,6 @@ static int create_anonymous_file(off_t size)
 }
 
 
-static void buffer_gets_ready(void *user_data, struct wl_buffer *unused)
-{
-  struct wld_window *window = (struct wld_window *)user_data;
-  window->buffer->wl_buffer_ready = true;
-//fprintf(stderr, "buffer_gets_ready: needs_commit=%d\n", window->buffer->draw_buffer_needs_commit);
-  if (window->buffer->draw_buffer_needs_commit) {
-    Fl_Wayland_Graphics_Driver::buffer_commit(window);
-  }
-}
-
-static const struct wl_buffer_listener buffer_listener = {
-  buffer_gets_ready
-};
-
-
 struct buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int height, uint32_t format, struct wld_window *window)
 {
   struct buffer *buffer;
@@ -89,14 +74,12 @@ struct buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int heig
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   struct wl_shm_pool *pool = wl_shm_create_pool(scr_driver->wl_shm, fd, size);
   buffer->wl_buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride, format);
-  if (window && Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::KDE) wl_buffer_add_listener(buffer->wl_buffer, &buffer_listener, window);
   wl_shm_pool_destroy(pool);
   close(fd);
   buffer->data = data;
   buffer->data_size = size;
   buffer->width = width;
   buffer->draw_buffer = new uchar[buffer->data_size];
-  buffer->wl_buffer_ready = true;
   buffer->draw_buffer_needs_commit = false;
 //fprintf(stderr, "create_shm_buffer: %dx%d\n", width, height);
   cairo_init(buffer, width, height, stride, CAIRO_FORMAT_ARGB32);
@@ -112,7 +95,6 @@ void Fl_Wayland_Graphics_Driver::buffer_commit(struct wld_window *window) {
   wl_surface_set_buffer_scale(window->wl_surface, window->scale);
   wl_surface_commit(window->wl_surface);
   window->buffer->draw_buffer_needs_commit = false;
-  if (Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::KDE) window->buffer->wl_buffer_ready = false;
 //fprintf(stderr,"buffer_commit %s\n", window->fl_win->parent()?"child":"top");
 }
 
