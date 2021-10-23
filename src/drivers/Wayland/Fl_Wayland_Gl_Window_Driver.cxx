@@ -37,8 +37,6 @@ Consequently, FL_DOUBLE is enforced in all Fl_Gl_Window::mode_ values under Wayl
 
 class Fl_Wayland_Gl_Window_Driver : public Fl_Gl_Window_Driver {
   friend class Fl_Gl_Window_Driver;
-private:
-  bool busy;
 protected:
   Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win);
   virtual float pixels_per_unit();
@@ -84,7 +82,6 @@ Fl_Wayland_Gl_Window_Driver::Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win) : Fl
   if (egl_display == EGL_NO_DISPLAY) init();
   egl_window = NULL;
   egl_surface = NULL;
-  busy = false;
 }
 
 
@@ -320,16 +317,14 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
   }
 
   if (egl_surface) {
-    if (!pWindow->parent() && (Fl_Wayland_Window_Driver::in_handle_configure || busy)) {
-     eglSwapInterval(egl_display, 1);
-    } else {
+    if ( !Fl_Wayland_Window_Driver::in_handle_configure ) {
       eglSwapInterval(egl_display, 0);
       // Register a frame callback to know when we can draw the next frame
       Window xid = fl_xid(pWindow);
       struct wl_surface *surf = xid->wl_surface;
       struct wl_callback *callback = wl_surface_frame(surf);
       wl_surface_commit(surf);
-      busy = true;
+      bool busy = true;
       wl_callback_add_listener(callback, &Fl_Wayland_Window_Driver::frame_ready_listener, &busy);
       while (busy) wl_display_dispatch(fl_display); // wait for arrival of frame event
     }
