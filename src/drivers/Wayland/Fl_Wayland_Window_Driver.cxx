@@ -449,12 +449,6 @@ void Fl_Wayland_Window_Driver::show() {
 }
 
 
-void Fl_Wayland_Window_Driver::show_menu()
-{
-    pWindow->Fl_Window::show();
-}
-
-
 static void popup_done(void *data, struct xdg_popup *xdg_popup);
 
 void Fl_Wayland_Window_Driver::hide() {
