@@ -327,6 +327,11 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
       bool busy = true;
       wl_callback_add_listener(callback, &Fl_Wayland_Window_Driver::frame_ready_listener, &busy);
       while (busy) wl_display_dispatch(fl_display); // wait for arrival of frame event
+      if (!pWindow->parent()) { // avoids crashes while downsizing toplevel GL windows
+        int current_w, current_h;
+        wl_egl_window_get_attached_size(egl_window, &current_w, &current_h);
+        if (current_w != pWindow->pixel_w() || current_h != pWindow->pixel_h()) return;
+      }
     }
     if (eglSwapBuffers(egl_display, egl_surface)) {
       //fprintf(stderr, "Swapped buffers for surface=%p display=%p\n", egl_surface, egl_display);
@@ -352,11 +357,11 @@ static Fl_Gl_Overlay_Plugin Gl_Overlay_Plugin;
 
 
 void Fl_Wayland_Gl_Window_Driver::resize(int is_a_resize, int W, int H) {
-  if (egl_window) {
+  if (egl_window && (W != pWindow->w() || H != pWindow->h() || Fl_Window::is_a_rescale()) {
     struct wld_window *win = fl_xid(pWindow);
     int wld_scale = win->scale;
     float f = Fl::screen_scale(pWindow->screen_num());
-    wl_egl_window_resize(egl_window, W * wld_scale * f, H * wld_scale * f, 0, 0);
+    wl_egl_window_resize(egl_window, (W * wld_scale) * f, (H * wld_scale) * f, 0, 0);
 //fprintf(stderr, "Fl_Wayland_Gl_Window_Driver::resize to %dx%d\n", W * wld_scale, H * wld_scale);
   }
 }
