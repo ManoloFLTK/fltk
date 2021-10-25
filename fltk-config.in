@@ -20,6 +20,7 @@
 MAJOR_VERSION=@FLTK_VERSION_MAJOR@
 MINOR_VERSION=@FLTK_VERSION_MINOR@
 PATCH_VERSION=@FLTK_VERSION_PATCH@
+BUILD=@BUILD@
 VERSION="$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION"
 APIVERSION="$MAJOR_VERSION.$MINOR_VERSION"
 
@@ -244,8 +245,13 @@ else
 fi
 
 # Calculate needed libraries
-LDSTATIC="$libdir/libfltk.a $LDLIBS"
-LDLIBS="-lfltk$SHAREDSUFFIX $LDLIBS"
+if test x$BUILD = xWAYLAND; then
+  LDSTATIC="$libdir/libfltk.a $libdir/libfltk_decor.a $LDLIBS"
+  LDLIBS="-lfltk$SHAREDSUFFIX -lfltk_decor$SHAREDSUFFIX $LDLIBS"
+else
+  LDSTATIC="$libdir/libfltk.a $LDLIBS"
+  LDLIBS="-lfltk$SHAREDSUFFIX $LDLIBS"
+fi
 
 if test x$use_forms = xyes; then
     LDLIBS="-lfltk_forms$SHAREDSUFFIX $LDLIBS"
