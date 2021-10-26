@@ -21,7 +21,7 @@
 #include <config.h>
 #include "../Posix/Fl_Posix_System_Driver.H"
 
-class Fl_Wayland_System_Driver : public Fl_Posix_System_Driver {
+class FL_EXPORT Fl_Wayland_System_Driver : public Fl_Posix_System_Driver {
 public:
   Fl_Wayland_System_Driver() : Fl_Posix_System_Driver() {
     // Wayland system driver uses the default key table

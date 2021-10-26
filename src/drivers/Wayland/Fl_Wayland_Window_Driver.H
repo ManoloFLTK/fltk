@@ -68,7 +68,7 @@ struct wld_window {
   Fl_Window *fl_win;
 };
 
-class Fl_Wayland_Window_Driver : public Fl_Window_Driver
+class FL_EXPORT Fl_Wayland_Window_Driver : public Fl_Window_Driver
 {
   friend class Fl_X;
 private:
