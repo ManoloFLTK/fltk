@@ -129,7 +129,7 @@ struct pointer_output {
 Fl_Wayland_Screen_Driver::compositor_name Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::MUTTER;
 
 extern "C" {
-  bool fl_libdecor_using_weston(void) {
+  FL_EXPORT bool fl_libdecor_using_weston(void) {
     return Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON;
   };
 }
