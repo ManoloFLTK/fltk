@@ -784,6 +784,7 @@ static void handle_configure(struct libdecor_frame *frame,
     if (!window->fl_win->border()) libdecor_frame_set_visibility(window->frame, false);
     else if (!libdecor_frame_is_visible(window->frame)) libdecor_frame_set_visibility(window->frame, true);
     Fl::handle(FL_FOCUS, window->fl_win);
+    fl_find(window);
   }
 
   if (window_state & LIBDECOR_WINDOW_STATE_MAXIMIZED) state = libdecor_state_new(width, height);
