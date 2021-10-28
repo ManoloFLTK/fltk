@@ -198,7 +198,7 @@ int main (int argc, char* argv[])
   glutCreateWindow("Triangle Test");
 #ifndef __APPLE__
   GLenum err = glewInit(); // defines pters to functions of OpenGL V 1.2 and above
-#ifdef __WAYLAND__
+#ifdef USE_WAYLAND
   if (err == GLEW_ERROR_NO_GLX_DISPLAY) err = GLEW_OK;
 #endif
   if (err != GLEW_OK) Fl::error("glewInit() failed returning %u", err);

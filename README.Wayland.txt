@@ -31,6 +31,7 @@ The code has been tested on Debian and Ubuntu with 3 distinct compositors: mutte
 
 It is possible to have your FLTK application do all its windowing and drawing
 through the Wayland protocol on Linux systems. All drawing is done via Cairo or EGL.
+FLTK creates an additional library, libfltk_decor.a, contain code for window decorations.
 
  Configuration
 ---------------
@@ -40,7 +41,7 @@ Once after "git clone/git checkout wayland", create the configure file :
    autoconf -f
 
 Prepare build with :
-   ./configure --enable-wayland
+   ./configure --enable-wayland [--enable-shared]
    
 Build with :
    make
@@ -49,8 +50,6 @@ Build with :
  Currently unsupported features
 -------------------------------
 
-* "make install" is not supported. All apps use a dynamic library, libdecor-0.1.so, currently put
-in the lib/ subdirectory of the FLTK source tree.
 * Complex text-input methods are not supported (but dead and compose keys are supported).
 * With Wayland, there is no way to know if a window is currently minimized, nor is there any way to
 unset minimization on this window. Consequently, Fl_Window::show() of a minimized window does nothing.
@@ -83,3 +82,4 @@ These packages are necessary, in addition to those for usual X11-based platforms
 ==================
 
 May 29 2021 - Manolo: Initial version.
+Oct 28 2021 - Manolo: --enable-shared configure option is now supported.

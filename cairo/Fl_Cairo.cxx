@@ -30,7 +30,7 @@
 #  include <cairo-win32.h>
 #elif defined(__APPLE_QUARTZ__)   // macOS
 #  include <cairo-quartz.h>
-#elif defined(__WAYLAND__)
+#elif defined(USE_WAYLAND)
 #  include "../src/drivers/Wayland/Fl_Wayland_Graphics_Driver.H"
 #  include "../src/drivers/Wayland/Fl_Wayland_Window_Driver.H"
 #else
@@ -73,10 +73,10 @@ void  Fl_Cairo_State::autolink(bool b)  {
 cairo_t * Fl::cairo_make_current(Fl_Window* wi) {
     if (!wi) return NULL; // Precondition
   cairo_t * cairo_ctxt;
-#if defined(__WAYLAND__)
+#if defined(USE_WAYLAND)
   cairo_ctxt = fl_xid(wi)->buffer->cairo_;
   cairo_state_.cc(cairo_ctxt, false);
-#else // __WAYLAND__
+#else // USE_WAYLAND
     if (fl_gc==0) { // means remove current cc
         Fl::cairo_cc(0); // destroy any previous cc
         cairo_state_.window(0);
@@ -101,11 +101,11 @@ cairo_t * Fl::cairo_make_current(Fl_Window* wi) {
 #ifndef __APPLE__
   cairo_scale(cairo_ctxt, scale, scale);
 #endif
-#endif // __WAYLAND__
+#endif // USE_WAYLAND
   return cairo_ctxt;
 }
 
-#if !defined(__WAYLAND__)
+#if !defined(USE_WAYLAND)
 /*
     Creates transparently a cairo_surface_t object.
     gc is an HDC context in Windows, a CGContext* in Quartz, and
@@ -185,7 +185,7 @@ cairo_t * Fl::cairo_make_current(void *gc, int W, int H) {
     return c;
 }
 
-#endif // !__WAYLAND__
+#endif // !USE_WAYLAND
 
 #else
 // just don't leave the libfltk_cairo lib empty to avoid warnings

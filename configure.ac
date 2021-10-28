@@ -456,6 +456,7 @@ AC_SUBST([DSOCOMMAND])
 AC_SUBST([DSOFLAGS])
 AC_SUBST([DSOLINK])
 AC_SUBST([DSONAME])
+AC_SUBST([DSONAME_DECOR])
 AC_SUBST([FLDSONAME])
 AC_SUBST([GLDSONAME])
 AC_SUBST([IMGDSONAME])
@@ -1010,13 +1011,17 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
       BUILD="WAYLAND"
       graphics="Wayland"
       LINKFLTK="$LINKFLTK ../lib/libfltk_decor.a"
-      LIBS="$LIBS $($PKGCONFIG --libs dbus-1) -ldl -no-pie"
-      LIBS="$($PKGCONFIG --libs wayland-cursor) $($PKGCONFIG --libs wayland-client) $($PKGCONFIG --libs xkbcommon) $LIBS"
-      CFLAGS="$CFLAGS -D__WAYLAND__"
-      CXXFLAGS="$CXXFLAGS -D__WAYLAND__ -I../libdecor/src"
+      AS_IF([test x$enable_shared = xyes], [
+            LINKSHARED="$LINKSHARED -lfltk_decor"
+            DSONAME_DECOR="libfltk_decor.so.$FL_DSO_VERSION"
+         ])
+      LIBS="$LIBS $($PKGCONFIG --libs wayland-cursor) $($PKGCONFIG --libs wayland-client) $($PKGCONFIG --libs xkbcommon)"
+      LIBS="$LIBS $($PKGCONFIG --libs dbus-1) -ldl"
+      CXXFLAGS="$CXXFLAGS -DUSE_WAYLAND -I../libdecor/src"
       DSOFLAGS="$LIBS $DSOFLAGS"
       enable_pango=yes
       LIBDECORDIR="libdecor/build"
+      LDFLAGS="$LDFLAGS -no-pie"
     
       AC_SEARCH_LIBS([dlopen], [dl])
       AC_CHECK_HEADER([GL/gl.h], [AC_DEFINE([HAVE_GL])])
@@ -1027,10 +1032,10 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
         
       dnl Check for the Pango library ...
       pango_found=no
+      CFLAGS="$($PKGCONFIG --cflags pangocairo) $CFLAGS"
       CXXFLAGS="$($PKGCONFIG --cflags pangocairo) $CXXFLAGS"
-      LIBS="$($PKGCONFIG --libs pangocairo) $LIBS"
+      LIBS="$LIBS $($PKGCONFIG --libs pangocairo)"
  
-      CPPFLAGS="$CXXFLAGS"
       AC_CHECK_HEADERS([pango/pangocairo.h], [
           AC_DEFINE([USE_PANGO])
           AC_DEFINE([USE_XFT])
@@ -1416,17 +1421,21 @@ AS_IF([test -n "$GCC"], [
         [AC_MSG_RESULT(no)])
     CFLAGS="$OLDCFLAGS"
 
-    dnl Make sure that shared libraries don't have undefined references
-    # See if ld supports -no-undefined...
-    AC_MSG_CHECKING([if ld supports -no-undefined])
-    OLDLDFLAGS="$LDFLAGS"
-    LDFLAGS="$LDFLAGS -Wl,-no-undefined"
-    AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM([[]], [[]])],
-        [DSOFLAGS="$DSOFLAGS -Wl,-no-undefined"
-         AC_MSG_RESULT(yes)],
-        [AC_MSG_RESULT(no)])
-    LDFLAGS="$OLDLDFLAGS"
+    AS_IF([test x$enable_wayland = xyes],[
+        DSOFLAGS="$DSOFLAGS -Wl,--allow-shlib-undefined"
+    ] , [
+        dnl Make sure that shared libraries don't have undefined references
+        # See if ld supports -no-undefined...
+        AC_MSG_CHECKING([if ld supports -no-undefined])
+        OLDLDFLAGS="$LDFLAGS"
+        LDFLAGS="$LDFLAGS -Wl,-no-undefined"
+        AC_LINK_IFELSE(
+          [AC_LANG_PROGRAM([[]], [[]])],
+          [DSOFLAGS="$DSOFLAGS -Wl,-no-undefined"
+          AC_MSG_RESULT(yes)],
+          [AC_MSG_RESULT(no)])
+        LDFLAGS="$OLDLDFLAGS"
+    ])
 
     # See if ld supports -Bsymbolic-functions...
     AC_MSG_CHECKING([if ld supports -Bsymbolic-functions])

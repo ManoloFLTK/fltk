@@ -146,7 +146,7 @@ public:
       make_current();
 #ifndef __APPLE__
       GLenum err = glewInit(); // defines pters to functions of OpenGL V 1.2 and above
-#  ifdef __WAYLAND__
+#  ifdef USE_WAYLAND
       // glewInit returns GLEW_ERROR_NO_GLX_DISPLAY with Wayland
       // see https://github.com/nigels-com/glew/issues/273
       if (err == GLEW_ERROR_NO_GLX_DISPLAY) err = GLEW_OK;
