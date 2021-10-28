@@ -1,0 +1,9 @@
+#
+# Files to be ignored by Git (do not commit)
+#
+xdg-*.c
+xdg-*.h
+demo
+egl
+config.h
+libfltk_decor.*
