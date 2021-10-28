@@ -38,7 +38,7 @@ class Fl_Window;
 #  elif defined(__APPLE__)
 #    include "mac.H"
 #  elif defined(FLTK_USE_WAYLAND)
-#    include "../src/drivers/Wayland/wayland.H"
+#    include "wayland.H"
 #  elif defined(FLTK_USE_X11)
 #    include "x11.H"
 #  endif // _WIN32
