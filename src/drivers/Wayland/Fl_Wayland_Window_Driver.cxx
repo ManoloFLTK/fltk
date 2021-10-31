@@ -21,7 +21,7 @@
 #include "Fl_Wayland_Graphics_Driver.H"
 #include "Fl_Wayland_System_Driver.H"
 #include "../../../libdecor/src/libdecor.h"
-#include "../../../libdecor/build/xdg-shell-client-protocol.h"
+#include "../../xdg-shell-client-protocol.h"
 #include <pango/pangocairo.h>
 #include <FL/Fl_Overlay_Window.H>
 #include <FL/Fl_Menu_Window.H>

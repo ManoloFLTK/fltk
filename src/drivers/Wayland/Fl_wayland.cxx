@@ -39,7 +39,7 @@
 #  include "Fl_Wayland_System_Driver.H"
 #  include "Fl_Wayland_Graphics_Driver.H"
 #  include "../../../libdecor/src/libdecor.h"
-#  include "../../../libdecor/build/xdg-shell-client-protocol.h"
+#  include "../../xdg-shell-client-protocol.h"
 #  include <unistd.h>
 #  include <time.h>
 #  include <sys/time.h>

@@ -20,7 +20,7 @@
 #include "Fl_Wayland_System_Driver.H"
 #include "Fl_Wayland_Graphics_Driver.H"
 #include "../../../libdecor/src/libdecor.h"
-#include "../../../libdecor/build/xdg-shell-client-protocol.h"
+#include "../../xdg-shell-client-protocol.h"
 #include "../Posix/Fl_Posix_System_Driver.H"
 #include <FL/Fl.H>
 #include <FL/platform.H>

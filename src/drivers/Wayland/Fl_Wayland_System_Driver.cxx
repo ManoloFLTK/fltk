@@ -22,7 +22,7 @@
 #include "../../flstring.h"
 #include "Fl_Wayland_Screen_Driver.H"
 #include "Fl_Wayland_Window_Driver.H"
-#include "../../../libdecor/build/xdg-shell-client-protocol.h"
+#include "../../xdg-shell-client-protocol.h"
 
 #include <locale.h>
 #include <time.h>

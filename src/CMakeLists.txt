@@ -431,7 +431,7 @@ if (FLTK_USE_X11)
 endif (FLTK_USE_X11)
 
 if (USE_WAYLAND)
-  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -I${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/build -I${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/src -fPIC -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 -DLIBDECOR_PLUGIN_DIR=\\\"Unused\\\" ")
+  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I. -I${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/src -fPIC -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 -DLIBDECOR_PLUGIN_DIR=\\\"Unused\\\" ")
   list (APPEND CFILES
     xutf8/keysym2Ucs.c
     scandir_posix.c
@@ -530,20 +530,18 @@ endif (USE_XFT)
 
 if (USE_WAYLAND)
   add_custom_command(
-    OUTPUT xdg-shell-protocol.c ${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/build/xdg-shell-client-protocol.h
-    COMMAND wayland-scanner private-code /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml
-                          xdg-shell-protocol.c
-    COMMAND wayland-scanner client-header /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml ${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/build/xdg-shell-client-protocol.h
+    OUTPUT xdg-shell-protocol.c xdg-shell-client-protocol.h
+    COMMAND wayland-scanner private-code /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol.c
+    COMMAND wayland-scanner client-header /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml xdg-shell-client-protocol.h
     DEPENDS /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml
     VERBATIM
   )
   list (APPEND STATIC_FILES "xdg-shell-protocol.c")
   list (APPEND SHARED_FILES "xdg-shell-protocol.c")
   add_custom_command(
-    OUTPUT xdg-decoration-protocol.c ${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/build/xdg-decoration-client-protocol.h
-    COMMAND wayland-scanner private-code /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
-                          xdg-decoration-protocol.c
-    COMMAND wayland-scanner client-header /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml ${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/build/xdg-decoration-client-protocol.h
+    OUTPUT xdg-decoration-protocol.c xdg-decoration-client-protocol.h
+    COMMAND wayland-scanner private-code /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml xdg-decoration-protocol.c
+    COMMAND wayland-scanner client-header /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml xdg-decoration-client-protocol.h
     DEPENDS /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
     VERBATIM
   )

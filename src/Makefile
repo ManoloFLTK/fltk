@@ -377,7 +377,7 @@ CFILES_XFT = $(XLIBCFILES)
 CFILES_WAYLAND = $(WLCFILES)
 EXTRA_WAYLAND =  ../libdecor/build/fl_libdecor.o ../libdecor/build/libdecor-cairo-blur.o \
   ../libdecor/build/fl_libdecor-cairo.o ../libdecor/build/libdecor-fallback.o \
-  ../libdecor/build/xdg-decoration-protocol.o ../libdecor/build/xdg-shell-protocol.o \
+  xdg-decoration-protocol.o xdg-shell-protocol.o \
   ../libdecor/build/cursor-settings.o
 
 CFILES_WIN = $(GDICFILES)
