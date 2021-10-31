@@ -456,7 +456,6 @@ AC_SUBST([DSOCOMMAND])
 AC_SUBST([DSOFLAGS])
 AC_SUBST([DSOLINK])
 AC_SUBST([DSONAME])
-AC_SUBST([DSONAME_DECOR])
 AC_SUBST([FLDSONAME])
 AC_SUBST([GLDSONAME])
 AC_SUBST([IMGDSONAME])
@@ -1010,11 +1009,6 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
 
       BUILD="WAYLAND"
       graphics="Wayland"
-      LINKFLTK="$LINKFLTK ../lib/libfltk_decor.a"
-      AS_IF([test x$enable_shared = xyes], [
-            LINKSHARED="$LINKSHARED -lfltk_decor"
-            DSONAME_DECOR="libfltk_decor.so.$FL_DSO_VERSION"
-         ])
       LIBS="$LIBS $($PKGCONFIG --libs wayland-cursor) $($PKGCONFIG --libs wayland-client) $($PKGCONFIG --libs xkbcommon)"
       LIBS="$LIBS $($PKGCONFIG --libs dbus-1) -ldl"
       CXXFLAGS="$CXXFLAGS -DUSE_WAYLAND -I../libdecor/src"

@@ -21,15 +21,12 @@ OBJECTS =  fl_libdecor.o libdecor-cairo-blur.o fl_libdecor-cairo.o libdecor-fall
   xdg-decoration-protocol.o xdg-shell-protocol.o cursor-settings.o
 PROTOCOLS = /usr/share/wayland-protocols
 
-all : demo egl $(DSONAME_DECOR)
+all : demo egl
 
 depend:
 	: echo "libdecor/build: make depend..."
 
-config.h :
-	touch config.h
-
-fl_libdecor.o : fl_libdecor.c ../src/libdecor.c xdg-shell-protocol.c xdg-decoration-protocol.c config.h
+fl_libdecor.o : fl_libdecor.c ../src/libdecor.c xdg-shell-protocol.c xdg-decoration-protocol.c
 	$(CC) $(CFLAGS) -c  fl_libdecor.c -DLIBDECOR_PLUGIN_API_VERSION=1 -DLIBDECOR_PLUGIN_DIR=\"Unused\"
 
 libdecor-fallback.o : ../src/libdecor-fallback.c
@@ -64,37 +61,18 @@ xdg-decoration-protocol.o : xdg-decoration-protocol.c
 xdg-shell-protocol.o : xdg-shell-protocol.c
 	$(CC) $(CFLAGS) -c xdg-shell-protocol.c
 
-
-../../lib/libfltk_decor.a : $(OBJECTS)
-	echo Creating libfltk_decor.a
-	$(RM) $@
-	$(LIBCOMMAND) $@ $(OBJECTS)
-	$(RANLIB) $@
-
-libfltk_decor.so.$(FL_DSO_VERSION) : $(OBJECTS)
-	$(CC) -shared -o $@ -Wl,-soname,$@ $(OBJECTS)
-	$(RM) libfltk_decor.so
-	$(LN) -s  $@ libfltk_decor.so
-
 	
-demo : ../../lib/libfltk_decor.a ../demo/demo.c
-	$(CC)  -o demo ../demo/demo.c -D_GNU_SOURCE -I../src -I. -L../../lib -lfltk_decor  -lwayland-cursor -lwayland-client -lxkbcommon `pkg-config --libs pangocairo` -ldl -ldbus-1 -lm -no-pie -Wl,--defsym=fl_libdecor_using_weston=0
+demo : ../demo/demo.c $(OBJECTS)
+	$(CC)  -o demo ../demo/demo.c -D_GNU_SOURCE -I../.. -I../src -I. $(OBJECTS)  -lwayland-cursor -lwayland-client -lxkbcommon `pkg-config --libs pangocairo` -ldl -ldbus-1 -lm -no-pie -Wl,--defsym=fl_libdecor_using_weston=0
 
-egl : ../../lib/libfltk_decor.a ../demo/egl.c
-	$(CC)  -o egl ../demo/egl.c -D_GNU_SOURCE -I../src -I. -L../../lib -lfltk_decor -lEGL -lGLU -lOpenGL -lwayland-egl  -lwayland-cursor -lwayland-client `pkg-config --libs pangocairo` -ldbus-1 -ldl -lm -no-pie -Wl,--defsym=fl_libdecor_using_weston=0
+egl : ../demo/egl.c $(OBJECTS)
+	$(CC)  -o egl ../demo/egl.c -D_GNU_SOURCE -I../.. -I../src -I. $(OBJECTS) -lEGL -lGLU -lOpenGL -lwayland-egl  -lwayland-cursor -lwayland-client `pkg-config --libs pangocairo` -ldbus-1 -ldl -lm -no-pie -Wl,--defsym=fl_libdecor_using_weston=0
 
 
-install : libfltk_decor.so.$(FL_DSO_VERSION)
-	echo "Installing libfltk_decor in $(DESTDIR)$(libdir)..."
-	-$(INSTALL_DIR) $(DESTDIR)$(libdir)
-	$(RM) $(DESTDIR)$(libdir)/libfltk_decor.so
-	$(INSTALL_LIB) libfltk_decor.so.$(FL_DSO_VERSION) $(DESTDIR)$(libdir)
-	$(LN) -s $(DESTDIR)$(libdir)/libfltk_decor.so.$(FL_DSO_VERSION) $(DESTDIR)$(libdir)/libfltk_decor.so
+install:
+	echo "Nothing to install"
 
 uninstall:
-	echo "Uninstalling libraries..."
-	$(RM) $(DESTDIR)$(libdir)/libfltk_decor.so*
-
 
 clean:
-	$(RM) *.o xdg-*.c xdg-*.h config.h demo egl ../../lib/libfltk_decor.a libfltk_decor.so*
+	$(RM) *.o xdg-*.c xdg-*.h demo egl

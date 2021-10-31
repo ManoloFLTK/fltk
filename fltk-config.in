@@ -245,13 +245,9 @@ else
 fi
 
 # Calculate needed libraries
-if test x$BUILD = xWAYLAND; then
-  LDSTATIC="$libdir/libfltk.a $libdir/libfltk_decor.a $LDLIBS"
-  LDLIBS="-lfltk$SHAREDSUFFIX -lfltk_decor$SHAREDSUFFIX $LDLIBS"
-else
-  LDSTATIC="$libdir/libfltk.a $LDLIBS"
-  LDLIBS="-lfltk$SHAREDSUFFIX $LDLIBS"
-fi
+LDSTATIC="$libdir/libfltk.a $LDLIBS"
+LDLIBS="-lfltk$SHAREDSUFFIX $LDLIBS"
+
 
 if test x$use_forms = xyes; then
     LDLIBS="-lfltk_forms$SHAREDSUFFIX $LDLIBS"
