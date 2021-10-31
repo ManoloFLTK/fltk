@@ -551,7 +551,10 @@ if (USE_WAYLAND)
   if (OPTION_USE_GL)
     list (APPEND OPTIONAL_LIBS "-lwayland-egl -lEGL")
   endif (OPTION_USE_GL)
-  list (APPEND OPTIONAL_LIBS "-lwayland-cursor -lwayland-client -lxkbcommon -ldl -ldbus-1 -no-pie")
+  list (APPEND OPTIONAL_LIBS "-lwayland-cursor -lwayland-client -lxkbcommon -ldl -ldbus-1")
+  if (NOT OPTION_BUILD_SHARED_LIBS)
+    list (APPEND OPTIONAL_LIBS "-no-pie")
+  endif (NOT OPTION_BUILD_SHARED_LIBS)
 endif (USE_WAYLAND)
 
 #######################################################################
