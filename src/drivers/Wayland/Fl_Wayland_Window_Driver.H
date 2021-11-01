@@ -74,7 +74,7 @@ class FL_EXPORT Fl_Wayland_Window_Driver : public Fl_Window_Driver
 private:
   static bool in_flush; // useful for progressive window drawing
 public:
-  static bool in_handle_configure; // distinguish OS and user window resize
+  bool in_handle_configure; // distinguish OS and user window resize
   static int titlebar_height; // height of libdecor's titlebars
   struct window_output {
     Fl_Wayland_Screen_Driver::output* output;

@@ -37,6 +37,7 @@ Consequently, FL_DOUBLE is enforced in all Fl_Gl_Window::mode_ values under Wayl
 
 class Fl_Wayland_Gl_Window_Driver : public Fl_Gl_Window_Driver {
   friend class Fl_Gl_Window_Driver;
+  bool egl_resize_in_progress;
 protected:
   Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win);
   virtual float pixels_per_unit();
@@ -82,6 +83,7 @@ Fl_Wayland_Gl_Window_Driver::Fl_Wayland_Gl_Window_Driver(Fl_Gl_Window *win) : Fl
   if (egl_display == EGL_NO_DISPLAY) init();
   egl_window = NULL;
   egl_surface = NULL;
+  egl_resize_in_progress = false;
 }
 
 
@@ -317,7 +319,8 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
   }
 
   if (egl_surface) {
-    if ( !Fl_Wayland_Window_Driver::in_handle_configure ) {
+    Fl_Wayland_Window_Driver *driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(pWindow);
+    if ( !driver->in_handle_configure ) {
       eglSwapInterval(egl_display, 0);
       // Register a frame callback to know when we can draw the next frame
       Window xid = fl_xid(pWindow);
@@ -327,7 +330,21 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
       bool busy = true;
       wl_callback_add_listener(callback, &Fl_Wayland_Window_Driver::frame_ready_listener, &busy);
       while (busy) wl_display_dispatch(fl_display); // wait for arrival of frame event
+      // special attention necessary for top-level GL wins
+      if (!pWindow->parent() && !egl_resize_in_progress) {
+        while (true) {
+          int W, H;
+          wl_egl_window_get_attached_size(egl_window, &W, &H);
+          float f = Fl::screen_scale(pWindow->screen_num());
+          int flW = int((pWindow->w() * xid->scale) * f);
+          int flH = int((pWindow->h() * xid->scale) * f);
+          if (W == flW && H == flH) break;
+          //fprintf(stderr,"swap_buffer: attached=%dx%d size=%dx%d \n",W,H,flW,flH);
+          wl_display_dispatch(fl_display);
+        }
+      }
     }
+    egl_resize_in_progress = false;
     if (eglSwapBuffers(egl_display, egl_surface)) {
       //fprintf(stderr, "Swapped buffers for surface=%p display=%p\n", egl_surface, egl_display);
     } else {
@@ -357,7 +374,8 @@ void Fl_Wayland_Gl_Window_Driver::resize(int is_a_resize, int W, int H) {
     int wld_scale = win->scale;
     float f = Fl::screen_scale(pWindow->screen_num());
     wl_egl_window_resize(egl_window, (W * wld_scale) * f, (H * wld_scale) * f, 0, 0);
-//fprintf(stderr, "Fl_Wayland_Gl_Window_Driver::resize to %dx%d\n", W * wld_scale, H * wld_scale);
+//fprintf(stderr, "Fl_Wayland_Gl_Window_Driver::resize to %dx%d\n", int(W * wld_scale*f), int(H * wld_scale*f));
+    egl_resize_in_progress = true;
   }
 }
 

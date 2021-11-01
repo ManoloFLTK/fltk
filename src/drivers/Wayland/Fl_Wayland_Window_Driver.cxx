@@ -60,6 +60,7 @@ Fl_Wayland_Window_Driver::Fl_Wayland_Window_Driver(Fl_Window *win) : Fl_Window_D
 {
   icon_ = new icon_data;
   memset(icon_, 0, sizeof(icon_data));
+  in_handle_configure = false;
 #if USE_XFT
   screen_num_ = -1;
 #endif
@@ -706,7 +707,6 @@ static struct wl_surface_listener surface_listener = {
   surface_leave,
 };
 
-bool Fl_Wayland_Window_Driver::in_handle_configure = false;
 int Fl_Wayland_Window_Driver::titlebar_height = 0;
 
 static void handle_configure(struct libdecor_frame *frame,
@@ -717,7 +717,7 @@ static void handle_configure(struct libdecor_frame *frame,
   int width, height;
   enum libdecor_window_state window_state;
   struct libdecor_state *state;
-  Fl_Window_Driver *driver = Fl_Window_Driver::driver(window->fl_win);
+  Fl_Wayland_Window_Driver *driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(window->fl_win);
   float f = Fl::screen_scale(window->fl_win->screen_num());
 
   if (!window->xdg_toplevel) window->xdg_toplevel = libdecor_frame_get_xdg_toplevel(frame);
@@ -760,9 +760,9 @@ static void handle_configure(struct libdecor_frame *frame,
   }
   if (width < 128) width = 128; // enforce minimal size of decorated windows for libdecor
   if (height < 56) height = 56;
-  Fl_Wayland_Window_Driver::in_handle_configure = true;
+  driver->in_handle_configure = true;
   window->fl_win->resize(0, 0, width / f, height / f);
-  Fl_Wayland_Window_Driver::in_handle_configure = false;
+  driver->in_handle_configure = false;
   
   if (int(width / f) != window->configured_width || int(height / f) != window->configured_height) {
     if (window->buffer) {
@@ -799,13 +799,13 @@ static void handle_configure(struct libdecor_frame *frame,
     //fprintf(stderr,"set floating_width+height %dx%d\n",width,height);
   }
   
-  Fl_Wayland_Window_Driver::in_handle_configure = true;
+  driver->in_handle_configure = true;
   if (!window->fl_win->as_gl_window()) {
     driver->flush();
   } else {
     driver->Fl_Window_Driver::flush(); // GL window
   }
-  Fl_Wayland_Window_Driver::in_handle_configure = false;
+  driver->in_handle_configure = false;
 }
 
 
