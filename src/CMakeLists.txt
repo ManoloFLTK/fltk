@@ -242,7 +242,7 @@ if (FLTK_USE_X11)
   )
 
 elseif (USE_WAYLAND)
-
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${CMAKE_BINARY_DIR}/src")
   set (DRIVER_FILES
     drivers/Posix/Fl_Posix_System_Driver.cxx
     drivers/Posix/Fl_Posix_Printer_Driver.cxx

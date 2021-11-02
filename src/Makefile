@@ -375,18 +375,20 @@ CFILES_X11 = $(XLIBCFILES) $(XLIBXCFILES)
 CFILES_XFT = $(XLIBCFILES)
 
 CFILES_WAYLAND = $(WLCFILES)
-EXTRA_WAYLAND =  ../libdecor/build/fl_libdecor.o ../libdecor/build/libdecor-cairo-blur.o \
+EXTRA_OBJECTS_WAYLAND =  ../libdecor/build/fl_libdecor.o ../libdecor/build/libdecor-cairo-blur.o \
   ../libdecor/build/fl_libdecor-cairo.o ../libdecor/build/libdecor-fallback.o \
   xdg-decoration-protocol.o xdg-shell-protocol.o \
   ../libdecor/build/cursor-settings.o
+EXTRA_CXXFLAGS_WAYLAND = -I.
 
 CFILES_WIN = $(GDICFILES)
 
 CFILES += $(CFILES_$(BUILD))
+CXXFLAGS += $(EXTRA_CXXFLAGS_$(BUILD))
 
 
 OBJECTS =  $(MMFILES:.mm=.o) $(CPPFILES:.cxx=.o) $(CFILES:.c=.o) $(UTF8CFILES:.c=.o)
-OBJECTS += $(EXTRA_$(BUILD))
+OBJECTS += $(EXTRA_OBJECTS_$(BUILD))
 GLOBJECTS = $(GLCPPFILES:.cxx=.o)
 FLOBJECTS = $(FLCPPFILES:.cxx=.o)
 IMGOBJECTS = $(IMGCPPFILES:.cxx=.o)
