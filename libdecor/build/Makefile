@@ -55,12 +55,6 @@ cursor-settings.o : ../src/cursor-settings.c
 	    $(PROTOCOLS)/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml \
 	    ../../src/xdg-decoration-client-protocol.h
 
-xdg-decoration-protocol.o : ../../src/xdg-decoration-protocol.c
-	$(CC) $(CFLAGS) -c ../../src/xdg-decoration-protocol.c
-
-xdg-shell-protocol.o : ../../src/xdg-shell-protocol.c
-	$(CC) $(CFLAGS) -c ../../src/xdg-shell-protocol.c
-
 	
 demo : ../demo/demo.c $(OBJECTS)
 	$(CC)  -o demo ../demo/demo.c -D_GNU_SOURCE -I../.. -I../src -I. -I../../src $(OBJECTS)  -lwayland-cursor -lwayland-client -lxkbcommon `pkg-config --libs pangocairo` -ldl -ldbus-1 -lm -no-pie -Wl,--defsym=fl_libdecor_using_weston=0
