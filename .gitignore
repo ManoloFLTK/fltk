@@ -117,6 +117,8 @@ etc/FLTKConfig.cmake
 /src/*.dll
 /src/*.sav
 /src/*.dylib
+/src/xdg-*.c
+/src/xdg-*.h
 
 # /test/
 # see test/.gitignore
