@@ -901,7 +901,7 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
     struct wld_window *fl_win = fl_xid(pWindow);
     if (is_a_resize) {
       float f = Fl::screen_scale(pWindow->screen_num());
-      if (!pWindow->resizable()) pWindow->size_range(w(), h(), w(), h());
+      if (!pWindow->resizable() && !fl_win->frame) pWindow->size_range(w(), h(), w(), h());
       if (fl_win->frame) { // a decorated window
         if (fl_win->buffer) {
           Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
@@ -912,6 +912,10 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
           struct libdecor_state *state = libdecor_state_new(W * f, H * f);
           libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
           libdecor_state_free(state);
+          if (!pWindow->resizable()) {
+            libdecor_frame_set_min_content_size(fl_win->frame, W * f, H * f);
+            libdecor_frame_set_max_content_size(fl_win->frame, W * f, H * f);
+          }
         }
       } else if (fl_win->subsurface) { // a subwindow
         wl_subsurface_set_position(fl_win->subsurface, X * f, Y * f);

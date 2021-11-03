@@ -912,6 +912,33 @@ static const struct xdg_popup_listener popup_listener = {
 
 bool Fl_Wayland_Window_Driver::in_flush = false;
 
+// Compute the parent window of the transient scale window
+static Fl_Window *calc_transient_parent() {
+  // Find top, the topmost window, but not a transient window itself
+  Fl_Window *top = Fl::first_window()->top_window();
+  while (top && top->user_data() == &Fl_Screen_Driver::transient_scale_display)
+   top = Fl::next_window(top);
+  Fl_Window *target = top;
+  // search if top's center belongs to one of its subwindows
+  int center_x = top->w()/2, center_y = top->h()/2;
+  while (target) {
+    Fl_Window *child = Fl::first_window();
+    while (child) {
+      if (child->window() == target && child->user_data() != &Fl_Screen_Driver::transient_scale_display &&
+            child->x() <= center_x && child->x()+child->w() > center_x &&
+            child->y() <= center_y && child->y()+child->h() > center_y) {
+          break; // child contains the center of top
+      }
+      child = Fl::next_window(child);
+    }
+    if (!child) break; // no more subwindow contains the center of top
+    target = child;
+    center_x -= child->x(); // express center coordinates relatively to child
+    center_y -= child->y();
+  }
+  return target;
+}
+
 
 Fl_X *Fl_Wayland_Window_Driver::makeWindow()
 {
@@ -936,15 +963,11 @@ fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.2f\n", pWindow, new
   
   if (pWindow->user_data() == &Fl_Screen_Driver::transient_scale_display && Fl::first_window()) {
   // put transient scale win at center of top window by making it a child of top
-    Fl_Window *top = Fl::first_window()->top_window();
-    Fl_Window *next = Fl::next_window(top);
-    if (next && next->user_data() != &Fl_Screen_Driver::transient_scale_display && next->top_window() == top) { // top window contains a subwindow: next
-      // if subwin contains the center of top window, make transient win a child of subwin
-      if (next->x() <= top->w()/2 && next->x()+next->w() > top->w()/2 && 
-        next->y() <= top->h()/2 && next->y()+next->h() > top->h()/2) top = next;
-      }
-    top->add(pWindow);
-    pWindow->position( (top->w()-pWindow->w())/2 ,  (top->h()-pWindow->h())/2 );
+    Fl_Window *top = calc_transient_parent();
+    if (top) {
+      top->add(pWindow);
+      pWindow->position( (top->w()-pWindow->w())/2 ,  (top->h()-pWindow->h())/2 );
+    }
   }
   
   if (pWindow->menu_window() || pWindow->tooltip_window()) { // a menu window or tooltip
@@ -981,8 +1004,9 @@ fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.2f\n", pWindow, new
     if (!pWindow->resizable()) {
       libdecor_frame_unset_capabilities(new_window->frame, LIBDECOR_ACTION_RESIZE);
       libdecor_frame_unset_capabilities(new_window->frame, LIBDECOR_ACTION_FULLSCREEN);
+    } else {
+      libdecor_frame_set_min_content_size(new_window->frame, 128, 56);// libdecor wants width ≥ 128 & height ≥ 56
     }
-    libdecor_frame_set_min_content_size(new_window->frame, 128, 56);// libdecor wants width ≥ 128 & height ≥ 56
     libdecor_frame_map(new_window->frame);
     float f = Fl::screen_scale(pWindow->screen_num());
     new_window->floating_width = pWindow->w() * f;
