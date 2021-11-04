@@ -430,11 +430,13 @@ void Fl_Wayland_Window_Driver::flush() {
   Fl_Window_Driver::flush();
   Fl_Wayland_Window_Driver::in_flush = false;
   
+/* This attempt to use a frame callback here creates serious problems with test/subwindow.
   wl_callback* cb = wl_surface_frame(window->wl_surface);
   bool busy = true;
   wl_callback_add_listener(cb, &frame_ready_listener, &busy);
   Fl_Wayland_Graphics_Driver::buffer_commit(window);
-  while (busy) { wl_display_dispatch(fl_display); }
+  while (busy) { wl_display_dispatch(fl_display); }*/
+  Fl_Wayland_Graphics_Driver::buffer_commit(window);
 }
 
 
