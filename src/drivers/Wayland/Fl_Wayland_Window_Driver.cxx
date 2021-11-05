@@ -32,6 +32,7 @@
 #include <FL/Fl_Image_Surface.H>
 #include <string.h>
 #include <sys/mman.h>
+#include <math.h> // for ceil()
 
 extern "C" {
   uchar *fl_libdecor_cairo_titlebar_buffer(struct libdecor_frame *frame, int *w, int *h, int *stride);
