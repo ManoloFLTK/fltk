@@ -90,7 +90,7 @@ void Fl_Wayland_Window_Driver::decorated_win_size(int &w, int &h)
   w = win->w();
   h = win->h();
   if (!win->shown() || win->parent() || !win->border() || !win->visible()) return;
-  h = win->h() + titlebar_height / Fl::screen_scale(win->screen_num());
+  h = win->h() + ceil(titlebar_height / Fl::screen_scale(win->screen_num()));
 }
 
 
@@ -738,10 +738,6 @@ static void handle_configure(struct libdecor_frame *frame,
     if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON) {
       driver->wait_for_expose_value = 0;
     }
-  } else {
-    if (driver->size_range_set()) {
-      if (width < driver->minw() || height < driver->minh()) return;
-    }
   }
 
   int tmpW, tmpH;
@@ -763,16 +759,16 @@ static void handle_configure(struct libdecor_frame *frame,
   if (width < 128) width = 128; // enforce minimal size of decorated windows for libdecor
   if (height < 56) height = 56;
   driver->in_handle_configure = true;
-  window->fl_win->resize(0, 0, width / f, height / f);
+  window->fl_win->resize(0, 0, ceil(width / f), ceil(height / f));
   driver->in_handle_configure = false;
   
-  if (int(width / f) != window->configured_width || int(height / f) != window->configured_height) {
+  if (ceil(width / f) != window->configured_width || ceil(height / f) != window->configured_height) {
     if (window->buffer) {
       Fl_Wayland_Graphics_Driver::buffer_release(window);
     }
   }
-  window->configured_width = width / f;
-  window->configured_height = height / f;
+  window->configured_width = ceil(width / f);
+  window->configured_height = ceil(height / f);
 //fprintf(stderr, "handle_configure fl_win=%p pos:%dx%d size:%dx%d state=%x wait_for_expose_value=%d \n", window->fl_win, window->fl_win->x(), window->fl_win->y(), width,height,window_state,driver->wait_for_expose_value);
 
 /* We would like to do FL_HIDE when window is minimized but :
@@ -790,14 +786,14 @@ static void handle_configure(struct libdecor_frame *frame,
   }
 
   if (window_state & LIBDECOR_WINDOW_STATE_MAXIMIZED) state = libdecor_state_new(width, height);
-  else state = libdecor_state_new(int(int(width/f)*f), int(int(height/f)*f));
+  else state = libdecor_state_new(int(ceil(width/f)*f), int(ceil(height/f)*f));
   libdecor_frame_commit(frame, state, configuration);
   libdecor_state_free(state);
   window->fl_win->redraw();
   
   if (libdecor_frame_is_floating(frame)) { // store floating dimensions
-    window->floating_width = int(int(width/f)*f);
-    window->floating_height = int(int(height/f)*f);
+    window->floating_width = int(ceil(width/f)*f);
+    window->floating_height = int(ceil(height/f)*f);
     //fprintf(stderr,"set floating_width+height %dx%d\n",width,height);
   }
   
@@ -877,12 +873,12 @@ static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel
     width = window->fl_win->w() * f;
     height = window->fl_win->h() * f;
   }
-  window->fl_win->size(width / f, height / f);
-  if (window->buffer && (int(width / f) != window->configured_width || int(height / f) != window->configured_height)) {
+  window->fl_win->size(ceil(width / f), ceil(height / f));
+  if (window->buffer && (ceil(width / f) != window->configured_width || ceil(height / f) != window->configured_height)) {
     Fl_Wayland_Graphics_Driver::buffer_release(window);
   }
-  window->configured_width = width / f;
-  window->configured_height = height / f;
+  window->configured_width = ceil(width / f);
+  window->configured_height = ceil(height / f);
 }
 
 

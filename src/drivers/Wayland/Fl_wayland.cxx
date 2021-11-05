@@ -909,13 +909,9 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
         fl_win->configured_width = W;
         fl_win->configured_height = H;
         if (!in_handle_configure && fl_win->xdg_toplevel) {
-          struct libdecor_state *state = libdecor_state_new(W * f, H * f);
+          struct libdecor_state *state = libdecor_state_new(int(W * f), int(H * f));
           libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
           libdecor_state_free(state);
-          if (!pWindow->resizable()) {
-            libdecor_frame_set_min_content_size(fl_win->frame, W * f, H * f);
-            libdecor_frame_set_max_content_size(fl_win->frame, W * f, H * f);
-          }
         }
       } else if (fl_win->subsurface) { // a subwindow
         wl_subsurface_set_position(fl_win->subsurface, X * f, Y * f);

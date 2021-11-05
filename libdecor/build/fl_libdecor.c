@@ -48,3 +48,10 @@ LIBDECOR_EXPORT struct libdecor *libdecor_new(struct wl_display *wl_display, str
   return context;
 }
 
+/* Avoid undoing a previously set min-content-size */
+void fl_libdecor_frame_clamp_min_content_size(struct libdecor_frame *frame,
+                                            int content_width, int content_height) {
+  struct libdecor_frame_private *frame_priv = frame->priv;
+  frame_priv->state.content_limits.min_width = MAX(frame_priv->state.content_limits.min_width, content_width);
+  frame_priv->state.content_limits.min_height = MAX(frame_priv->state.content_limits.min_height, content_height);
+}

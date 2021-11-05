@@ -1,4 +1,9 @@
+struct libdecor_frame;
+extern void fl_libdecor_frame_clamp_min_content_size(struct libdecor_frame *frame,
+                                                   int content_width, int content_height);
+#define libdecor_frame_set_min_content_size fl_libdecor_frame_clamp_min_content_size
 #include "../src/plugins/cairo/libdecor-cairo.c"
+#undef libdecor_frame_clamp_min_content_size
 
 /*
  FLTK-added utility function to give access to the pixel array representing
