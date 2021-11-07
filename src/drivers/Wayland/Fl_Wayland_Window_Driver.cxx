@@ -431,12 +431,7 @@ void Fl_Wayland_Window_Driver::flush() {
   Fl_Window_Driver::flush();
   Fl_Wayland_Window_Driver::in_flush = false;
   
-/* This attempt to use a frame callback here creates serious problems with test/subwindow.
-  wl_callback* cb = wl_surface_frame(window->wl_surface);
-  bool busy = true;
-  wl_callback_add_listener(cb, &frame_ready_listener, &busy);
-  Fl_Wayland_Graphics_Driver::buffer_commit(window);
-  while (busy) { wl_display_dispatch(fl_display); }*/
+  wl_surface_frame(window->wl_surface);
   Fl_Wayland_Graphics_Driver::buffer_commit(window);
 }
 
@@ -736,9 +731,6 @@ static void handle_configure(struct libdecor_frame *frame,
   if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
     width = 0;
     height = 0;
-    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON) {
-      driver->wait_for_expose_value = 0;
-    }
   }
 
   int tmpW, tmpH;
@@ -801,7 +793,19 @@ static void handle_configure(struct libdecor_frame *frame,
   driver->in_handle_configure = true;
   if (!window->fl_win->as_gl_window()) {
     driver->flush();
+    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON &&
+        driver->wait_for_expose_value) { // support of Fl_Window::wait_for_expose() under Weston
+      wl_callback* cb = wl_surface_frame(window->wl_surface);
+      wl_callback_add_listener(cb, &Fl_Wayland_Window_Driver::frame_ready_listener, &driver->wait_for_expose_value);
+      Fl_Wayland_Graphics_Driver::buffer_commit(window);
+      while (driver->wait_for_expose_value) {
+        wl_display_dispatch(fl_display);
+      }
+    }
   } else {
+    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON) {
+       driver->wait_for_expose_value = 0;
+    }
     driver->Fl_Window_Driver::flush(); // GL window
   }
   driver->in_handle_configure = false;

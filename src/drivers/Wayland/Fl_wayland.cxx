@@ -912,6 +912,10 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
           struct libdecor_state *state = libdecor_state_new(int(W * f), int(H * f));
           libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
           libdecor_state_free(state);
+          if (libdecor_frame_is_floating(fl_win->frame)) {
+            fl_win->floating_width = int(W*f);
+            fl_win->floating_height = int(H*f);
+          }
         }
       } else if (fl_win->subsurface) { // a subwindow
         wl_subsurface_set_position(fl_win->subsurface, X * f, Y * f);
