@@ -867,8 +867,7 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   if (strcmp(interface, "wl_compositor") == 0) {
     if (version < 4) {
-      fprintf(stderr, "wl_compositor version >= 4 required");
-      exit(EXIT_FAILURE);
+      Fl::fatal("wl_compositor version >= 4 required");
     }
     scr_driver->wl_compositor = (struct wl_compositor*)wl_registry_bind(wl_registry,
            id, &wl_compositor_interface, 4);
@@ -884,9 +883,7 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
     
   } else if (strcmp(interface, "wl_seat") == 0) {
     if (version < 3) {
-      fprintf(stderr, "%s version 3 required but only version "
-          "%i is available\n", interface, version);
-      exit(EXIT_FAILURE);
+      Fl::fatal("%s version 3 required but only version %i is available\n", interface, version);
     }
     if (!scr_driver->seat) scr_driver->seat = (struct seat*)calloc(1, sizeof(struct seat));
 //fprintf(stderr, "registry_handle_global: seat=%p\n", scr_driver->seat);
@@ -918,9 +915,7 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
     
   } else if (strcmp(interface, "wl_output") == 0) {
     if (version < 2) {
-      fprintf(stderr, "%s version 3 required but only version "
-          "%i is available\n", interface, version);
-      exit(EXIT_FAILURE);
+      Fl::fatal("%s version 3 required but only version %i is available\n", interface, version);
     }
     Fl_Wayland_Screen_Driver::output *output = (Fl_Wayland_Screen_Driver::output*)calloc(1, sizeof *output);
     output->id = id;
@@ -938,10 +933,10 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
       xdg_wm_base_add_listener(scr_driver->xdg_wm_base, &xdg_wm_base_listener, NULL);
   } else if (strcmp(interface, "weston_desktop_shell") == 0) {
     Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::WESTON;
-    fprintf(stderr, "Running the Weston compositor\n");
+    //fprintf(stderr, "Running the Weston compositor\n");
   } else if (strcmp(interface, "org_kde_plasma_shell") == 0) {
     Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::KDE;
-    fprintf(stderr, "Running the KDE compositor\n");
+    //fprintf(stderr, "Running the KDE compositor\n");
   }
 }
 
@@ -950,7 +945,7 @@ static void registry_handle_global_remove(void *data, struct wl_registry *regist
 {//TODO to be tested
   Fl_Wayland_Screen_Driver::output *output;
   Fl_Wayland_Window_Driver::window_output *window_output;
-fprintf(stderr, "registry_handle_global_remove data=%p id=%u\n", data, name);
+//fprintf(stderr, "registry_handle_global_remove data=%p id=%u\n", data, name);
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   wl_list_for_each(output, &(scr_driver->outputs), link) { // all screens of the system
     if (output->id == name) { // the screen being removed
@@ -1002,8 +997,7 @@ void Fl_Wayland_Screen_Driver::open_display_platform() {
   beenHereDoneThat = true;
   wl_display = wl_display_connect(NULL);
   if (!wl_display) {
-    fprintf(stderr, "No Wayland connection\n");
-    exit(EXIT_FAILURE);
+    Fl::fatal("No Wayland connection\n");
   }
   fl_display = wl_display;
   wl_list_init(&seats);
@@ -1014,8 +1008,7 @@ void Fl_Wayland_Screen_Driver::open_display_platform() {
   wl_display_dispatch(wl_display);
   wl_display_roundtrip(wl_display);
   if (!has_xrgb) {
-    fprintf(stderr, "No WL_SHM_FORMAT_ARGB8888 shm format\n");
-    exit( EXIT_FAILURE);
+    Fl::fatal("Error: no WL_SHM_FORMAT_ARGB8888 shm format\n");
   }
   Fl::add_fd(wl_display_get_fd(wl_display), FL_READ, (Fl_FD_Handler)fd_callback, wl_display);
   Fl_Wayland_Window_Driver::titlebar_height = (compositor == WESTON ? 24 : 0);

@@ -59,14 +59,14 @@ struct buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int heig
   int size = stride * height;
   int fd = create_anonymous_file(size);
   if (fd < 0) {
-    fprintf(stderr, "creating a buffer file for %d B failed: %s\n",
+    Fl::fatal("creating a buffer file for %d B failed: %s\n",
       size, strerror(errno));
     return NULL;
   }
   void *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   if (data == MAP_FAILED) {
-    fprintf(stderr, "mmap failed: %s\n", strerror(errno));
     close(fd);
+    Fl::fatal("mmap failed: %s\n", strerror(errno));
     return NULL;
   }
   buffer = (struct buffer*)calloc(1, sizeof *buffer);
@@ -100,16 +100,16 @@ void Fl_Wayland_Graphics_Driver::buffer_commit(struct wld_window *window) {
 
 
 void Fl_Wayland_Graphics_Driver::cairo_init(struct buffer *buffer, int width, int height, int stride, cairo_format_t format) {
-  cairo_surface_t *surf = cairo_image_surface_create_for_data (buffer->draw_buffer, format,
+  cairo_surface_t *surf = cairo_image_surface_create_for_data(buffer->draw_buffer, format,
                                                         width, height, stride);
   if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
-    fprintf(stderr, "Can't create Cairo surface\n");
+    Fl::fatal("Can't create Cairo surface with cairo_image_surface_create_for_data()\n");
     return;
   }
   buffer->cairo_ = cairo_create(surf);
   cairo_status_t err;
   if ((err = cairo_status(buffer->cairo_)) != CAIRO_STATUS_SUCCESS) {
-    fprintf(stderr, "Cairo error on create %s\n", cairo_status_to_string(err));
+    Fl::fatal("Cairo error during cairo_create() %s\n", cairo_status_to_string(err));
     return;
   }
   cairo_set_source_rgba(buffer->cairo_, 1.0, 1.0, 1.0, 0.);

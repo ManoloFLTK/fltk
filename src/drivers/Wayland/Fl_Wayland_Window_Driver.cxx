@@ -656,8 +656,7 @@ int Fl_Wayland_Window_Driver::scroll(int src_x, int src_y, int src_w, int src_h,
 
 static void handle_error(struct libdecor *libdecor_context, enum libdecor_error error, const char *message)
 {
-  fprintf(stderr, "Caught error (%d): %s\n", error, message);
-  exit(EXIT_FAILURE);
+  Fl::fatal("Caught error (%d): %s\n", error, message);
 }
 
 static struct libdecor_interface libdecor_iface = {
@@ -968,7 +967,7 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
   wl_list_init(&new_window->outputs);
 
   new_window->wl_surface = wl_compositor_create_surface(scr_driver->wl_compositor);
-fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.2f\n", pWindow, new_window->scale, Fl::screen_scale(0));
+  //Fl::warning("makeWindow:%p wayland-scale=%d user-scale=%.2f\n", pWindow, new_window->scale, Fl::screen_scale(0));
   wl_surface_add_listener(new_window->wl_surface, &surface_listener, new_window);
   
   if (pWindow->user_data() == &Fl_Screen_Driver::transient_scale_display && Fl::first_window()) {
@@ -1039,7 +1038,7 @@ fprintf(stderr, "makeWindow:%p wayland-scale=%d user-scale=%.2f\n", pWindow, new
 
   } else { // a window without decoration
     new_window->xdg_surface = xdg_wm_base_get_xdg_surface(scr_driver->xdg_wm_base, new_window->wl_surface);
-fprintf(stderr, "makeWindow: xdg_wm_base_get_xdg_surface=%p\n", new_window->xdg_surface);
+//fprintf(stderr, "makeWindow: xdg_wm_base_get_xdg_surface=%p\n", new_window->xdg_surface);
     xdg_surface_add_listener(new_window->xdg_surface, &xdg_surface_listener, new_window);
     new_window->xdg_toplevel = xdg_surface_get_toplevel(new_window->xdg_surface);
     xdg_toplevel_add_listener(new_window->xdg_toplevel, &xdg_toplevel_listener, new_window);

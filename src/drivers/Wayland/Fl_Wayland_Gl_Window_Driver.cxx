@@ -93,15 +93,12 @@ void Fl_Wayland_Gl_Window_Driver::init() {
   if (!fl_display) Fl::screen_driver()->open_display();
   egl_display = eglGetDisplay((EGLNativeDisplayType) fl_display);
   if (egl_display == EGL_NO_DISPLAY) {
-    fprintf(stderr, "Can't create egl display\n");
-    exit(1);
-  } else {
-    //fprintf(stderr, "Created egl display\n");
+    Fl::fatal("Can't create egl display\n");
   }
+}
   
   if (eglInitialize(egl_display, &major, &minor) != EGL_TRUE) {
-    fprintf(stderr, "Can't initialise egl display\n");
-    exit(1);
+    Fl::fatal("Can't initialise egl display\n");
   }
   //printf("EGL major: %d, minor %d\n", major, minor);
   
@@ -170,8 +167,7 @@ Fl_Gl_Choice *Fl_Wayland_Gl_Window_Driver::find(int m, const int *alistp)
     eglChooseConfig(egl_display, config_attribs, configs, configs_count, &n);
   }
   if (n == 0) {
-    fprintf(stderr, "failed to choose an EGL config\n");
-    exit(1);
+    Fl::fatal("failed to choose an EGL config\n");
   }
   
   g = new Fl_Wayland_Gl_Choice(m, alistp, first);
@@ -214,7 +210,7 @@ void Fl_Wayland_Gl_Window_Driver::set_gl_context(Fl_Window* w, GLContext context
     if (eglMakeCurrent(egl_display, egl_surface, egl_surface, (EGLContext)context)) {
 //fprintf(stderr, "EGLContext %p made current\n", context);
     } else {
-      fprintf(stderr, "Made current failed\n");
+      Fl::error("eglMakeCurrent() failed\n");
     }
   }
 }
@@ -225,9 +221,9 @@ void Fl_Wayland_Gl_Window_Driver::delete_gl_context(GLContext context) {
     cached_window = 0;
   }
   EGLBoolean b = eglDestroyContext(egl_display, context);
-fprintf(stderr,"EGL context %p destroyed %s\n", context, b==EGL_TRUE?"successfully":"w/ error");
+//fprintf(stderr,"EGL context %p destroyed %s\n", context, b==EGL_TRUE?"successfully":"w/ error");
   b = eglDestroySurface(egl_display, egl_surface);
-fprintf(stderr,"EGLSurface %p destroyed %s\n", egl_surface, b==EGL_TRUE?"successfully":"w/ error");
+//fprintf(stderr,"EGLSurface %p destroyed %s\n", egl_surface, b==EGL_TRUE?"successfully":"w/ error");
   egl_surface = NULL;
   wl_egl_window_destroy(egl_window);
   egl_window = NULL;
@@ -258,14 +254,13 @@ void Fl_Wayland_Gl_Window_Driver::make_current_before() {
     struct wl_surface *surface = win->wl_surface;
     egl_window = wl_egl_window_create(surface, pWindow->pixel_w(), pWindow->pixel_h());
     if (egl_window == EGL_NO_SURFACE) {
-      fprintf(stderr, "Can't create egl window\n");
-      exit(1);
+      Fl::fatal("Can't create egl window with wl_egl_window_create()\n");
     } else {
       //fprintf(stderr, "Created egl window=%p\n", egl_window);
     }
     Fl_Wayland_Gl_Choice *g = (Fl_Wayland_Gl_Choice*)this->g();
     egl_surface = eglCreateWindowSurface(egl_display, g->egl_conf, egl_window, NULL);
-fprintf(stderr, "Created egl surface=%p at scale=%d\n", egl_surface, win->scale);
+//fprintf(stderr, "Created egl surface=%p at scale=%d\n", egl_surface, win->scale);
     wl_surface_set_buffer_scale(surface, win->scale);
     wl_surface_commit(surface);
     wl_display_roundtrip(fl_display);
@@ -349,7 +344,7 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
       //fprintf(stderr, "Swapped buffers for surface=%p display=%p\n", egl_surface, egl_display);
     } else {
       cached_context = 0;
-      fprintf(stderr, "Swapped buffers failed\n");
+      Fl::error("eglSwapBuffers() failed\n");
     }
   }
 }

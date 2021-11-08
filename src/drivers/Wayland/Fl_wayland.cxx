@@ -352,7 +352,7 @@ void write_data_source_cb(FL_SOCKET fd, data_source_write_struct *data) {
     ssize_t n = write(fd, data->from, data->rest);
     if (n == -1) {
       if (errno == EAGAIN) return;
-fprintf(stderr, "write_data_source_cb: error while writing clipboard data\n");
+      Fl::error("write_data_source_cb: error while writing clipboard data\n");
       break;
     }
     data->from += n;
@@ -372,7 +372,7 @@ static void data_source_handle_send(void *data, struct wl_data_source *source, c
     write_data->from = fl_selection_buffer[rank];
     Fl::add_fd(fd, FL_WRITE, (Fl_FD_Handler)write_data_source_cb, write_data);
   } else {
-fprintf(stderr, "Destination client requested unsupported MIME type: %s\n", mime_type);
+    Fl::error("Destination client requested unsupported MIME type: %s\n", mime_type);
     close(fd);
   }
 }
