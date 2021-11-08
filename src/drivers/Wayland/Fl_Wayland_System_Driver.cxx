@@ -363,11 +363,6 @@ void Fl_Wayland_System_Driver::display_arg(const char *arg) {
   Fl::display(arg);
 }
 
-int Fl_Wayland_System_Driver::XParseGeometry(const char* string, int* x, int* y,
-                                         unsigned int* width, unsigned int* height) {
-  return 0;//::XParseGeometry(string, x, y, width, height);
-}
-
 //
 // Needs some docs
 // Returns -1 on error, errmsg will contain OS error if non-NULL.

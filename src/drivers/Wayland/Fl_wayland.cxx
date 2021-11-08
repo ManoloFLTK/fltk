@@ -960,6 +960,7 @@ void Fl_Wayland_Window_Driver::fullscreen_on() {
       left = top;
       right = top;
     }
+  pWindow->wait_for_expose(); // make sure ->xdg_toplevel is initialized
   if (fl_xid(pWindow)->xdg_toplevel) {
     xdg_toplevel_set_fullscreen(fl_xid(pWindow)->xdg_toplevel, NULL);
     pWindow->_set_fullscreen();

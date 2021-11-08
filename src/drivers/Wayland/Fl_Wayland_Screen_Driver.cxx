@@ -1252,6 +1252,12 @@ static void set_selection_color(uchar r, uchar g, uchar b)
 
 static void getsyscolor(const char *key1, const char* key2, const char *arg, const char *defarg, void (*func)(uchar,uchar,uchar))
 {
+  uchar r, g, b;
+  if (!arg) arg = defarg;
+  if (!Fl::screen_driver()->parse_color(arg, r, g, b))
+    Fl::error("Unknown color: %s", arg);
+  else
+    func(r, g, b);
 }
 
 
