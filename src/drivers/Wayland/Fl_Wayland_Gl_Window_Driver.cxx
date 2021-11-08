@@ -95,7 +95,6 @@ void Fl_Wayland_Gl_Window_Driver::init() {
   if (egl_display == EGL_NO_DISPLAY) {
     Fl::fatal("Can't create egl display\n");
   }
-}
   
   if (eglInitialize(egl_display, &major, &minor) != EGL_TRUE) {
     Fl::fatal("Can't initialise egl display\n");
