@@ -922,14 +922,14 @@ static const struct xdg_popup_listener popup_listener = {
 bool Fl_Wayland_Window_Driver::in_flush = false;
 
 // Compute the parent window of the transient scale window
-static Fl_Window *calc_transient_parent() {
+static Fl_Window *calc_transient_parent(int &center_x, int &center_y) {
   // Find top, the topmost window, but not a transient window itself
   Fl_Window *top = Fl::first_window()->top_window();
   while (top && top->user_data() == &Fl_Screen_Driver::transient_scale_display)
    top = Fl::next_window(top);
   Fl_Window *target = top;
   // search if top's center belongs to one of its subwindows
-  int center_x = top->w()/2, center_y = top->h()/2;
+  center_x = top->w()/2; center_y = top->h()/2;
   while (target) {
     Fl_Window *child = Fl::first_window();
     while (child) {
@@ -972,10 +972,11 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
   
   if (pWindow->user_data() == &Fl_Screen_Driver::transient_scale_display && Fl::first_window()) {
   // put transient scale win at center of top window by making it a child of top
-    Fl_Window *top = calc_transient_parent();
+    int center_x, center_y;
+    Fl_Window *top = calc_transient_parent(center_x, center_y);
     if (top) {
       top->add(pWindow);
-      pWindow->position( (top->w()-pWindow->w())/2 ,  (top->h()-pWindow->h())/2 );
+      pWindow->position(center_x - pWindow->w()/2 ,  center_y - pWindow->h()/2);
     }
   }
   
