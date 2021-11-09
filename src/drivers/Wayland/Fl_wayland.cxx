@@ -518,6 +518,23 @@ static void data_device_handle_selection(void *data, struct wl_data_device *data
 //if (offer == NULL) fprintf(stderr, "Clipboard is empty\n");
 }
 
+
+static size_t convert_crlf(char *s, size_t len)
+{ // turn \r characters into \n and "\r\n" sequences into \n:
+  char *p;
+  size_t l = len;
+  while ((p = strchr(s, '\r'))) {
+    if (*(p+1) == '\n') {
+      memmove(p, p+1, l-(p-s));
+      len--; l--;
+    } else *p = '\n';
+    l -= p-s;
+    s = p + 1;
+  }
+  return len;
+}
+
+
 // Gets from the system the clipboard or dnd text and puts it in fl_selection_buffer[1]
 // which is enlarged if necessary.
 static void get_clipboard_or_dragged_text(struct wl_data_offer *offer) {
@@ -530,6 +547,8 @@ static void get_clipboard_or_dragged_text(struct wl_data_offer *offer) {
   char *to = fl_selection_buffer[1];
   ssize_t rest = fl_selection_buffer_length[1];
   while (rest) {
+    wl_display_roundtrip(fl_display); // Supports DnD inside same app
+    while (Fl::ready()) Fl::check(); // Make app write to the other side of pipe
     ssize_t n = read(fds[0], to, rest);
     if (n <= 0) {
       close(fds[0]);
@@ -537,6 +556,7 @@ static void get_clipboard_or_dragged_text(struct wl_data_offer *offer) {
       fl_selection_buffer[1][ fl_selection_length[1] ] = 0;
       return;
     }
+    n = convert_crlf(to, n);
     to += n;
     rest -= n;
   }
@@ -569,10 +589,11 @@ static void get_clipboard_or_dragged_text(struct wl_data_offer *offer) {
       close(fds[0]);
       break;
     }
+    n = convert_crlf(from, n);
     from += n;
   }
-  fl_selection_length[1] = rest;
-  fl_selection_buffer[1][rest] = 0;
+  fl_selection_length[1] = from - fl_selection_buffer[1];;
+  fl_selection_buffer[1][fl_selection_length[1]] = 0;
   Fl::e_clipboard_type = Fl::clipboard_plain_text;
 }
 
@@ -585,10 +606,11 @@ static void data_device_handle_enter(void *data, struct wl_data_device *data_dev
   Fl_Window *win = Fl_Wayland_Screen_Driver::surface_to_window(surface);
 //printf("Drag entered our surface %p(win=%p) at %dx%d\n", surface, win, wl_fixed_to_int(x), wl_fixed_to_int(y));
   if (win) {
+    float f = Fl::screen_scale(win->screen_num());
     fl_dnd_target_window = win;
-    Fl::e_x = wl_fixed_to_int(x);
+    Fl::e_x = wl_fixed_to_int(x) / f;
     Fl::e_x_root = Fl::e_x + fl_dnd_target_window->x();
-    Fl::e_y = wl_fixed_to_int(y);
+    Fl::e_y = wl_fixed_to_int(y) / f;
     Fl::e_y_root = Fl::e_y + fl_dnd_target_window->y();
     Fl::handle(FL_DND_ENTER, fl_dnd_target_window);
     current_drag_offer = offer;
@@ -605,9 +627,10 @@ static void data_device_handle_motion(void *data, struct wl_data_device *data_de
 //printf("data_device_handle_motion fl_dnd_target_window=%p\n", fl_dnd_target_window);
   int ret = 0;
   if (fl_dnd_target_window) {
-    Fl::e_x = wl_fixed_to_int(x);
+    float f = Fl::screen_scale(fl_dnd_target_window->screen_num());
+    Fl::e_x = wl_fixed_to_int(x) / f;
     Fl::e_x_root = Fl::e_x + fl_dnd_target_window->x();
-    Fl::e_y = wl_fixed_to_int(y);
+    Fl::e_y = wl_fixed_to_int(y) / f;
     Fl::e_y_root = Fl::e_y + fl_dnd_target_window->y();
     ret = Fl::handle(FL_DND_DRAG, fl_dnd_target_window);
   }
@@ -615,6 +638,7 @@ static void data_device_handle_motion(void *data, struct wl_data_device *data_de
   uint32_t preferred_action = supported_actions;
   wl_data_offer_set_actions(current_drag_offer, supported_actions, preferred_action);
   wl_display_roundtrip(fl_display);
+  if (ret) wl_data_offer_accept(current_drag_offer, fl_dnd_serial, "text/plain");
 }
 
 static void data_device_handle_leave(void *data, struct wl_data_device *data_device) {
@@ -627,9 +651,8 @@ static void data_device_handle_drop(void *data, struct wl_data_device *data_devi
   int ret = Fl::handle(FL_DND_RELEASE, fl_dnd_target_window);
 //printf("data_device_handle_drop ret=%d\n", ret);
 
-  if (!ret) wl_data_offer_destroy(current_drag_offer);
-  wl_data_offer_accept(current_drag_offer, fl_dnd_serial, ret ? "text/plain" : NULL);
   if (!ret) {
+    wl_data_offer_destroy(current_drag_offer);
     current_drag_offer = NULL;
     return;
   }
