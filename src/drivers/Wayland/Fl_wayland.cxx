@@ -442,6 +442,7 @@ static const struct wl_data_source_listener data_source_listener = {
   .action = data_source_handle_action,
 };
 
+static bool doing_dnd = false; // helps identify DnD within the app itself
 
 int Fl_Wayland_Screen_Driver::dnd(int unused) {
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
@@ -456,6 +457,7 @@ int Fl_Wayland_Screen_Driver::dnd(int unused) {
   struct wl_surface *icon = NULL;
   scr_driver->xc_arrow = scr_driver->cache_cursor("dnd-copy");
   wl_data_device_start_drag(scr_driver->seat->data_device, source, scr_driver->seat->pointer_focus, icon, scr_driver->seat->serial);
+  doing_dnd = true;
   return 1;
 }
 
@@ -547,8 +549,6 @@ static void get_clipboard_or_dragged_text(struct wl_data_offer *offer) {
   char *to = fl_selection_buffer[1];
   ssize_t rest = fl_selection_buffer_length[1];
   while (rest) {
-    wl_display_roundtrip(fl_display); // Supports DnD inside same app
-    while (Fl::ready()) Fl::check(); // Make app write to the other side of pipe
     ssize_t n = read(fds[0], to, rest);
     if (n <= 0) {
       close(fds[0]);
@@ -643,6 +643,7 @@ static void data_device_handle_motion(void *data, struct wl_data_device *data_de
 
 static void data_device_handle_leave(void *data, struct wl_data_device *data_device) {
 //printf("Drag left our surface\n");
+  doing_dnd = false;
 }
 
 
@@ -657,9 +658,14 @@ static void data_device_handle_drop(void *data, struct wl_data_device *data_devi
     return;
   }
 
-  get_clipboard_or_dragged_text(current_drag_offer);
-  Fl::e_text = fl_selection_buffer[1];
-  Fl::e_length = fl_selection_length[1];
+  if (doing_dnd) {
+    Fl::e_text = fl_selection_buffer[0];
+    Fl::e_length = fl_selection_length[0];
+  } else {
+    get_clipboard_or_dragged_text(current_drag_offer);
+    Fl::e_text = fl_selection_buffer[1];
+    Fl::e_length = fl_selection_length[1];
+  }
   int old_event = Fl::e_number;
   Fl::belowmouse()->handle(Fl::e_number = FL_PASTE);
   Fl::e_number = old_event;
