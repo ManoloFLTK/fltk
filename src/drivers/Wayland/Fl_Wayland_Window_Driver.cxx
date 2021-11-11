@@ -61,6 +61,7 @@ Fl_Wayland_Window_Driver::Fl_Wayland_Window_Driver(Fl_Window *win) : Fl_Window_D
 {
   icon_ = new icon_data;
   memset(icon_, 0, sizeof(icon_data));
+  cursor = NULL;
   in_handle_configure = false;
 #if USE_XFT
   screen_num_ = -1;

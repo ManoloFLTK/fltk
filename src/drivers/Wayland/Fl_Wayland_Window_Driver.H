@@ -86,6 +86,7 @@ public:
     Fl_RGB_Image **icons;
     int count;
   } *icon_;
+  struct wl_cursor *cursor;
 #if  USE_XFT
   // --- support for screen-specific scaling factors
   struct type_for_resize_window_between_screens {

@@ -226,9 +226,8 @@ static struct wl_shm_listener shm_listener = {
   shm_format
 };
 
-static void do_set_cursor(struct seat *seat)
+static void do_set_cursor(struct seat *seat, struct wl_cursor *wl_cursor = NULL)
 {
-  struct wl_cursor *wl_cursor;
   struct wl_cursor_image *image;
   struct wl_buffer *buffer;
   const int scale = seat->pointer_scale;
@@ -236,7 +235,7 @@ static void do_set_cursor(struct seat *seat)
   if (!seat->cursor_theme)
     return;
 
-  wl_cursor = seat->default_cursor;
+  if (!wl_cursor) wl_cursor = seat->default_cursor;
   image = wl_cursor->images[0];
   buffer = wl_cursor_image_get_buffer(image);
   wl_pointer_set_cursor(seat->wl_pointer, seat->serial,
@@ -298,9 +297,18 @@ static void pointer_enter(void *data,
         wl_fixed_t surface_y)
 {
   struct seat *seat = (struct seat*)data;
-  do_set_cursor(seat);
-  seat->serial = serial;
   Fl_Window *win = Fl_Wayland_Screen_Driver::surface_to_window(surface);
+  struct wl_cursor *cursor = NULL;
+  if (win) { // use custom cursor if present
+    Fl_Wayland_Window_Driver *driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(win);
+    cursor = driver->cursor;
+    if (win->parent() && !cursor) {
+      driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(win->top_window());
+      cursor = driver->cursor;
+    }
+  }
+  do_set_cursor(seat, cursor);
+  seat->serial = serial;
   if (win) {
     float f = Fl::screen_scale(win->screen_num());
     Fl::e_x = wl_fixed_to_int(surface_x) / f;
@@ -470,6 +478,13 @@ static void cursor_surface_enter(void *data,
 //fprintf(stderr, "cursor_surface_enter: wl_output_get_user_data(%p)=%p\n", wl_output, pointer_output->output);
   wl_list_insert(&seat->pointer_outputs, &pointer_output->link);
   try_update_cursor(seat);
+  // maintain custom window cursor
+  Fl_Window *win = Fl::first_window();
+  if (win) {
+    Fl_Wayland_Window_Driver *driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(win);
+    struct wl_cursor *cursor = driver->cursor;
+    if (cursor) do_set_cursor(seat, cursor);
+  }
 }
 
 static void cursor_surface_leave(void *data,

@@ -1028,8 +1028,8 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
   struct wl_cursor *new_cursor = (struct wl_cursor*)malloc(sizeof(struct wl_cursor));
   struct cursor_image *new_image = (struct cursor_image*)calloc(1, sizeof(struct cursor_image));
   int scale = fl_xid(pWindow)->scale;
-  new_image->image.width = rgb->data_w() * scale;
-  new_image->image.height = rgb->data_h() * scale;
+  new_image->image.width = rgb->w() * scale;
+  new_image->image.height = rgb->h() * scale;
   new_image->image.hotspot_x = hotx * scale;
   new_image->image.hotspot_y = hoty * scale;
   new_image->image.delay = 0;
@@ -1046,13 +1046,24 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
   Fl_Surface_Device::push_current(img_surf);
   Fl_Wayland_Graphics_Driver *driver = (Fl_Wayland_Graphics_Driver*)img_surf->driver();
   cairo_scale(driver->cr(), scale, scale);
+  memset(offscreen->draw_buffer, 0, offscreen->data_size);
   ((Fl_RGB_Image*)rgb)->draw(0, 0);
   Fl_Surface_Device::pop_current();
   delete img_surf;
   memcpy(offscreen->data, offscreen->draw_buffer, offscreen->data_size);
+  if (new_image->image.width <= 64 && new_image->image.height <= 64) {
+    // for some mysterious reason, small cursor images want RGBA whereas big ones want BGRA !!!
+    //fprintf(stderr, "exchange R and B\n");
+    char *to = (char*)offscreen->data, *last = to + offscreen->data_size, xchg;
+    while (to < last) {
+      xchg = *to;
+      *to = *(to+2);
+      *(to+2) = xchg;
+      to += 4;
+    }
+  }
   //have this new cursor used
-  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-  scr_driver->default_cursor(new_cursor);
+  this->cursor = new_cursor;
   //memorize new cursor
   if (previous_custom_cursor) {
     struct wld_window fake_xid;
