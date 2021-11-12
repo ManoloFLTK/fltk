@@ -723,7 +723,6 @@ static void handle_configure(struct libdecor_frame *frame,
     
   if (window->fl_win->fullscreen_active()) {
     libdecor_frame_set_fullscreen(window->frame, NULL);
-    window->fl_win->_clear_fullscreen();
   } else if (driver->show_iconic()) {
     libdecor_frame_set_minimized(window->frame);
     driver->show_iconic(0);
