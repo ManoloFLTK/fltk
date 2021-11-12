@@ -1367,7 +1367,7 @@ Fl_RGB_Image *Fl_Wayland_Screen_Driver::read_win_rectangle(int X, int Y, int w, 
                                                            bool ignore, bool *p_ignore) {
   Window xid = win ? fl_xid(win) : NULL;
   struct buffer *buffer = win ? xid->buffer : (Fl_Offscreen)Fl_Surface_Device::surface()->driver()->gc();
-  int s = win ? xid->scale : 1; //TODO: check when win is NULL
+  float s = win ? xid->scale * scale(win->screen_num()) : 1; //TODO: check when win is NULL
   if (s != 1) {
     X *= s; Y *= s; w *= s; h *= s;
   }
