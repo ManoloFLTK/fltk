@@ -666,7 +666,14 @@ void Fl_Wayland_Graphics_Driver::draw_cached_pattern_(Fl_Image *img, cairo_patte
   cairo_clip(cairo_);
   if (img->d() >= 1) cairo_set_source(cairo_, pat);
   cairo_matrix_t matrix;
-  cairo_matrix_init_scale(&matrix, double(img->data_w())/(img->w()+1), double(img->data_h())/(img->h()+1));
+  // Hack to support fl_overlay_rect() for integer values of GUI scaling
+  int extra = 1;
+  if (W==1 || H==1) {
+    float s = fl_window ? fl_window->scale * Fl::screen_driver()->scale(0) : 1;
+    if (img->w() == W && img->h() == H && img->data_w() == s * img->w()) extra = 0;
+  }
+//fprintf(stderr,"WH=%dx%d dataWH=%dx%d extra=%d\n",img->w(),img->h(),img->data_w(),img->data_h(),extra);
+  cairo_matrix_init_scale(&matrix, double(img->data_w())/(img->w()+extra), double(img->data_h())/(img->h()+extra));
   cairo_matrix_translate(&matrix, -X+0.5+cx, -Y+0.5+cy);
   cairo_pattern_set_matrix(pat, &matrix);
   cairo_mask(cairo_, pat);
