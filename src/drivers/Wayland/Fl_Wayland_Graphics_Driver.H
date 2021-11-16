@@ -127,6 +127,7 @@ public:
   void cache(Fl_Pixmap *pxm);
   void draw_pixmap(Fl_Pixmap *rgb,int XP, int YP, int WP, int HP, int cx, int cy);
   void uncache_pixmap(fl_uintptr_t p);
+  void overlay_rect(int x, int y, int w , int h);
   static void init_built_in_fonts();
   static struct buffer *create_shm_buffer(int width, int height, uint32_t format, struct wld_window *window);
   static void buffer_release(struct wld_window *window);

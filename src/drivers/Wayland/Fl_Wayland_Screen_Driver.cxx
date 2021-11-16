@@ -1368,21 +1368,28 @@ Fl_RGB_Image *Fl_Wayland_Screen_Driver::read_win_rectangle(int X, int Y, int w, 
   Window xid = win ? fl_xid(win) : NULL;
   struct buffer *buffer = win ? xid->buffer : (Fl_Offscreen)Fl_Surface_Device::surface()->driver()->gc();
   float s = win ? xid->scale * scale(win->screen_num()) : 1; //TODO: check when win is NULL
-  if (s != 1) {
-    X *= s; Y *= s; w *= s; h *= s;
+  int Xs, Ys, ws, hs;
+  if (s == 1) {
+    Xs = X; Ys = Y; ws = w; hs = h;
+  } else {
+    Xs = Fl_Scalable_Graphics_Driver::floor(X, s);
+    Ys = Fl_Scalable_Graphics_Driver::floor(Y, s);
+    ws = Fl_Scalable_Graphics_Driver::floor(X+w, s) - Xs;
+    hs = Fl_Scalable_Graphics_Driver::floor(Y+h, s) - Ys;
   }
-  uchar *data = new uchar[w * h * 3];
+  if (ws == 0 || hs == 0) return NULL;
+  uchar *data = new uchar[ws * hs * 3];
   uchar *p = data, *q;
-  for (int j = 0; j < h; j++) {
-    q = buffer->draw_buffer + (j+Y) * buffer->stride + 4 * X;
-    for (int i = 0; i < w; i++) {
+  for (int j = 0; j < hs; j++) {
+    q = buffer->draw_buffer + (j+Ys) * buffer->stride + 4 * Xs;
+    for (int i = 0; i < ws; i++) {
       *p++ = *(q+2); // R
       *p++ = *(q+1); // G
       *p++ = *q;     // B
       q += 4;
     }
   }
-  Fl_RGB_Image *rgb = new Fl_RGB_Image(data, w, h, 3);
+  Fl_RGB_Image *rgb = new Fl_RGB_Image(data, ws, hs, 3);
   rgb->alloc_array = 1;
   return rgb;
 }

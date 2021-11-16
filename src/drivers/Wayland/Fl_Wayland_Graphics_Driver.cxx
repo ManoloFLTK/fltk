@@ -660,21 +660,65 @@ void Fl_Wayland_Graphics_Driver::transformed_vertex(double x, double y) {
 }
 
 
-void Fl_Wayland_Graphics_Driver::draw_cached_pattern_(Fl_Image *img, cairo_pattern_t *pat, int X, int Y, int W, int H, int cx, int cy) {
+void Fl_Wayland_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
   cairo_save(cairo_);
-  cairo_rectangle(cairo_, X-0.5, Y-0.5, W+1, H+1);
-  cairo_clip(cairo_);
-  if (img->d() >= 1) cairo_set_source(cairo_, pat);
-  cairo_matrix_t matrix;
-  // Hack to support fl_overlay_rect() for integer values of GUI scaling
-  int extra = 1;
-  if (W==1 || H==1) {
-    float s = fl_window ? fl_window->scale * Fl::screen_driver()->scale(0) : 1;
-    if (img->w() == W && img->h() == H && img->data_w() == s * img->w()) extra = 0;
+  cairo_matrix_t mat;
+  cairo_get_matrix(cairo_, &mat);
+  float s = (float)mat.xx;
+  cairo_matrix_init_identity(&mat);
+  cairo_set_matrix(cairo_, &mat); // use drawing units
+  int lwidth = s < 1 ? 1 : int(s);
+  cairo_set_line_width(cairo_, lwidth);
+  cairo_translate(cairo_, lwidth/2., lwidth/2.); // translate by half of line width
+  double ddash = (lwidth > 2 ? lwidth : 2);
+  if (linestyle_ == FL_DOT){
+    cairo_set_dash(cairo_, &ddash, 1, 0); // dash size = line width
   }
-//fprintf(stderr,"WH=%dx%d dataWH=%dx%d extra=%d\n",img->w(),img->h(),img->data_w(),img->data_h(),extra);
-  cairo_matrix_init_scale(&matrix, double(img->data_w())/(img->w()+extra), double(img->data_h())/(img->h()+extra));
-  cairo_matrix_translate(&matrix, -X+0.5+cx, -Y+0.5+cy);
+  // rectangle in drawing units
+  int Xs = Fl_Scalable_Graphics_Driver::floor(x, s);
+  int Ws = Fl_Scalable_Graphics_Driver::floor(x+w-1, s) - Xs;
+  int Ys = Fl_Scalable_Graphics_Driver::floor(y, s);
+  int Hs = Fl_Scalable_Graphics_Driver::floor(y+h-1, s) - Ys;
+  cairo_move_to(cairo_, Xs, Ys);
+  cairo_line_to(cairo_, Xs+Ws, Ys);
+  cairo_line_to(cairo_, Xs+Ws, Ys+Hs);
+  cairo_line_to(cairo_, Xs, Ys+Hs);
+  cairo_close_path(cairo_);
+  cairo_stroke(cairo_);
+  cairo_restore(cairo_);
+  buffer->draw_buffer_needs_commit = true;
+}
+
+
+void Fl_Wayland_Graphics_Driver::draw_cached_pattern_(Fl_Image *img, cairo_pattern_t *pat, int X, int Y, int W, int H, int cx, int cy) {
+  // compute size of output rectangle in drawing units
+  cairo_matrix_t matrix;
+  cairo_get_matrix(cairo_, &matrix);
+  float s = (float)matrix.xx;
+  int Xs = Fl_Scalable_Graphics_Driver::floor(X, s);
+  int Ws = Fl_Scalable_Graphics_Driver::floor(X+W, s) - Xs  ;
+  int Ys = Fl_Scalable_Graphics_Driver::floor(Y, s);
+  int Hs = Fl_Scalable_Graphics_Driver::floor(Y+H, s) - Ys;
+  if (Ws == 0 || Hs == 0) return;
+  cairo_save(cairo_);
+  if (cx || cy || W < img->w() || H < img->h()) { // clip when necessary
+    cairo_rectangle(cairo_, X-0.5, Y-0.5, W+1, H+1);
+    cairo_clip(cairo_);
+  }
+  cairo_matrix_init_identity(&matrix);
+  cairo_set_matrix(cairo_, &matrix); // use drawing units
+  if (img->d() >= 1) cairo_set_source(cairo_, pat);
+  int offset = 0;
+  if (Ws >= img->data_w()*1.09 || Hs >= img->data_h()*1.09) {
+    // When enlarging while drawing, 1 pixel around target area seems unpainted,
+    // so we increase a bit the target area and move it int(s) pixels to left and top.
+    Ws = (img->w()+2)*s, Hs = (img->h()+2)*s;
+    offset = int(s);
+  }
+
+//fprintf(stderr,"WHs=%dx%d dataWH=%dx%d s=%.1f offset=%d\n",Ws,Hs,img->data_w(),img->data_h(),s,offset);
+  cairo_matrix_init_scale(&matrix, double(img->data_w())/Ws, double(img->data_h())/Hs);
+  cairo_matrix_translate(&matrix, -Xs + cx +offset, -Ys + cy +offset);
   cairo_pattern_set_matrix(pat, &matrix);
   cairo_mask(cairo_, pat);
   cairo_restore(cairo_);
