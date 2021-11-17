@@ -705,8 +705,10 @@ void Fl_Wayland_Graphics_Driver::draw_cached_pattern_(Fl_Image *img, cairo_patte
     cairo_rectangle(cairo_, X-0.5, Y-0.5, W+1, H+1);
     cairo_clip(cairo_);
   }
-  cairo_matrix_init_identity(&matrix);
-  cairo_set_matrix(cairo_, &matrix); // use drawing units
+  // remove any scaling, but keep current translation when not to display
+  matrix.xx = matrix.yy = 1;
+  if (Fl_Display_Device::display_device()->is_current()) matrix.x0 = matrix.y0 = 0;
+  cairo_set_matrix(cairo_, &matrix);
   if (img->d() >= 1) cairo_set_source(cairo_, pat);
   int offset = 0;
   if (Ws >= img->data_w()*1.09 || Hs >= img->data_h()*1.09) {
