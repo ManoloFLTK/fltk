@@ -691,7 +691,7 @@ void Fl_Wayland_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
 
 
 void Fl_Wayland_Graphics_Driver::draw_cached_pattern_(Fl_Image *img, cairo_pattern_t *pat, int X, int Y, int W, int H, int cx, int cy) {
-  // compute size of output rectangle in drawing units
+  // compute size of output image in drawing units
   cairo_matrix_t matrix;
   cairo_get_matrix(cairo_, &matrix);
   float s = (float)matrix.xx;
@@ -705,9 +705,9 @@ void Fl_Wayland_Graphics_Driver::draw_cached_pattern_(Fl_Image *img, cairo_patte
     cairo_rectangle(cairo_, X-0.5, Y-0.5, W+1, H+1);
     cairo_clip(cairo_);
   }
-  // remove any scaling, but keep current translation when not to display
+  // remove any scaling and the current "0.5" translation useful for lines but bad for images
   matrix.xx = matrix.yy = 1;
-  if (Fl_Display_Device::display_device()->is_current()) matrix.x0 = matrix.y0 = 0;
+  matrix.x0 -= 0.5 * s; matrix.y0 -= 0.5 * s;
   cairo_set_matrix(cairo_, &matrix);
   if (img->d() >= 1) cairo_set_source(cairo_, pat);
   int offset = 0;
@@ -720,7 +720,7 @@ void Fl_Wayland_Graphics_Driver::draw_cached_pattern_(Fl_Image *img, cairo_patte
 
 //fprintf(stderr,"WHs=%dx%d dataWH=%dx%d s=%.1f offset=%d\n",Ws,Hs,img->data_w(),img->data_h(),s,offset);
   cairo_matrix_init_scale(&matrix, double(img->data_w())/Ws, double(img->data_h())/Hs);
-  cairo_matrix_translate(&matrix, -Xs + cx +offset, -Ys + cy +offset);
+  cairo_matrix_translate(&matrix, -Xs + cx + offset, -Ys + cy + offset);
   cairo_pattern_set_matrix(pat, &matrix);
   cairo_mask(cairo_, pat);
   cairo_restore(cairo_);
