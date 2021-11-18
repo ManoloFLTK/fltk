@@ -87,7 +87,6 @@ public:
     int count;
   } *icon_;
   struct wl_cursor *cursor;
-#if  USE_XFT
   // --- support for screen-specific scaling factors
   struct type_for_resize_window_between_screens {
     int screen;
@@ -96,7 +95,6 @@ public:
   static type_for_resize_window_between_screens data_for_resize_window_between_screens_;
   int screen_num_;
   void screen_num(int n) { screen_num_ = n; }
-#endif // USE_XFT
   void decorated_win_size(int &w, int &h);
   void shape_bitmap_(Fl_Image* b);
   void shape_alpha_(Fl_Image* img, int offset);
@@ -109,10 +107,8 @@ public:
   static const struct wl_callback_listener frame_ready_listener;
 
   static inline Fl_Wayland_Window_Driver* driver(const Fl_Window *w) {return (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(w);}
-#if  USE_XFT
   virtual int screen_num();
   static void resize_after_screen_change(void *data);
-#endif // USE_XFT
 
   // --- window data
   virtual int decorated_w();

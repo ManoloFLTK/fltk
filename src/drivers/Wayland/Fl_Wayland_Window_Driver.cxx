@@ -63,9 +63,7 @@ Fl_Wayland_Window_Driver::Fl_Wayland_Window_Driver(Fl_Window *win) : Fl_Window_D
   memset(icon_, 0, sizeof(icon_data));
   cursor = NULL;
   in_handle_configure = false;
-#if USE_XFT
   screen_num_ = -1;
-#endif
 }
 
 
@@ -455,9 +453,7 @@ void Fl_Wayland_Window_Driver::hide() {
   Fl_X* ip = Fl_X::i(pWindow);
   if (hide_common()) return;
   if (ip->region) Fl_Graphics_Driver::default_driver().XDestroyRegion(ip->region);
-#if USE_XFT
   screen_num_ = -1;
-#endif
   struct wld_window *wld_win = ip->xid;
   if (wld_win) { // this test makes sure ip->xid has not been destroyed already
     Fl_Wayland_Graphics_Driver::buffer_release(wld_win);
@@ -1096,14 +1092,12 @@ void Fl_Wayland_Window_Driver::resize_after_screen_change(void *data) {
 }
 
 
-#if USE_XFT
 int Fl_Wayland_Window_Driver::screen_num() {
   if (pWindow->parent()) {
     screen_num_ = Fl_Window_Driver::driver(pWindow->top_window())->screen_num();
   }
   return screen_num_ >= 0 ? screen_num_ : 0;
 }
-#endif
 
 
 int Fl_Wayland_Window_Driver::set_cursor(Fl_Cursor c) {

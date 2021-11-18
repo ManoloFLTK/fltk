@@ -205,9 +205,7 @@ static double missed_timeout_by;
 Fl_Screen_Driver *Fl_Screen_Driver::newScreenDriver()
 {
   Fl_Wayland_Screen_Driver *d = new Fl_Wayland_Screen_Driver();
-#if USE_XFT
   for (int i = 0;  i < MAX_SCREENS; i++) d->screens[i].scale = 1;
-#endif
   return d;
 }
 
@@ -1050,37 +1048,25 @@ void Fl_Wayland_Screen_Driver::init_workarea()
 
 int Fl_Wayland_Screen_Driver::x() {
   if (!fl_display) open_display();
-  return fl_workarea_xywh[0]
-#if USE_XFT
-  / screens[0].scale
-#endif
+  return fl_workarea_xywh[0] / screens[0].scale
   ;
 }
 
 int Fl_Wayland_Screen_Driver::y() {
   if (!fl_display) open_display();
-  return fl_workarea_xywh[1]
-#if USE_XFT
-  / screens[0].scale
-#endif
+  return fl_workarea_xywh[1] / screens[0].scale
   ;
 }
 
 int Fl_Wayland_Screen_Driver::w() {
   if (!fl_display) open_display();
-  return fl_workarea_xywh[2]
-#if USE_XFT
-      / screens[0].scale
-#endif
+  return fl_workarea_xywh[2] / screens[0].scale
   ;
 }
 
 int Fl_Wayland_Screen_Driver::h() {
   if (!fl_display) open_display();
-  return fl_workarea_xywh[3]
-#if USE_XFT
-  / screens[0].scale
-#endif
+  return fl_workarea_xywh[3] / screens[0].scale
   ;
 }
 
@@ -1113,11 +1099,7 @@ void Fl_Wayland_Screen_Driver::screen_xywh(int &X, int &Y, int &W, int &H, int n
     n = 0;
 
   if (num_screens > 0) {
-#if USE_XFT
     float s = screens[n].scale;
-#else
-    float s = 1;
-#endif
     X = screens[n].x_org / s;
     Y = screens[n].y_org / s;
     W = screens[n].width / s;
@@ -1355,11 +1337,7 @@ void Fl_Wayland_Screen_Driver::remove_timeout(Fl_Timeout_Handler cb, void *argp)
 
 
 int Fl_Wayland_Screen_Driver::text_display_can_leak() {
-#if USE_XFT
   return 1;
-#else
-  return 0;
-#endif
 }
 
 
@@ -1401,7 +1379,6 @@ void Fl_Wayland_Screen_Driver::offscreen_size(Fl_Offscreen off, int &width, int 
   height = off->data_size / off->stride;
 }
 
-#if USE_XFT
 //NOTICE: returns -1 if x,y is not in any screen
 int Fl_Wayland_Screen_Driver::screen_num_unscaled(int x, int y)
 {
@@ -1424,7 +1401,6 @@ void Fl_Wayland_Screen_Driver::desktop_scale_factor()
 {
 }
 
-#endif // USE_XFT
 
 void Fl_Wayland_Screen_Driver::set_cursor() {
   do_set_cursor(seat);
