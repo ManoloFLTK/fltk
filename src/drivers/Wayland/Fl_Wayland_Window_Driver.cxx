@@ -500,7 +500,8 @@ void Fl_Wayland_Window_Driver::map() {
     if (parent) {
       Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
       wl_win->subsurface = wl_subcompositor_get_subsurface(scr_driver->wl_subcompositor, wl_win->wl_surface, parent->wl_surface);
-      wl_subsurface_set_position(wl_win->subsurface, pWindow->x(), pWindow->y());
+      float f = Fl::screen_scale(pWindow->top_window()->screen_num());
+      wl_subsurface_set_position(wl_win->subsurface, pWindow->x() * f, pWindow->y() * f);
       wl_subsurface_set_desync(wl_win->subsurface); // important
       wl_subsurface_place_above(wl_win->subsurface, parent->wl_surface);
       wl_win->configured_width = pWindow->w();
