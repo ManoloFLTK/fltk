@@ -695,10 +695,10 @@ void Fl_Wayland_Graphics_Driver::draw_cached_pattern_(Fl_Image *img, cairo_patte
   cairo_matrix_t matrix;
   cairo_get_matrix(cairo_, &matrix);
   float s = (float)matrix.xx;
-  int Xs = Fl_Scalable_Graphics_Driver::floor(X, s);
-  int Ws = Fl_Scalable_Graphics_Driver::floor(X+W, s) - Xs  ;
-  int Ys = Fl_Scalable_Graphics_Driver::floor(Y, s);
-  int Hs = Fl_Scalable_Graphics_Driver::floor(Y+H, s) - Ys;
+  int Xs = Fl_Scalable_Graphics_Driver::floor(X - cx, s);
+  int Ws = Fl_Scalable_Graphics_Driver::floor(X - cx + img->w(), s) - Xs  ;
+  int Ys = Fl_Scalable_Graphics_Driver::floor(Y - cy, s);
+  int Hs = Fl_Scalable_Graphics_Driver::floor(Y - cy + img->h(), s) - Ys;
   if (Ws == 0 || Hs == 0) return;
   cairo_save(cairo_);
   if (cx || cy || W < img->w() || H < img->h()) { // clip when necessary
@@ -720,7 +720,7 @@ void Fl_Wayland_Graphics_Driver::draw_cached_pattern_(Fl_Image *img, cairo_patte
 
 //fprintf(stderr,"WHs=%dx%d dataWH=%dx%d s=%.1f offset=%d\n",Ws,Hs,img->data_w(),img->data_h(),s,offset);
   cairo_matrix_init_scale(&matrix, double(img->data_w())/Ws, double(img->data_h())/Hs);
-  cairo_matrix_translate(&matrix, -Xs + cx + offset, -Ys + cy + offset);
+  cairo_matrix_translate(&matrix, -Xs + offset, -Ys + offset);
   cairo_pattern_set_matrix(pat, &matrix);
   cairo_mask(cairo_, pat);
   cairo_restore(cairo_);
