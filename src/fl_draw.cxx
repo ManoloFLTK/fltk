@@ -492,8 +492,8 @@ void fl_restore_scale(float s) {
 
   The size limits are implementation details and may be changed at any time.
 
-  \param[in]  X,Y  top left corner of the bounding box
-  \param[in]  W,H  width and height of the bounding box
+  \param[in]  bb   rectangle that defines the bounding box
+  \param[in]  col  Fl_Color to draw the check mark
 
   \since 1.4.0
 */
@@ -551,7 +551,7 @@ void fl_draw_check(Fl_Rect bb, Fl_Color col) {
   // Bit 2 set: draws a red frame around the check mark (the bounding box)
   // The background (1) can be used to test correct positioning by the widget code
 
-#define DEBUG_FRAME (3)
+#define DEBUG_FRAME (0)
 #if (DEBUG_FRAME)
   if (DEBUG_FRAME & 1) {    // 1 = background
     fl_color(0x88dd8800);
