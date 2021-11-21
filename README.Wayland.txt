@@ -31,12 +31,12 @@ The code has been tested on Debian and Ubuntu with 3 distinct compositors: mutte
 
 It is possible to have your FLTK application do all its windowing and drawing
 through the Wayland protocol on Linux systems. All drawing is done via Cairo or EGL.
-FLTK creates an additional library, libfltk_decor.a, contain code for window decorations.
+All text-drawing is done via Pango.
 
  Configuration
 ---------------
 
-At this point, only configure-based build is available.
+* Configure-based build can be performed as follows:
 Once after "git clone/git checkout wayland", create the configure file :
    autoconf -f
 
@@ -46,6 +46,10 @@ Prepare build with :
 Build with :
    make
 
+* CMake-based build can be performed as follows:
+cmake -S <path-to-source> -B <path-to-build> -DCMAKE_BUILD_TYPE=Release -DOPTION_USE_WAYLAND=1
+
+cd <path-to-build>; make
 
  Currently unsupported features
 -------------------------------
@@ -83,3 +87,4 @@ These packages are necessary, in addition to those for usual X11-based platforms
 
 May 29 2021 - Manolo: Initial version.
 Oct 28 2021 - Manolo: --enable-shared configure option is now supported.
+Nov 21 2021 - Manolo: CMake-based building is now supported.
