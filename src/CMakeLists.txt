@@ -236,7 +236,7 @@ if (USE_X11)
   )
 
 elseif (OPTION_USE_WAYLAND)
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${CMAKE_BINARY_DIR}/src")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${CMAKE_CURRENT_BINARY_DIR}")
   set (DRIVER_FILES
     drivers/Posix/Fl_Posix_System_Driver.cxx
     drivers/Posix/Fl_Posix_Printer_Driver.cxx
@@ -482,7 +482,7 @@ if (USE_X11)
 endif (USE_X11)
 
 if (OPTION_USE_WAYLAND)
-  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I. -I${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/src -fPIC -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 -DLIBDECOR_PLUGIN_DIR=\\\"Unused\\\" ")
+  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${CMAKE_CURRENT_BINARY_DIR} -I${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/src -fPIC -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 -DLIBDECOR_PLUGIN_DIR=\\\"Unused\\\" ")
   list (APPEND CFILES
     xutf8/keysym2Ucs.c
     scandir_posix.c
