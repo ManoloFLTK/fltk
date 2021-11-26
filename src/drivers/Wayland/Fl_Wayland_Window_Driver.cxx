@@ -801,9 +801,6 @@ static void handle_configure(struct libdecor_frame *frame,
       wl_callback* cb = wl_surface_frame(window->wl_surface);
       wl_callback_add_listener(cb, &Fl_Wayland_Window_Driver::frame_ready_listener, &driver->wait_for_expose_value);
       Fl_Wayland_Graphics_Driver::buffer_commit(window);
-      while (driver->wait_for_expose_value) {
-        wl_display_dispatch(fl_display);
-      }
     }
   } else {
     if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON) {
