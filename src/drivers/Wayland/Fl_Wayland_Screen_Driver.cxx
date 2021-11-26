@@ -126,7 +126,7 @@ struct pointer_output {
    - Fl_Wayland_Window_Driver::update_scale() sets the scale info of the records for a given window
  */
 
-Fl_Wayland_Screen_Driver::compositor_name Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::MUTTER;
+Fl_Wayland_Screen_Driver::compositor_name Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::unspecified;
 
 extern "C" {
   FL_EXPORT bool fl_libdecor_using_weston(void) {
@@ -945,6 +945,9 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
 //fprintf(stderr, "registry_handle_global interface=%s\n", interface);
     scr_driver->xdg_wm_base = (struct xdg_wm_base *)wl_registry_bind(wl_registry, id, &xdg_wm_base_interface, 1);
       xdg_wm_base_add_listener(scr_driver->xdg_wm_base, &xdg_wm_base_listener, NULL);
+  } else if (strcmp(interface, "gtk_shell1") == 0) {
+    Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::MUTTER;
+    //fprintf(stderr, "Running the Mutter compositor\n");
   } else if (strcmp(interface, "weston_desktop_shell") == 0) {
     Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::WESTON;
     //fprintf(stderr, "Running the Weston compositor\n");
@@ -1023,6 +1026,9 @@ void Fl_Wayland_Screen_Driver::open_display_platform() {
   wl_display_roundtrip(wl_display);
   if (!has_xrgb) {
     Fl::fatal("Error: no WL_SHM_FORMAT_ARGB8888 shm format\n");
+  }
+  if (compositor == Fl_Wayland_Screen_Driver::unspecified) {
+    Fl::warning("FLTK could not identify the type of the running Wayland compositor");
   }
   Fl::add_fd(wl_display_get_fd(wl_display), FL_READ, (Fl_FD_Handler)fd_callback, wl_display);
   Fl_Wayland_Window_Driver::titlebar_height = (compositor == WESTON ? 24 : 0);
