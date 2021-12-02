@@ -518,7 +518,19 @@ int Fl_Wayland_Graphics_Driver::clip_box(int x, int y, int w, int h, int &X, int
 }
 
 void Fl_Wayland_Graphics_Driver::restore_clip() {
-  //TODO
+  if (cairo_) cairo_reset_clip(cairo_);
+}
+
+void Fl_Wayland_Graphics_Driver::clip_region(Fl_Region r) {
+  if (cairo_) {
+    cairo_reset_clip(cairo_);
+    if (r) {
+      for (int i = 0; i < r->count; i++) {
+        cairo_rectangle(cairo_, r->rects[i].x-0.5 , r->rects[i].y-0.5 , r->rects[i].width  , r->rects[i].height);
+      }
+      cairo_clip(cairo_);
+    }
+  }
 }
 
 

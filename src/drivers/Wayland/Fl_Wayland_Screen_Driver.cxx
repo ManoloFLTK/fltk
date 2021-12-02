@@ -435,7 +435,7 @@ static struct wl_pointer_listener pointer_listener = {
   pointer_axis
 };
 
-static const char *proxy_tag = "libdecor-client";//TODO: see what's the purpose of this
+static const char *proxy_tag = "FLTK for Wayland";
 
 bool Fl_Wayland_Screen_Driver::own_output(struct wl_output *output)
 {
@@ -832,7 +832,7 @@ static void output_mode(void *data, struct wl_output *wl_output, uint32_t flags,
 }
 
 static void output_done(void *data, struct wl_output *wl_output)
-{//TODO to be verified
+{
   Fl_Wayland_Screen_Driver::output *output = (Fl_Wayland_Screen_Driver::output*)data;
   Fl_Wayland_Window_Driver::window_output *window_output;
   struct seat *seat;
@@ -1351,7 +1351,8 @@ Fl_RGB_Image *Fl_Wayland_Screen_Driver::read_win_rectangle(int X, int Y, int w, 
                                                            bool ignore, bool *p_ignore) {
   Window xid = win ? fl_xid(win) : NULL;
   struct buffer *buffer = win ? xid->buffer : (Fl_Offscreen)Fl_Surface_Device::surface()->driver()->gc();
-  float s = win ? xid->scale * scale(win->screen_num()) : 1; //TODO: check when win is NULL
+  float s = win ? xid->scale * scale(win->screen_num()) :
+                  Fl_Surface_Device::surface()->driver()->scale();
   int Xs, Ys, ws, hs;
   if (s == 1) {
     Xs = X; Ys = Y; ws = w; hs = h;
