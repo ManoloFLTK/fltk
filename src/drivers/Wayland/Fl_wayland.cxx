@@ -1051,7 +1051,7 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
   Fl_Surface_Device::pop_current();
   delete img_surf;
   memcpy(offscreen->data, offscreen->draw_buffer, offscreen->data_size);
-  if (new_image->image.width <= 64 && new_image->image.height <= 64) {
+  /*if (new_image->image.width <= 64 && new_image->image.height <= 64) {
     // for some mysterious reason, small cursor images want RGBA whereas big ones want BGRA !!!
     //fprintf(stderr, "exchange R and B\n");
     char *to = (char*)offscreen->data, *last = to + offscreen->data_size, xchg;
@@ -1061,7 +1061,7 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
       *(to+2) = xchg;
       to += 4;
     }
-  }
+  }*/
   //have this new cursor used
   this->cursor = new_cursor;
   //memorize new cursor
