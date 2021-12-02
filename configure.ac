@@ -129,8 +129,6 @@ AC_ARG_ENABLE([x11], AS_HELP_STRING([--enable-x11], [use X11 with Cygwin or macO
 
 AC_ARG_ENABLE([xcursor], AS_HELP_STRING([--disable-xcursor], [turn off Xcursor support]))
 
-AC_ARG_ENABLE([xdbe], AS_HELP_STRING([--disable-xdbe], [turn off Xdbe support]))
-
 AC_ARG_ENABLE([xfixes], AS_HELP_STRING([--disable-xfixes], [turn off Xfixes support]))
 
 AC_ARG_ENABLE([xft], AS_HELP_STRING([--disable-xft], [turn off Xft support]))
@@ -1203,18 +1201,6 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
         ])
     ])
 
-    dnl Check for the Xdbe extension unless disabled...
-    xdbe_found=no
-    AS_IF([test x$enable_xdbe != xno], [
-        AC_CHECK_HEADER([X11/extensions/Xdbe.h], [
-            AC_CHECK_LIB([Xext], [XdbeQueryExtension], [
-                AC_DEFINE([HAVE_XDBE])
-                LIBS="-lXext $LIBS"
-                xdbe_found=yes
-            ])
-        ], [], [#include <X11/Xlib.h>])
-    ])
-
     dnl Check for the Xfixes extension unless disabled...
     xfixes_found=no
     AS_IF([test x$enable_xfixes != xno], [
@@ -1255,26 +1241,6 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
     AC_CHECK_HEADER([X11/Xregion.h], [
         AC_DEFINE([HAVE_X11_XREGION_H])
     ], [], [#include <X11/Xlib.h>])
-
-    dnl Check for overlay visuals...
-    AC_PATH_PROG([XPROP], [xprop])
-    AC_CACHE_CHECK([for X overlay visuals], [ac_cv_have_overlay], [
-        AS_IF([test "x$XPROP" != x], [
-            AS_IF([$XPROP -root 2>/dev/null | grep -c "SERVER_OVERLAY_VISUALS" >/dev/null], [
-                ac_cv_have_overlay=yes
-            ], [
-                ac_cv_have_overlay=no
-            ])
-        ], [
-            ac_cv_have_overlay=no
-        ])
-    ])
-
-    AS_IF([test x$ac_cv_have_overlay = xyes], [
-        AC_DEFINE([HAVE_OVERLAY])
-    ])
-    
-    ])
 
     # Make symlinks since UNIX/Linux is case sensitive,
     # but Cygwin in general not.
@@ -1622,9 +1588,6 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
     ])
     AS_IF([test x$xft_found = xyes], [
         graphics="$graphics + Xft"
-    ])
-    AS_IF([test x$xdbe_found = xyes], [
-        graphics="$graphics + Xdbe"
     ])
     AS_IF([test x$xfixes_found = xyes], [
         graphics="$graphics + Xfixes"
