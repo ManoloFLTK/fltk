@@ -83,6 +83,7 @@ class FL_EXPORT Fl_Wayland_Graphics_Driver : public Fl_Cairo_Graphics_Driver {
 private:
   struct buffer *buffer;
   PangoLayout *dummy_pango_layout_; // used to measure text width before showing a window
+  int linestyle_;
   void draw_cached_pattern_(Fl_Image *img, cairo_pattern_t *pat, int X, int Y, int W, int H, int cx, int cy);
 public:
   Fl_Wayland_Graphics_Driver();
@@ -102,6 +103,7 @@ public:
   int not_clipped(int x, int y, int w, int h);
   int clip_box(int x, int y, int w, int h, int &X, int &Y, int &W, int &H);
   void restore_clip();
+  void line_style(int style, int width, char* dashes);
   Fl_Region XRectangleRegion(int x, int y, int w, int h);
   void add_rectangle_to_region(Fl_Region r, int X, int Y, int W, int H);
   void XDestroyRegion(Fl_Region r);

@@ -138,9 +138,8 @@ void Fl_Wayland_Graphics_Driver::buffer_release(struct wld_window *window)
 
 
 Fl_Wayland_Graphics_Driver::Fl_Wayland_Graphics_Driver () : Fl_Cairo_Graphics_Driver() {
-  clip_ = NULL;
   dummy_pango_layout_ = NULL;
-  pango_layout_ = NULL;
+  linestyle_ = 0;
 }
 
 
@@ -659,6 +658,10 @@ void Fl_Wayland_Graphics_Driver::transformed_vertex(double x, double y) {
   }
 }
 
+void Fl_Wayland_Graphics_Driver::line_style(int style, int width, char* dashes) {
+  linestyle_ = style;
+  Fl_Cairo_Graphics_Driver::line_style(style, width, dashes);
+}
 
 void Fl_Wayland_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
   cairo_save(cairo_);
