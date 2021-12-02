@@ -39,6 +39,8 @@ class Fl_Window;
 #    include "mac.H"
 #  elif defined(__ANDROID__)
 #    include "android.H"
+#  elif defined(USE_WAYLAND)
+#    include "wayland.H"
 #  else // X11
 #   include <FL/fl_types.h>
 #   include <FL/Enumerations.H>

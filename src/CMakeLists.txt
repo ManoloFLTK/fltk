@@ -234,6 +234,24 @@ if (USE_X11)
     drivers/Xlib/Fl_Font.H
   )
 
+elseif (OPTION_USE_WAYLAND)
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${CMAKE_CURRENT_BINARY_DIR}")
+  set (DRIVER_FILES
+    drivers/Posix/Fl_Posix_System_Driver.cxx
+    drivers/Posix/Fl_Posix_Printer_Driver.cxx
+    drivers/Wayland/Fl_Wayland_Screen_Driver.cxx
+    drivers/Wayland/Fl_Wayland_Window_Driver.cxx
+    drivers/Wayland/Fl_Wayland_System_Driver.cxx
+    drivers/Wayland/Fl_Wayland_Graphics_Driver.cxx
+    drivers/Wayland/Fl_Wayland_Copy_Surface_Driver.cxx
+    drivers/Wayland/Fl_Wayland_Image_Surface_Driver.cxx
+    drivers/Wayland/Fl_wayland.cxx
+    drivers/Wayland/Fl_get_key_wayland.cxx
+    drivers/Cairo/Fl_Cairo_Graphics_Driver.cxx
+    Fl_Native_File_Chooser_FLTK.cxx
+    Fl_Native_File_Chooser_GTK.cxx
+  )
+
 elseif (USE_SDL)
 
   # SDL2
@@ -403,6 +421,8 @@ set (GL_DRIVER_FILES
 )
 if (USE_X11)
   set (GL_DRIVER_FILES ${GL_DRIVER_FILES} drivers/X11/Fl_X11_Gl_Window_Driver.cxx)
+elseif (OPTION_USE_WAYLAND)
+  set (GL_DRIVER_FILES ${GL_DRIVER_FILES} drivers/Wayland/Fl_Wayland_Gl_Window_Driver.cxx)
 elseif (APPLE)
   set (GL_DRIVER_FILES ${GL_DRIVER_FILES} drivers/Cocoa/Fl_Cocoa_Gl_Window_Driver.cxx)
 elseif (WIN32)
@@ -459,6 +479,19 @@ if (USE_X11)
     )
   endif (NOT USE_XFT)
 endif (USE_X11)
+
+if (OPTION_USE_WAYLAND)
+  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${CMAKE_CURRENT_BINARY_DIR} -I${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/src -fPIC -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 -DLIBDECOR_PLUGIN_DIR=\\\"Unused\\\" ")
+  list (APPEND CFILES
+    xutf8/keysym2Ucs.c
+    scandir_posix.c
+    ../libdecor/src/libdecor-fallback.c
+    ../libdecor/src/cursor-settings.c
+    ../libdecor/src/plugins/cairo/libdecor-cairo-blur.c
+    ../libdecor/build/fl_libdecor.c
+    ../libdecor/build/fl_libdecor-cairo.c
+  )
+endif (OPTION_USE_WAYLAND)
 
 if (WIN32)
   list (APPEND CFILES
@@ -548,6 +581,35 @@ if (USE_XFT)
     list (APPEND OPTIONAL_LIBS ${LIB_fontconfig})
   endif (LIB_fontconfig)
 endif (USE_XFT)
+
+if (OPTION_USE_WAYLAND)
+  add_custom_command(
+    OUTPUT xdg-shell-protocol.c xdg-shell-client-protocol.h
+    COMMAND wayland-scanner private-code /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol.c
+    COMMAND wayland-scanner client-header /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml xdg-shell-client-protocol.h
+    DEPENDS /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml
+    VERBATIM
+  )
+  list (APPEND STATIC_FILES "xdg-shell-protocol.c")
+  list (APPEND SHARED_FILES "xdg-shell-protocol.c")
+  add_custom_command(
+    OUTPUT xdg-decoration-protocol.c xdg-decoration-client-protocol.h
+    COMMAND wayland-scanner private-code /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml xdg-decoration-protocol.c
+    COMMAND wayland-scanner client-header /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml xdg-decoration-client-protocol.h
+    DEPENDS /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
+    VERBATIM
+  )
+  list (APPEND STATIC_FILES "xdg-decoration-protocol.c")
+  list (APPEND SHARED_FILES "xdg-decoration-protocol.c")
+
+  if (OPTION_USE_GL)
+    list (APPEND OPTIONAL_LIBS "-lwayland-egl -lEGL")
+  endif (OPTION_USE_GL)
+  list (APPEND OPTIONAL_LIBS "-lwayland-cursor -lwayland-client -lxkbcommon -ldl -ldbus-1")
+  if (NOT OPTION_BUILD_SHARED_LIBS)
+    list (APPEND OPTIONAL_LIBS "-no-pie")
+  endif (NOT OPTION_BUILD_SHARED_LIBS)
+endif (OPTION_USE_WAYLAND)
 
 #######################################################################
 

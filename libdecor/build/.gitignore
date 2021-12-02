@@ -1,0 +1,5 @@
+#
+# Files to be ignored by Git (do not commit)
+#
+demo
+egl

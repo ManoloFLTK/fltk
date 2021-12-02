@@ -109,6 +109,8 @@ AC_ARG_ENABLE([localzlib], AS_HELP_STRING([--enable-localzlib], [use local ZLIB 
 
 AC_ARG_ENABLE([pango], AS_HELP_STRING([--enable-pango], [turn on Pango support]))
 
+AC_ARG_ENABLE([wayland], AS_HELP_STRING([--enable-wayland], [turn on Wayland support]))
+
 AC_ARG_ENABLE([print], AS_HELP_STRING([--disable-print], [turn off print support (X11)]))
 AS_IF([test x$enable_print = xno], [
     AC_DEFINE([FL_NO_PRINT_SUPPORT], [Disable X11 print support?])
@@ -896,6 +898,7 @@ dnl Define OS-specific stuff...
 HLINKS=
 OSX_ONLY=:
 THREADS=
+LIBDECORDIR=""
 
 AC_ARG_WITH([links], AS_HELP_STRING([--with-links], [make header links for common misspellings (default=no)]))
 
@@ -993,6 +996,52 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
         AC_DEFINE([HAVE_PTHREAD])
         THREADS="threads$EXEEXT"
     ])
+
+    AS_IF([test x$enable_wayland = xyes], [
+      dnl Prepare for Wayland...
+      
+      AS_IF([test x$PKGCONFIG = x], [
+          dnl pkg-config is not available, issue warning and abort...
+          AC_MSG_WARN([--enable-wayland: please install pkg-config.])
+          AC_MSG_ERROR([Aborting.])
+      ])
+
+      BUILD="WAYLAND"
+      graphics="Wayland"
+      LIBS="$LIBS $($PKGCONFIG --libs wayland-cursor) $($PKGCONFIG --libs wayland-client) $($PKGCONFIG --libs xkbcommon)"
+      LIBS="$LIBS $($PKGCONFIG --libs dbus-1) -ldl"
+      CXXFLAGS="$CXXFLAGS -DUSE_WAYLAND -I../libdecor/src"
+      DSOFLAGS="$LIBS $DSOFLAGS"
+      enable_pango=yes
+      LIBDECORDIR="libdecor/build"
+      LDFLAGS="$LDFLAGS -no-pie"
+    
+      AC_SEARCH_LIBS([dlopen], [dl])
+      AC_CHECK_HEADER([GL/gl.h], [AC_DEFINE([HAVE_GL])])
+      AC_CHECK_HEADER([GL/glu.h], [
+          AC_DEFINE([HAVE_GL_GLU_H])
+          GLLIBS="$($PKGCONFIG --libs wayland-egl) $($PKGCONFIG --libs egl) $($PKGCONFIG --libs glu) $GLLIBS"
+      ])
+        
+      dnl Check for the Pango library ...
+      pango_found=no
+      CFLAGS="$($PKGCONFIG --cflags pangocairo) $CFLAGS"
+      CXXFLAGS="$($PKGCONFIG --cflags pangocairo) $CXXFLAGS"
+      LIBS="$LIBS $($PKGCONFIG --libs pangocairo)"
+ 
+      AC_CHECK_HEADERS([pango/pangocairo.h], [
+          AC_DEFINE([USE_PANGO])
+          AC_DEFINE([USE_XFT])
+          pango_found=yes
+      ])
+
+      dnl Early abort if Pango could not be found
+      AS_IF([test x$pango_found != xyes], [
+          AC_MSG_NOTICE([--enable-wayland: Pango libs and/or headers could not be found.])
+          AC_MSG_ERROR([Aborting.])
+      ])
+
+    ], [
 
     dnl Check for X11...
     AC_PATH_XTRA
@@ -1216,6 +1265,8 @@ AC_SUBST([HLINKS])
 AC_SUBST([OSX_ONLY])
 AC_SUBST([THREADS])
 
+AC_SUBST([LIBDECORDIR])
+
 AC_SUBST([INSTALL_DESKTOP])
 AC_SUBST([UNINSTALL_DESKTOP])
 
@@ -1343,17 +1394,21 @@ AS_IF([test -n "$GCC"], [
         [AC_MSG_RESULT(no)])
     CFLAGS="$OLDCFLAGS"
 
-    dnl Make sure that shared libraries don't have undefined references
-    # See if ld supports -no-undefined...
-    AC_MSG_CHECKING([if ld supports -no-undefined])
-    OLDLDFLAGS="$LDFLAGS"
-    LDFLAGS="$LDFLAGS -Wl,-no-undefined"
-    AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM([[]], [[]])],
-        [DSOFLAGS="$DSOFLAGS -Wl,-no-undefined"
-         AC_MSG_RESULT(yes)],
-        [AC_MSG_RESULT(no)])
-    LDFLAGS="$OLDLDFLAGS"
+    AS_IF([test x$enable_wayland = xyes],[
+        DSOFLAGS="$DSOFLAGS -Wl,--allow-shlib-undefined"
+    ] , [
+        dnl Make sure that shared libraries don't have undefined references
+        # See if ld supports -no-undefined...
+        AC_MSG_CHECKING([if ld supports -no-undefined])
+        OLDLDFLAGS="$LDFLAGS"
+        LDFLAGS="$LDFLAGS -Wl,-no-undefined"
+        AC_LINK_IFELSE(
+          [AC_LANG_PROGRAM([[]], [[]])],
+          [DSOFLAGS="$DSOFLAGS -Wl,-no-undefined"
+          AC_MSG_RESULT(yes)],
+          [AC_MSG_RESULT(no)])
+        LDFLAGS="$OLDLDFLAGS"
+    ])
 
     # See if ld supports -Bsymbolic-functions...
     AC_MSG_CHECKING([if ld supports -Bsymbolic-functions])
@@ -1528,7 +1583,9 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
 ], [darwin*], [
     graphics="Quartz"
 ], [*], [
-    graphics="X11"
+    AS_IF([test x$enable_wayland != xyes], [
+        graphics="X11"
+    ])
     AS_IF([test x$xft_found = xyes], [
         graphics="$graphics + Xft"
     ])
