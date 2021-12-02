@@ -103,7 +103,7 @@ public:
   int not_clipped(int x, int y, int w, int h);
   int clip_box(int x, int y, int w, int h, int &X, int &Y, int &W, int &H);
   void restore_clip();
-  void line_style(int style, int width, char* dashes);
+  void line_style(int style, int width=0, char* dashes=0);
   Fl_Region XRectangleRegion(int x, int y, int w, int h);
   void add_rectangle_to_region(Fl_Region r, int X, int Y, int W, int H);
   void XDestroyRegion(Fl_Region r);
