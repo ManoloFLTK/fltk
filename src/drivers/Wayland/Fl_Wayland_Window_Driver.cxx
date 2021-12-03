@@ -440,8 +440,7 @@ void Fl_Wayland_Window_Driver::show() {
     fl_open_display();
     makeWindow();
   } else {
-    //XMapRaised(fl_display, fl_xid(pWindow));
-    //TODO
+    // Wayland itself gives no way to programmatically unminimize a minimized window
     Fl::handle(FL_SHOW, pWindow);
   }
 }
