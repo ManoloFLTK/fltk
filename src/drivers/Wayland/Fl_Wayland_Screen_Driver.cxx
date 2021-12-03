@@ -96,10 +96,16 @@ struct pointer_output {
  struct wl_output : Wayland-defined, contains info about a screen, one such record for each screen
 
  struct Fl_Wayland_Screen_Driver::output { // FLTK defined
-   uint32_t id; // screen identification
-   struct wl_output *wl_output;
-   int scale;
-   struct wl_list link;
+    uint32_t id; // screen identification
+    short x_org;
+    short y_org;
+    short width; // screen width in pixels
+    short height; // screen height in pixels
+    float dpi;
+    struct wl_output *wl_output;
+    int wld_scale; // Wayland scale
+    float gui_scale; // user-set scale
+    struct wl_list link;
  };
 
  struct Fl_Wayland_Window_Driver::window_output {  // FLTK defined
@@ -112,7 +118,7 @@ struct pointer_output {
    - this list is initialised by open-display
    - registry_handle_global() feeds the list with 1 record for each screen
    - registry_handle_global_remove() runs when a screen is removed. It removes
-   output records that correspond to that screen from the unique list of screens
+   the output record that corresponds to that screen from the unique list of screens
    (outputs member of the Fl_Wayland_Screen_Driver) and the list of struct output objects attached
    to each window.
 
@@ -204,9 +210,7 @@ static double missed_timeout_by;
  */
 Fl_Screen_Driver *Fl_Screen_Driver::newScreenDriver()
 {
-  Fl_Wayland_Screen_Driver *d = new Fl_Wayland_Screen_Driver();
-  for (int i = 0;  i < MAX_SCREENS; i++) d->screens[i].scale = 1;
-  return d;
+  return new Fl_Wayland_Screen_Driver();
 }
 
 FL_EXPORT struct wl_display *fl_display = NULL;
@@ -450,7 +454,7 @@ static void try_update_cursor(struct seat *seat)
   int scale = 1;
 
   wl_list_for_each(pointer_output, &seat->pointer_outputs, link) {
-    scale = fl_max(scale, pointer_output->output->scale);
+    scale = fl_max(scale, pointer_output->output->wld_scale);
   }
 
   if (scale != seat->pointer_scale) {
@@ -799,36 +803,19 @@ static void output_geometry(void *data,
     int32_t transform)
 {
   //fprintf(stderr, "output_geometry: x=%d y=%d physical=%dx%d\n",x,y,physical_width,physical_height);
+  Fl_Wayland_Screen_Driver::output *output = (Fl_Wayland_Screen_Driver::output*)data;
+  output->dpi = 96; // to elaborate
 }
 
 static void output_mode(void *data, struct wl_output *wl_output, uint32_t flags,
       int32_t width, int32_t height, int32_t refresh)
 {
-  Fl_Wayland_Screen_Driver::output *output;
-  bool found = false;
-  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-  wl_list_for_each(output, &(scr_driver->outputs), link) { // all screens
-    if (output->wl_output == wl_output) { // the screen involved in this call
-      for (int i = 0; i < Fl::screen_count(); i++) {
-        scr_driver->screens[i].x_org = 0;
-        scr_driver->screens[i].y_org = 0;
-        scr_driver->screens[i].width = width;
-        scr_driver->screens[i].height = height;
-        found = true;
-      }
-    }
-  }
-  if (!found) {
-    int count = Fl::screen_count();
-    if (count < 0) count = 0;
-    scr_driver->screens[count].x_org = 0;
-    scr_driver->screens[count].y_org = 0;
-    scr_driver->screens[count].width = width;
-    scr_driver->screens[count].height = height;
-    scr_driver->screens[count].scale = 1.f;
-    scr_driver->screen_count(count+1);
-//fprintf(stderr, "output_mode: screen_count()=%d width=%d,height=%d\n",Fl::screen_count(),width,height);
-  }
+  Fl_Wayland_Screen_Driver::output *output = (Fl_Wayland_Screen_Driver::output*)data;
+  output->x_org = 0;
+  output->y_org = 0;
+  output->width = width;
+  output->height = height;
+//fprintf(stderr, "output_mode: [%p]=%dx%d\n",output->wl_output,width,height);
 }
 
 static void output_done(void *data, struct wl_output *wl_output)
@@ -843,7 +830,7 @@ static void output_done(void *data, struct wl_output *wl_output)
     wl_list_for_each(window_output, &(win->outputs), link) { // all Fl_Wayland_Window_Driver::window_output for this window
       if (window_output->output == output) {
         Fl_Wayland_Window_Driver *win_driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(win->fl_win);
-        if (output->scale != win->scale) win_driver->update_scale();
+        if (output->wld_scale != win->scale) win_driver->update_scale();
       }
     }
     xp = xp->next;
@@ -858,12 +845,10 @@ static void output_done(void *data, struct wl_output *wl_output)
 }
 
 
-static void output_scale(void *data,
-       struct wl_output *wl_output,
-       int32_t factor)
-{
+static void output_scale(void *data, struct wl_output *wl_output, int32_t factor) {
   Fl_Wayland_Screen_Driver::output *output = (Fl_Wayland_Screen_Driver::output*)data;
-  output->scale = factor;
+  output->wld_scale = factor;
+//fprintf(stderr,"output_scale: wl_output=%p factor=%d\n",wl_output, factor);
 }
 
 
@@ -934,13 +919,15 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
     }
     Fl_Wayland_Screen_Driver::output *output = (Fl_Wayland_Screen_Driver::output*)calloc(1, sizeof *output);
     output->id = id;
-    output->scale = 1;
+    output->wld_scale = 1;
     output->wl_output = (struct wl_output*)wl_registry_bind(wl_registry,
                  id, &wl_output_interface, 2);
-//fprintf(stderr, "wl_output: id=%d wl_output=%p\n", id, output->wl_output);
+    output->gui_scale = 1.f;
     wl_proxy_set_tag((struct wl_proxy *) output->wl_output, &proxy_tag);
     wl_output_add_listener(output->wl_output, &output_listener, output);
     wl_list_insert(&(scr_driver->outputs), &output->link);
+    scr_driver->screen_count( wl_list_length(&(scr_driver->outputs)) );
+//fprintf(stderr, "wl_output: id=%d wl_output=%p screen_count()=%d\n", id, output->wl_output, Fl::screen_count());
     
   } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
 //fprintf(stderr, "registry_handle_global interface=%s\n", interface);
@@ -979,6 +966,7 @@ static void registry_handle_global_remove(void *data, struct wl_registry *regist
         xp = xp->next;
       }
       wl_list_remove(&output->link);
+      scr_driver->screen_count( wl_list_length(&(scr_driver->outputs)) );
       wl_output_destroy(output->wl_output);
       free(output);
       break;
@@ -1046,35 +1034,51 @@ static int fl_workarea_xywh[4] = { -1, -1, -1, -1 };
 
 void Fl_Wayland_Screen_Driver::init_workarea()
 {
-    fl_workarea_xywh[0] = 0;
-    fl_workarea_xywh[1] = 0;
-    fl_workarea_xywh[2] = screens[0].width;
-    fl_workarea_xywh[3] = screens[0].height;
+  fl_workarea_xywh[0] = 0;
+  fl_workarea_xywh[1] = 0;
+  Fl_Wayland_Screen_Driver::output *output;
+  wl_list_for_each(output, &outputs, link) {
+    fl_workarea_xywh[2] = output->width / output->wld_scale;
+    fl_workarea_xywh[3] = output->height / output->wld_scale;
+    break;
+  }
 }
 
 
 int Fl_Wayland_Screen_Driver::x() {
   if (!fl_display) open_display();
-  return fl_workarea_xywh[0] / screens[0].scale
-  ;
+  Fl_Wayland_Screen_Driver::output *output;
+  wl_list_for_each(output, &outputs, link) {
+    break;
+  }
+  return fl_workarea_xywh[0] / output->gui_scale;
 }
 
 int Fl_Wayland_Screen_Driver::y() {
   if (!fl_display) open_display();
-  return fl_workarea_xywh[1] / screens[0].scale
-  ;
+  Fl_Wayland_Screen_Driver::output *output;
+  wl_list_for_each(output, &outputs, link) {
+    break;
+  }
+  return fl_workarea_xywh[1] / output->gui_scale;
 }
 
 int Fl_Wayland_Screen_Driver::w() {
   if (!fl_display) open_display();
-  return fl_workarea_xywh[2] / screens[0].scale
-  ;
+  Fl_Wayland_Screen_Driver::output *output;
+  wl_list_for_each(output, &outputs, link) {
+    break;
+  }
+  return fl_workarea_xywh[2] / output->gui_scale;
 }
 
 int Fl_Wayland_Screen_Driver::h() {
   if (!fl_display) open_display();
-  return fl_workarea_xywh[3] / screens[0].scale
-  ;
+  Fl_Wayland_Screen_Driver::output *output;
+  wl_list_for_each(output, &outputs, link) {
+    break;
+  }
+  return fl_workarea_xywh[3] / output->gui_scale;
 }
 
 
@@ -1106,11 +1110,18 @@ void Fl_Wayland_Screen_Driver::screen_xywh(int &X, int &Y, int &W, int &H, int n
     n = 0;
 
   if (num_screens > 0) {
-    float s = screens[n].scale;
-    X = screens[n].x_org / s;
-    Y = screens[n].y_org / s;
-    W = screens[n].width / s;
-    H = screens[n].height / s;
+    Fl_Wayland_Screen_Driver::output *output;
+    int i = 0;
+    wl_list_for_each(output, &outputs, link) {
+      if (i++ == n) { // n'th screen of the system
+        float s = output->gui_scale * output->wld_scale;
+        X = output->x_org / s;
+        Y = output->y_org / s;
+        W = output->width / s;
+        H = output->height / s;
+        break;
+      }
+    }
   }
 }
 
@@ -1121,8 +1132,14 @@ void Fl_Wayland_Screen_Driver::screen_dpi(float &h, float &v, int n)
   h = v = 0.0f;
 
   if (n >= 0 && n < num_screens) {
-    h = dpi[n][0];
-    v = dpi[n][1];
+    Fl_Wayland_Screen_Driver::output *output;
+    int i = 0;
+    wl_list_for_each(output, &outputs, link) {
+      if (i++ == n) { // n'th screen of the system
+        h = output->dpi;
+        v = output->dpi;
+      }
+    }
   }
 }
 
@@ -1390,19 +1407,41 @@ void Fl_Wayland_Screen_Driver::offscreen_size(Fl_Offscreen off, int &width, int 
 //NOTICE: returns -1 if x,y is not in any screen
 int Fl_Wayland_Screen_Driver::screen_num_unscaled(int x, int y)
 {
-  int screen = -1;
   if (num_screens < 0) init();
 
-  for (int i = 0; i < num_screens; i ++) {
-    int sx = screens[i].x_org, sy = screens[i].y_org, sw = screens[i].width, sh = screens[i].height;
+  Fl_Wayland_Screen_Driver::output *output;
+  int screen = 0;
+  wl_list_for_each(output, &outputs, link) {
+    int s = output->wld_scale;
+    int sx = output->x_org/s, sy = output->y_org/s, sw = output->width/s, sh = output->height/s;
     if ((x >= sx) && (x < (sx+sw)) && (y >= sy) && (y < (sy+sh))) {
-      screen = i;
-      break;
+      return screen;
     }
+    screen++;
   }
-  return screen;
+  return -1;
 }
 
+float Fl_Wayland_Screen_Driver::scale(int n) {
+  Fl_Wayland_Screen_Driver::output *output;
+  int i = 0;
+  wl_list_for_each(output, &outputs, link) {
+    if (i++ == n) break;
+  }
+  return output->gui_scale;
+}
+
+
+void Fl_Wayland_Screen_Driver::scale(int n, float f) {
+  Fl_Wayland_Screen_Driver::output *output;
+  int i = 0;
+  wl_list_for_each(output, &outputs, link) {
+    if (i++ == n) {
+      output->gui_scale = f;
+      return;
+    }
+  }
+}
 
 // set the desktop's default scaling value
 void Fl_Wayland_Screen_Driver::desktop_scale_factor()

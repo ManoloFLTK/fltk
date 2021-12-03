@@ -956,7 +956,7 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
   new_window->scale = 1;
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   wl_list_for_each(output, &(scr_driver->outputs), link) {
-    new_window->scale = MAX(new_window->scale, output->scale);
+    new_window->scale = MAX(new_window->scale, output->wld_scale);
   }
   wl_list_init(&new_window->outputs);
 
@@ -1216,7 +1216,7 @@ void Fl_Wayland_Window_Driver::update_scale()
   Fl_Wayland_Window_Driver::window_output *window_output;
 
   wl_list_for_each(window_output, &window->outputs, link) {
-    scale = fl_max(scale, window_output->output->scale);
+    scale = fl_max(scale, window_output->output->wld_scale);
   }
   if (scale != window->scale) {
     window->scale = scale;

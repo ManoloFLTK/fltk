@@ -58,15 +58,6 @@ class FL_EXPORT Fl_Wayland_Screen_Driver : public Fl_Screen_Driver
 {
   friend class Fl_Screen_Driver;
 public:
-  typedef struct {
-    short x_org;
-    short y_org;
-    short width;
-    short height;
-    float scale;
-  } FLScreenInfo;
-  FLScreenInfo screens[MAX_SCREENS];
-  float dpi[MAX_SCREENS][2];
   int poll_or_select();
   int poll_or_select_with_delay(double time_to_wait);
   int get_mouse_unscaled(int &xx, int &yy);
@@ -100,11 +91,17 @@ public:
   struct wl_shm *wl_shm;
   struct wl_list seats;
   struct seat *seat;
-  struct wl_list outputs;
-  struct output {
+  struct wl_list outputs; // linked list of all screens in system
+  struct output { // one record for each screen
     uint32_t id;
+    short x_org;
+    short y_org;
+    short width; // in pixels
+    short height; // in pixels
+    float dpi;
     struct wl_output *wl_output;
-    int scale;
+    int wld_scale; // Wayland scale factor
+    float gui_scale; // FLTK scale factor
     struct wl_list link;
   };
   struct libdecor *libdecor_context;
@@ -112,8 +109,8 @@ public:
   
   Fl_Wayland_Screen_Driver();
   virtual APP_SCALING_CAPABILITY rescalable() { return PER_SCREEN_APP_SCALING; }
-  virtual float scale(int n) {return screens[n].scale;}
-  virtual void scale(int n, float f) { screens[n].scale = f;}
+  virtual float scale(int n);
+  virtual void scale(int n, float f);
   virtual void desktop_scale_factor();
   int screen_num_unscaled(int x, int y);
 
