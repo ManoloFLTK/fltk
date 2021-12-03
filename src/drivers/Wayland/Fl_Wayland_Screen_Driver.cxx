@@ -854,6 +854,7 @@ static void output_done(void *data, struct wl_output *wl_output)
     try_update_cursor(seat);
   }
   scr_driver->init_workarea();
+  Fl::handle(FL_SCREEN_CONFIGURATION_CHANGED, NULL);
 }
 
 
