@@ -1138,6 +1138,7 @@ void Fl_Wayland_Screen_Driver::screen_dpi(float &h, float &v, int n)
       if (i++ == n) { // n'th screen of the system
         h = output->dpi;
         v = output->dpi;
+        break;
       }
     }
   }
