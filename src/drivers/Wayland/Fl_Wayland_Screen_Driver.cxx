@@ -1029,17 +1029,17 @@ void Fl_Wayland_Screen_Driver::close_display() {
 }
 
 
-static int fl_workarea_xywh[4] = { -1, -1, -1, -1 };
+static int workarea_xywh[4] = { -1, -1, -1, -1 };
 
 
 void Fl_Wayland_Screen_Driver::init_workarea()
 {
-  fl_workarea_xywh[0] = 0;
-  fl_workarea_xywh[1] = 0;
+  workarea_xywh[0] = 0;
+  workarea_xywh[1] = 0;
   Fl_Wayland_Screen_Driver::output *output;
   wl_list_for_each(output, &outputs, link) {
-    fl_workarea_xywh[2] = output->width / output->wld_scale;
-    fl_workarea_xywh[3] = output->height / output->wld_scale;
+    workarea_xywh[2] = output->width; // pixels
+    workarea_xywh[3] = output->height; // pixels
     break;
   }
 }
@@ -1051,7 +1051,7 @@ int Fl_Wayland_Screen_Driver::x() {
   wl_list_for_each(output, &outputs, link) {
     break;
   }
-  return fl_workarea_xywh[0] / output->gui_scale;
+  return workarea_xywh[0] / (output->gui_scale * output->wld_scale);
 }
 
 int Fl_Wayland_Screen_Driver::y() {
@@ -1060,7 +1060,7 @@ int Fl_Wayland_Screen_Driver::y() {
   wl_list_for_each(output, &outputs, link) {
     break;
   }
-  return fl_workarea_xywh[1] / output->gui_scale;
+  return workarea_xywh[1] / (output->gui_scale * output->wld_scale);
 }
 
 int Fl_Wayland_Screen_Driver::w() {
@@ -1069,7 +1069,7 @@ int Fl_Wayland_Screen_Driver::w() {
   wl_list_for_each(output, &outputs, link) {
     break;
   }
-  return fl_workarea_xywh[2] / output->gui_scale;
+  return workarea_xywh[2] / (output->gui_scale * output->wld_scale);
 }
 
 int Fl_Wayland_Screen_Driver::h() {
@@ -1078,7 +1078,7 @@ int Fl_Wayland_Screen_Driver::h() {
   wl_list_for_each(output, &outputs, link) {
     break;
   }
-  return fl_workarea_xywh[3] / output->gui_scale;
+  return workarea_xywh[3] / (output->gui_scale * output->wld_scale);
 }
 
 
