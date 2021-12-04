@@ -949,7 +949,7 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
 static void registry_handle_global_remove(void *data, struct wl_registry *registry, uint32_t name)
 {//TODO to be tested
   Fl_Wayland_Screen_Driver::output *output;
-  Fl_Wayland_Window_Driver::window_output *window_output;
+  Fl_Wayland_Window_Driver::window_output *window_output, *tmp;
 //fprintf(stderr, "registry_handle_global_remove data=%p id=%u\n", data, name);
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   wl_list_for_each(output, &(scr_driver->outputs), link) { // all screens of the system
@@ -957,7 +957,7 @@ static void registry_handle_global_remove(void *data, struct wl_registry *regist
       Fl_X *xp = Fl_X::first;
       while (xp) { // all mapped windows
         struct wld_window *win = xp->xid;
-        wl_list_for_each(window_output, &(win->outputs), link) { // all Fl_Wayland_Window_Driver::window_output for this window
+        wl_list_for_each_safe(window_output, tmp, &(win->outputs), link) { // all Fl_Wayland_Window_Driver::window_output for this window
           if (window_output->output == output) {
             wl_list_remove(&window_output->link);
             free(window_output);
