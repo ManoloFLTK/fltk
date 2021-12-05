@@ -39,21 +39,8 @@ Window fl_xim_win = 0;
 char fl_is_over_the_spot = 0;
 
 
-extern char *fl_get_font_xfld(int fnum, int size);
-
-
 void fl_set_status(int x, int y, int w, int h)
 {
- }
-
-//extern XRectangle fl_spot;
-extern int fl_spotf;
-extern int fl_spots;
-
-void Fl_Wayland_Screen_Driver::enable_im() {
-}
-
-void Fl_Wayland_Screen_Driver::disable_im() {
 }
 
 
