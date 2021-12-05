@@ -45,16 +45,12 @@
  - bool draw_buffer_needs_commit
  is TRUE when draw_buffer has been modified and needs being committed for display, and
  FALSE after having been committed but before having been modified;
- - bool wl_buffer_ready
- is used under Mutter and Weston and is TRUE when wl_buffer is ready to be committed
- for display and FALSE otherwise;
  - struct wl_callback *cb
- is used under KDE to synchronize drawing with the compositor.
+ is used to synchronize drawing with the compositor during progressive drawing.
  
  When a graphics scene is to be committed, the data_size bytes of draw_buffer are copied by memcpy()
  starting at data, and wl_buffer is attached to the wl_surface which is committed for display
- by wl_surface_commit(). Finally, draw_buffer_needs_commit is set to FALSE, as is wl_buffer_ready
- except under KDE.
+ by wl_surface_commit(). Finally, draw_buffer_needs_commit is set to FALSE.
  
  All drawing functions have Cairo write to draw_buffer and turn draw_buffer_needs_commit to TRUE.
 */
@@ -62,7 +58,7 @@
 
 #include "../Cairo/Fl_Cairo_Graphics_Driver.H"
 #include <cairo/cairo.h>
-#include <wayland-client.h>
+#include <stdint.h> // for uint32_t
 typedef struct _PangoLayout  PangoLayout;
 
 struct buffer {

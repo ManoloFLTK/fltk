@@ -18,7 +18,6 @@
 #ifndef FL_NIX_SYSTEM_DRIVER_H
 #define FL_NIX_SYSTEM_DRIVER_H
 
-#include <config.h>
 #include "../Posix/Fl_Posix_System_Driver.H"
 class Fl_RGB_Image;
 

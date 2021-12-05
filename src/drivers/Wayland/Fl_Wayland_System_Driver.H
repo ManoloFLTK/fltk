@@ -18,7 +18,6 @@
 #ifndef FL_WAYLAND_SYSTEM_DRIVER_H
 #define FL_WAYLAND_SYSTEM_DRIVER_H
 
-#include <config.h>
 #include "../Nix/Fl_Nix_System_Driver.H"
 
 class FL_EXPORT Fl_Wayland_System_Driver : public Fl_Nix_System_Driver {

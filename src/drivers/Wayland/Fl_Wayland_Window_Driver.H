@@ -25,9 +25,7 @@
 #include "../../Fl_Window_Driver.H"
 #include <FL/Fl_Plugin.H>
 #include "Fl_Wayland_Screen_Driver.H"
-#include <wayland-client.h>
 
-class Fl_Bitmap;
 
 /*
  Move everything here that manages the native window interface.

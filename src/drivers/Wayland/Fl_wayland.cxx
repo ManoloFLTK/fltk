@@ -19,29 +19,15 @@
 #  include <config.h>
 #  include <FL/Fl.H>
 #  include <FL/platform.H>
-#  include "../../Fl_Window_Driver.H"
 #  include <FL/Fl_Window.H>
-#  include <FL/fl_utf8.h>
-#  include <FL/Fl_Tooltip.H>
-#  include <FL/fl_draw.H>
-#  include <FL/Fl_Paged_Device.H>
 #  include <FL/Fl_Shared_Image.H>
-#  include <FL/fl_ask.H>
-#  include <FL/filename.H>
-#  include <FL/Fl_Image_Surface.H>
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include "../../flstring.h"
 #  include "Fl_Wayland_Screen_Driver.H"
 #  include "Fl_Wayland_Window_Driver.H"
 #  include "Fl_Wayland_System_Driver.H"
-#  include "Fl_Wayland_Graphics_Driver.H"
-#  include "../../../libdecor/src/libdecor.h"
-#  include "xdg-shell-client-protocol.h"
-#  include <unistd.h>
-#  include <time.h>
-#  include <sys/time.h>
-#  include <math.h>
+//#  include <unistd.h>
 #  include <errno.h>
 
 

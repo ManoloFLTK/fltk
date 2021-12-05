@@ -24,9 +24,7 @@
 #define FL_WAYLAND_SCREEN_DRIVER_H
 
 #include "../../Fl_Screen_Driver.H"
-#include <wayland-cursor.h>
 #include <wayland-client.h>
-
 
 class Fl_Window;
 

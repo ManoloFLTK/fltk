@@ -17,7 +17,6 @@
 
 #include "Fl_Nix_System_Driver.H"
 #include <FL/Fl_File_Browser.H>
-#include <FL/fl_string.h>  // fl_strdup
 #include <FL/platform.H>
 #include "../../flstring.h"
 
@@ -26,12 +25,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
-#include <string.h>     // strerror(errno)
 #include <errno.h>      // errno
 #include <sys/time.h>   // gettimeofday()
-#if HAVE_DLSYM && HAVE_DLFCN_H
-#include <dlfcn.h>   // for dlsym
-#endif
 
 
 #ifndef HAVE_SCANDIR
