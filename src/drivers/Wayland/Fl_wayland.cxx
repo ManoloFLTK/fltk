@@ -16,8 +16,6 @@
 
 #if !defined(FL_DOXYGEN)
 
-#  define CONSOLIDATE_MOTION 1
-
 #  include <config.h>
 #  include <FL/Fl.H>
 #  include <FL/platform.H>
@@ -46,207 +44,6 @@
 #  include <math.h>
 #  include <errno.h>
 
-////////////////////////////////////////////////////////////////
-// interface to poll/select call:
-
-#  if USE_POLL
-
-#    include <poll.h>
-static pollfd *pollfds = 0;
-
-#  else
-#    if HAVE_SYS_SELECT_H
-#      include <sys/select.h>
-#    endif /* HAVE_SYS_SELECT_H */
-
-
-static fd_set fdsets[3];
-static int maxfd;
-#    define POLLIN 1
-#    define POLLOUT 4
-#    define POLLERR 8
-
-#  endif /* USE_POLL */
-
-static int nfds = 0;
-static int fd_array_size = 0;
-struct FD {
-#  if !USE_POLL
-  int fd;
-  short events;
-#  endif
-  void (*cb)(int, void*);
-  void* arg;
-};
-
-static FD *fd = 0;
-
-void Fl_Wayland_System_Driver::add_fd(int n, int events, void (*cb)(int, void*), void *v) {
-  remove_fd(n,events);
-  int i = nfds++;
-  if (i >= fd_array_size) {
-    FD *temp;
-    fd_array_size = 2*fd_array_size+1;
-
-    if (!fd) temp = (FD*)malloc(fd_array_size*sizeof(FD));
-    else temp = (FD*)realloc(fd, fd_array_size*sizeof(FD));
-
-    if (!temp) return;
-    fd = temp;
-
-#  if USE_POLL
-    pollfd *tpoll;
-
-    if (!pollfds) tpoll = (pollfd*)malloc(fd_array_size*sizeof(pollfd));
-    else tpoll = (pollfd*)realloc(pollfds, fd_array_size*sizeof(pollfd));
-
-    if (!tpoll) return;
-    pollfds = tpoll;
-#  endif
-  }
-  fd[i].cb = cb;
-  fd[i].arg = v;
-#  if USE_POLL
-  pollfds[i].fd = n;
-  pollfds[i].events = events;
-#  else
-  fd[i].fd = n;
-  fd[i].events = events;
-  if (events & POLLIN) FD_SET(n, &fdsets[0]);
-  if (events & POLLOUT) FD_SET(n, &fdsets[1]);
-  if (events & POLLERR) FD_SET(n, &fdsets[2]);
-  if (n > maxfd) maxfd = n;
-#  endif
-}
-
-void Fl_Wayland_System_Driver::add_fd(int n, void (*cb)(int, void*), void* v) {
-  add_fd(n, POLLIN, cb, v);
-}
-
-void Fl_Wayland_System_Driver::remove_fd(int n, int events) {
-  int i,j;
-# if !USE_POLL
-  maxfd = -1; // recalculate maxfd on the fly
-# endif
-  for (i=j=0; i<nfds; i++) {
-#  if USE_POLL
-    if (pollfds[i].fd == n) {
-      int e = pollfds[i].events & ~events;
-      if (!e) continue; // if no events left, delete this fd
-      pollfds[j].events = e;
-    }
-#  else
-    if (fd[i].fd == n) {
-      int e = fd[i].events & ~events;
-      if (!e) continue; // if no events left, delete this fd
-      fd[i].events = e;
-    }
-    if (fd[i].fd > maxfd) maxfd = fd[i].fd;
-#  endif
-    // move it down in the array if necessary:
-    if (j<i) {
-      fd[j] = fd[i];
-#  if USE_POLL
-      pollfds[j] = pollfds[i];
-#  endif
-    }
-    j++;
-  }
-  nfds = j;
-#  if !USE_POLL
-  if (events & POLLIN) FD_CLR(n, &fdsets[0]);
-  if (events & POLLOUT) FD_CLR(n, &fdsets[1]);
-  if (events & POLLERR) FD_CLR(n, &fdsets[2]);
-#  endif
-}
-
-void Fl_Wayland_System_Driver::remove_fd(int n) {
-  remove_fd(n, -1);
-}
-
-extern int fl_send_system_handlers(void *e);
-
-#if CONSOLIDATE_MOTION
-//static Fl_Window* send_motion;
-extern Fl_Window* fl_xmousewin;
-#endif
-//static bool in_a_window; // true if in any of our windows, even destroyed ones
-
-// these pointers are set by the Fl::lock() function:
-static void nothing() {}
-void (*fl_lock_function)() = nothing;
-void (*fl_unlock_function)() = nothing;
-
-
-// This is never called with time_to_wait < 0.0:
-// It should return negative on error, 0 if nothing happens before
-// timeout, and >0 if any callbacks were done.
-int Fl_Wayland_Screen_Driver::poll_or_select_with_delay(double time_to_wait) {
-  
-  if (fl_display) wl_display_flush(fl_display);
-  
-#  if !USE_POLL
-    fd_set fdt[3];
-    fdt[0] = fdsets[0];
-    fdt[1] = fdsets[1];
-    fdt[2] = fdsets[2];
-#  endif
-    int n;
-    
-    fl_unlock_function();
-    
-    if (time_to_wait < 2147483.648) {
-#  if USE_POLL
-      n = ::poll(pollfds, nfds, int(time_to_wait*1000 + .5));
-#  else
-      timeval t;
-      t.tv_sec = int(time_to_wait);
-      t.tv_usec = int(1000000 * (time_to_wait-t.tv_sec));
-      n = ::select(maxfd+1,&fdt[0],&fdt[1],&fdt[2],&t);
-#  endif
-    } else {
-#  if USE_POLL
-      n = ::poll(pollfds, nfds, -1);
-#  else
-      n = ::select(maxfd+1,&fdt[0],&fdt[1],&fdt[2],0);
-#  endif
-    }
-    fl_lock_function();
-    
-    if (n > 0) {
-      for (int i=0; i<nfds; i++) {
-#  if USE_POLL
-        if (pollfds[i].revents) fd[i].cb(pollfds[i].fd, fd[i].arg);
-#  else
-        int f = fd[i].fd;
-        short revents = 0;
-        if (FD_ISSET(f,&fdt[0])) revents |= POLLIN;
-        if (FD_ISSET(f,&fdt[1])) revents |= POLLOUT;
-        if (FD_ISSET(f,&fdt[2])) revents |= POLLERR;
-        if (fd[i].events & revents) fd[i].cb(f, fd[i].arg);
-#  endif
-      }
-    }
-    return n;
-}
-
-int Fl_Wayland_Screen_Driver::poll_or_select() {
-  if (fl_display) wl_display_flush(fl_display);
-
-  if (!nfds) return 0; // nothing to select or poll
-#  if USE_POLL
-  return ::poll(pollfds, nfds, 0);
-#  else
-  timeval t;
-  t.tv_sec = 0;
-  t.tv_usec = 0;
-  fd_set fdt[3];
-  fdt[0] = fdsets[0];
-  fdt[1] = fdsets[1];
-  fdt[2] = fdsets[2];
-  return ::select(maxfd+1,&fdt[0],&fdt[1],&fdt[2],&t);
-#  endif
-}
 
 ////////////////////////////////////////////////////////////////
 
@@ -303,37 +100,6 @@ static struct wl_data_offer *fl_selection_offer = NULL;
 static const char *fl_selection_offer_type = NULL;
 // The MIME type Wayland uses for text-containing clipboard:
 static const char wld_plain_text_clipboard[] = "text/plain;charset=utf-8";
-
-
-static void read_int(uchar *c, int& i) {
-  i = *c;
-  i |= (*(++c))<<8;
-  i |= (*(++c))<<16;
-  i |= (*(++c))<<24;
-}
-
-// turn BMP image FLTK produced by create_bmp() back to Fl_RGB_Image
-static Fl_RGB_Image *own_bmp_to_RGB(char *bmp) {
-  int w, h;
-  read_int((uchar*)bmp + 18, w);
-  read_int((uchar*)bmp + 22, h);
-  int R=((3*w+3)/4) * 4; // the number of bytes per row, rounded up to multiple of 4
-  bmp +=  54;
-  uchar *data = new uchar[w*h*3];
-  uchar *p = data;
-  for (int i = h-1; i >= 0; i--) {
-    char *s = bmp + i * R;
-    for (int j = 0; j < w; j++) {
-      *p++=s[2];
-      *p++=s[1];
-      *p++=s[0];
-      s+=3;
-    }
-  }
-  Fl_RGB_Image *img = new Fl_RGB_Image(data, w, h, 3);
-  img->alloc_array = 1;
-  return img;
-}
 
 
 int Fl_Wayland_System_Driver::clipboard_contains(const char *type)
@@ -688,6 +454,14 @@ static const struct wl_data_device_listener data_device_listener = {
 const struct wl_data_device_listener *Fl_Wayland_Screen_Driver::p_data_device_listener = &data_device_listener;
 
 
+static void read_int(uchar *c, int& i) {
+  i = *c;
+  i |= (*(++c))<<8;
+  i |= (*(++c))<<16;
+  i |= (*(++c))<<24;
+}
+
+
 // Reads from the clipboard an image which can be in image/bmp or image/png MIME type.
 // Returns 0 if OK, != 0 if error.
 static int get_clipboard_image() {
@@ -745,7 +519,8 @@ static int get_clipboard_image() {
 //fprintf(stderr, "get_clipboard_image: image/bmp %dx%d rest=%lu\n", w,h,rest);
     }
     close(fds[0]);
-    if (!rest) Fl::e_clipboard_data = own_bmp_to_RGB(bmp);
+    Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+    if (!rest) Fl::e_clipboard_data = sys_dr->own_bmp_to_RGB(bmp);
     delete[] bmp;
     if (rest) return 1;
   }
@@ -821,70 +596,12 @@ void Fl_Wayland_System_Driver::copy(const char *stuff, int len, int clipboard, c
 }
 
 
-static void write_short(unsigned char **cp, short i) {
-  unsigned char *c = *cp;
-  *c++ = i & 0xFF; i >>= 8;
-  *c++ = i & 0xFF;
-  *cp = c;
-}
-
-static void write_int(unsigned char **cp, int i) {
-  unsigned char *c = *cp;
-  *c++ = i & 0xFF; i >>= 8;
-  *c++ = i & 0xFF; i >>= 8;
-  *c++ = i & 0xFF; i >>= 8;
-  *c++ = i & 0xFF;
-  *cp = c;
-}
-
-static unsigned char *create_bmp(const unsigned char *data, int W, int H, int *return_size){
-  int R = ((3*W+3)/4) * 4; // the number of bytes per row, rounded up to multiple of 4
-  int s=H*R;
-  int fs=14+40+s;
-  unsigned char *b=new unsigned char[fs];
-  unsigned char *c=b;
-  // BMP header
-  *c++='B';
-  *c++='M';
-  write_int(&c,fs);
-  write_int(&c,0);
-  write_int(&c,14+40);
-  // DIB header:
-  write_int(&c,40);
-  write_int(&c,W);
-  write_int(&c,H);
-  write_short(&c,1);
-  write_short(&c,24);//bits ber pixel
-  write_int(&c,0);//RGB
-  write_int(&c,s);
-  write_int(&c,0);// horizontal resolution
-  write_int(&c,0);// vertical resolution
-  write_int(&c,0);//number of colors. 0 -> 1<<bits_per_pixel
-  write_int(&c,0);
-  // Pixel data
-  data+=3*W*H;
-  for (int y=0;y<H;++y){
-    data-=3*W;
-    const unsigned char *s=data;
-    unsigned char *p=c;
-    for (int x=0;x<W;++x){
-      *p++=s[2];
-      *p++=s[1];
-      *p++=s[0];
-      s+=3;
-    }
-    c+=R;
-  }
-  *return_size = fs;
-  return b;
-}
-
-
 // takes a raw RGB image and puts it in the copy/paste buffer
 void Fl_Wayland_Screen_Driver::copy_image(const unsigned char *data, int W, int H){
   if (!data || W <= 0 || H <= 0) return;
   delete[] fl_selection_buffer[1];
-  fl_selection_buffer[1] = (char *)create_bmp(data,W,H,&fl_selection_length[1]);
+  Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+  fl_selection_buffer[1] = (char *)sys_dr->create_bmp(data,W,H,&fl_selection_length[1]);
   fl_selection_buffer_length[1] = fl_selection_length[1];
   fl_i_own_selection[1] = 1;
   fl_selection_type[1] = Fl::clipboard_image;
@@ -902,202 +619,6 @@ void Fl_Wayland_Screen_Driver::copy_image(const unsigned char *data, int W, int 
 // is that possible with Wayland ?
 
 ////////////////////////////////////////////////////////////////
-
-
-void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
-  int is_a_move = (X != x() || Y != y() || Fl_Window::is_a_rescale());
-  int is_a_resize = (W != w() || H != h() || Fl_Window::is_a_rescale());
-  if (is_a_move) force_position(1);
-  else if (!is_a_resize && !is_a_move) return;
-  if (is_a_resize) {
-    pWindow->Fl_Group::resize(X,Y,W,H);
-//fprintf(stderr, "resize: win=%p to %dx%d\n", pWindow, W, H);
-    if (shown()) {pWindow->redraw();}
-  } else {
-    if (pWindow->parent() || pWindow->menu_window() || pWindow->tooltip_window()) {
-      x(X); y(Y);
-//fprintf(stderr, "move menuwin=%p x()=%d\n", pWindow, X);
-    } else {
-      //"a deliberate design trait of Wayland makes application windows ignorant of their exact placement on screen"
-      x(0); y(0);
-    }
-  }
-  if (is_a_resize && !pWindow->resizable() && !shown()) {
-    pWindow->size_range(w(), h(), w(), h());
-  }
-    
-  if (shown()) {
-    struct wld_window *fl_win = fl_xid(pWindow);
-    if (is_a_resize) {
-      float f = Fl::screen_scale(pWindow->screen_num());
-      if (!pWindow->resizable() && !fl_win->frame) pWindow->size_range(w(), h(), w(), h());
-      if (fl_win->frame) { // a decorated window
-        if (fl_win->buffer) {
-          Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
-        }
-        fl_win->configured_width = W;
-        fl_win->configured_height = H;
-        if (!in_handle_configure && fl_win->xdg_toplevel) {
-          struct libdecor_state *state = libdecor_state_new(int(W * f), int(H * f));
-          libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
-          libdecor_state_free(state);
-          if (libdecor_frame_is_floating(fl_win->frame)) {
-            fl_win->floating_width = int(W*f);
-            fl_win->floating_height = int(H*f);
-          }
-        }
-      } else if (fl_win->subsurface) { // a subwindow
-        wl_subsurface_set_position(fl_win->subsurface, X * f, Y * f);
-        if (!pWindow->as_gl_window()) Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
-        fl_win->configured_width = W;
-        fl_win->configured_height = H;
-      } else if (fl_win->xdg_surface) { // a window without border
-        if (!pWindow->as_gl_window()) Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
-        fl_win->configured_width = W;
-        fl_win->configured_height = H;
-        xdg_surface_set_window_geometry(fl_win->xdg_surface, 0, 0, W * f, H * f);
-      }
-    } else {
-     if (!in_handle_configure && fl_win->xdg_toplevel) {
-      // Wayland doesn't seem to provide a reliable way for the app to set the window position on screen.
-      // This is functional when the move is mouse-driven.
-      Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-      xdg_toplevel_move(fl_win->xdg_toplevel, scr_driver->seat->wl_seat, scr_driver->seat->serial);
-      }
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////////
-
-
-extern Fl_Window *fl_xfocus;
-
-
-/* Change an existing window to fullscreen */
-void Fl_Wayland_Window_Driver::fullscreen_on() {
-    int top, bottom, left, right;
-
-    top = fullscreen_screen_top();
-    bottom = fullscreen_screen_bottom();
-    left = fullscreen_screen_left();
-    right = fullscreen_screen_right();
-
-    if ((top < 0) || (bottom < 0) || (left < 0) || (right < 0)) {
-      top = screen_num();
-      bottom = top;
-      left = top;
-      right = top;
-    }
-  pWindow->wait_for_expose(); // make sure ->xdg_toplevel is initialized
-  if (fl_xid(pWindow)->xdg_toplevel) {
-    xdg_toplevel_set_fullscreen(fl_xid(pWindow)->xdg_toplevel, NULL);
-    pWindow->_set_fullscreen();
-    Fl::handle(FL_FULLSCREEN, pWindow);
-  }
-}
-
-void Fl_Wayland_Window_Driver::fullscreen_off(int X, int Y, int W, int H) {
-  if (!border()) pWindow->Fl_Group::resize(X, Y, W, H);
-  xdg_toplevel_unset_fullscreen(fl_xid(pWindow)->xdg_toplevel);
-  pWindow->_clear_fullscreen();
-  Fl::handle(FL_FULLSCREEN, pWindow);
-}
-
-////////////////////////////////////////////////////////////////
-
-void Fl_Wayland_Screen_Driver::default_icons(const Fl_RGB_Image *icons[], int count) {
-}
-
-void Fl_Wayland_Window_Driver::set_icons() {
-}
-
-////////////////////////////////////////////////////////////////
-
-
-int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int hoty) {
-  static struct wl_cursor *previous_custom_cursor = NULL;
-  static struct buffer *previous_offscreen = NULL;
-  struct cursor_image { // as in wayland-cursor.c of the Wayland project source code
-    struct wl_cursor_image image;
-    struct wl_cursor_theme *theme;
-    struct wl_buffer *buffer;
-    int offset; /* data offset of this image in the shm pool */
-  };
-// build a new wl_cursor and its image
-  struct wl_cursor *new_cursor = (struct wl_cursor*)malloc(sizeof(struct wl_cursor));
-  struct cursor_image *new_image = (struct cursor_image*)calloc(1, sizeof(struct cursor_image));
-  int scale = fl_xid(pWindow)->scale;
-  new_image->image.width = rgb->w() * scale;
-  new_image->image.height = rgb->h() * scale;
-  new_image->image.hotspot_x = hotx * scale;
-  new_image->image.hotspot_y = hoty * scale;
-  new_image->image.delay = 0;
-  new_image->offset = 0;
-  //create a Wayland buffer and have it used as an image of the new cursor
-  struct buffer *offscreen = Fl_Wayland_Graphics_Driver::create_shm_buffer(new_image->image.width, new_image->image.height, WL_SHM_FORMAT_ARGB8888, NULL);
-  new_image->buffer = offscreen->wl_buffer;
-  new_cursor->image_count = 1;
-  new_cursor->images = (struct wl_cursor_image**)malloc(sizeof(struct wl_cursor_image*));
-  new_cursor->images[0] = (struct wl_cursor_image*)new_image;
-  new_cursor->name = strdup("custom cursor");
-  // draw the rgb image to the cursor's drawing buffer
-  Fl_Image_Surface *img_surf = new Fl_Image_Surface(new_image->image.width, new_image->image.height, 0, offscreen);
-  Fl_Surface_Device::push_current(img_surf);
-  Fl_Wayland_Graphics_Driver *driver = (Fl_Wayland_Graphics_Driver*)img_surf->driver();
-  cairo_scale(driver->cr(), scale, scale);
-  memset(offscreen->draw_buffer, 0, offscreen->data_size);
-  ((Fl_RGB_Image*)rgb)->draw(0, 0);
-  Fl_Surface_Device::pop_current();
-  delete img_surf;
-  memcpy(offscreen->data, offscreen->draw_buffer, offscreen->data_size);
-  /*if (new_image->image.width <= 64 && new_image->image.height <= 64) {
-    // for some mysterious reason, small cursor images want RGBA whereas big ones want BGRA !!!
-    //fprintf(stderr, "exchange R and B\n");
-    char *to = (char*)offscreen->data, *last = to + offscreen->data_size, xchg;
-    while (to < last) {
-      xchg = *to;
-      *to = *(to+2);
-      *(to+2) = xchg;
-      to += 4;
-    }
-  }*/
-  //have this new cursor used
-  this->cursor = new_cursor;
-  //memorize new cursor
-  if (previous_custom_cursor) {
-    struct wld_window fake_xid;
-    new_image = (struct cursor_image*)previous_custom_cursor->images[0];
-    fake_xid.buffer = previous_offscreen;
-    Fl_Wayland_Graphics_Driver::buffer_release(&fake_xid);
-    free(new_image);
-    free(previous_custom_cursor->images);
-    free(previous_custom_cursor->name);
-    free(previous_custom_cursor);
-  }
-  previous_custom_cursor = new_cursor;
-  previous_offscreen = offscreen;
-  return 1;
-}
-
-////////////////////////////////////////////////////////////////
-
-// returns pointer to the filename, or null if name ends with '/'
-const char *Fl_Wayland_System_Driver::filename_name(const char *name) {
-  const char *p,*q;
-  if (!name) return (0);
-  for (p=q=name; *p;) if (*p++ == '/') q = p;
-  return q;
-}
-
-void Fl_Wayland_Window_Driver::label(const char *name, const char *iname) {
-  if (shown() && !parent()) {
-    if (!name) name = "";
-    if (!iname) iname = fl_filename_name(name);
-    libdecor_frame_set_title(fl_xid(pWindow)->frame, name);
-  }
-}
-
 
 //#define USE_PRINT_BUTTON 1
 #ifdef USE_PRINT_BUTTON

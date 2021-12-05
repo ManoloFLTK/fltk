@@ -272,9 +272,6 @@ void Fl_Wayland_Window_Driver::icons(const Fl_RGB_Image *icons[], int count) {
       icon_->icons[i]->normalize();
     }
   }
-
-  if (Fl_X::i(pWindow))
-    set_icons();
 }
 
 const void *Fl_Wayland_Window_Driver::icon() const {
@@ -1236,5 +1233,177 @@ void Fl_Wayland_Window_Driver::use_border() {
     pWindow->redraw();
   } else {
     Fl_Window_Driver::use_border();
+  }
+}
+
+
+/* Change an existing window to fullscreen */
+void Fl_Wayland_Window_Driver::fullscreen_on() {
+    int top, bottom, left, right;
+
+    top = fullscreen_screen_top();
+    bottom = fullscreen_screen_bottom();
+    left = fullscreen_screen_left();
+    right = fullscreen_screen_right();
+
+    if ((top < 0) || (bottom < 0) || (left < 0) || (right < 0)) {
+      top = screen_num();
+      bottom = top;
+      left = top;
+      right = top;
+    }
+  pWindow->wait_for_expose(); // make sure ->xdg_toplevel is initialized
+  if (fl_xid(pWindow)->xdg_toplevel) {
+    xdg_toplevel_set_fullscreen(fl_xid(pWindow)->xdg_toplevel, NULL);
+    pWindow->_set_fullscreen();
+    Fl::handle(FL_FULLSCREEN, pWindow);
+  }
+}
+
+
+void Fl_Wayland_Window_Driver::fullscreen_off(int X, int Y, int W, int H) {
+  if (!border()) pWindow->Fl_Group::resize(X, Y, W, H);
+  xdg_toplevel_unset_fullscreen(fl_xid(pWindow)->xdg_toplevel);
+  pWindow->_clear_fullscreen();
+  Fl::handle(FL_FULLSCREEN, pWindow);
+}
+
+
+void Fl_Wayland_Window_Driver::label(const char *name, const char *iname) {
+  if (shown() && !parent()) {
+    if (!name) name = "";
+    if (!iname) iname = fl_filename_name(name);
+    libdecor_frame_set_title(fl_xid(pWindow)->frame, name);
+  }
+}
+
+
+int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int hoty) {
+  static struct wl_cursor *previous_custom_cursor = NULL;
+  static struct buffer *previous_offscreen = NULL;
+  struct cursor_image { // as in wayland-cursor.c of the Wayland project source code
+    struct wl_cursor_image image;
+    struct wl_cursor_theme *theme;
+    struct wl_buffer *buffer;
+    int offset; /* data offset of this image in the shm pool */
+  };
+// build a new wl_cursor and its image
+  struct wl_cursor *new_cursor = (struct wl_cursor*)malloc(sizeof(struct wl_cursor));
+  struct cursor_image *new_image = (struct cursor_image*)calloc(1, sizeof(struct cursor_image));
+  int scale = fl_xid(pWindow)->scale;
+  new_image->image.width = rgb->w() * scale;
+  new_image->image.height = rgb->h() * scale;
+  new_image->image.hotspot_x = hotx * scale;
+  new_image->image.hotspot_y = hoty * scale;
+  new_image->image.delay = 0;
+  new_image->offset = 0;
+  //create a Wayland buffer and have it used as an image of the new cursor
+  struct buffer *offscreen = Fl_Wayland_Graphics_Driver::create_shm_buffer(new_image->image.width, new_image->image.height, WL_SHM_FORMAT_ARGB8888, NULL);
+  new_image->buffer = offscreen->wl_buffer;
+  new_cursor->image_count = 1;
+  new_cursor->images = (struct wl_cursor_image**)malloc(sizeof(struct wl_cursor_image*));
+  new_cursor->images[0] = (struct wl_cursor_image*)new_image;
+  new_cursor->name = strdup("custom cursor");
+  // draw the rgb image to the cursor's drawing buffer
+  Fl_Image_Surface *img_surf = new Fl_Image_Surface(new_image->image.width, new_image->image.height, 0, offscreen);
+  Fl_Surface_Device::push_current(img_surf);
+  Fl_Wayland_Graphics_Driver *driver = (Fl_Wayland_Graphics_Driver*)img_surf->driver();
+  cairo_scale(driver->cr(), scale, scale);
+  memset(offscreen->draw_buffer, 0, offscreen->data_size);
+  ((Fl_RGB_Image*)rgb)->draw(0, 0);
+  Fl_Surface_Device::pop_current();
+  delete img_surf;
+  memcpy(offscreen->data, offscreen->draw_buffer, offscreen->data_size);
+  /*if (new_image->image.width <= 64 && new_image->image.height <= 64) {
+    // for some mysterious reason, small cursor images want RGBA whereas big ones want BGRA !!!
+    //fprintf(stderr, "exchange R and B\n");
+    char *to = (char*)offscreen->data, *last = to + offscreen->data_size, xchg;
+    while (to < last) {
+      xchg = *to;
+      *to = *(to+2);
+      *(to+2) = xchg;
+      to += 4;
+    }
+  }*/
+  //have this new cursor used
+  this->cursor = new_cursor;
+  //memorize new cursor
+  if (previous_custom_cursor) {
+    struct wld_window fake_xid;
+    new_image = (struct cursor_image*)previous_custom_cursor->images[0];
+    fake_xid.buffer = previous_offscreen;
+    Fl_Wayland_Graphics_Driver::buffer_release(&fake_xid);
+    free(new_image);
+    free(previous_custom_cursor->images);
+    free(previous_custom_cursor->name);
+    free(previous_custom_cursor);
+  }
+  previous_custom_cursor = new_cursor;
+  previous_offscreen = offscreen;
+  return 1;
+}
+
+
+void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
+  int is_a_move = (X != x() || Y != y() || Fl_Window::is_a_rescale());
+  int is_a_resize = (W != w() || H != h() || Fl_Window::is_a_rescale());
+  if (is_a_move) force_position(1);
+  else if (!is_a_resize && !is_a_move) return;
+  if (is_a_resize) {
+    pWindow->Fl_Group::resize(X,Y,W,H);
+//fprintf(stderr, "resize: win=%p to %dx%d\n", pWindow, W, H);
+    if (shown()) {pWindow->redraw();}
+  } else {
+    if (pWindow->parent() || pWindow->menu_window() || pWindow->tooltip_window()) {
+      x(X); y(Y);
+//fprintf(stderr, "move menuwin=%p x()=%d\n", pWindow, X);
+    } else {
+      //"a deliberate design trait of Wayland makes application windows ignorant of their exact placement on screen"
+      x(0); y(0);
+    }
+  }
+  if (is_a_resize && !pWindow->resizable() && !shown()) {
+    pWindow->size_range(w(), h(), w(), h());
+  }
+    
+  if (shown()) {
+    struct wld_window *fl_win = fl_xid(pWindow);
+    if (is_a_resize) {
+      float f = Fl::screen_scale(pWindow->screen_num());
+      if (!pWindow->resizable() && !fl_win->frame) pWindow->size_range(w(), h(), w(), h());
+      if (fl_win->frame) { // a decorated window
+        if (fl_win->buffer) {
+          Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
+        }
+        fl_win->configured_width = W;
+        fl_win->configured_height = H;
+        if (!in_handle_configure && fl_win->xdg_toplevel) {
+          struct libdecor_state *state = libdecor_state_new(int(W * f), int(H * f));
+          libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
+          libdecor_state_free(state);
+          if (libdecor_frame_is_floating(fl_win->frame)) {
+            fl_win->floating_width = int(W*f);
+            fl_win->floating_height = int(H*f);
+          }
+        }
+      } else if (fl_win->subsurface) { // a subwindow
+        wl_subsurface_set_position(fl_win->subsurface, X * f, Y * f);
+        if (!pWindow->as_gl_window()) Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
+        fl_win->configured_width = W;
+        fl_win->configured_height = H;
+      } else if (fl_win->xdg_surface) { // a window without border
+        if (!pWindow->as_gl_window()) Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
+        fl_win->configured_width = W;
+        fl_win->configured_height = H;
+        xdg_surface_set_window_geometry(fl_win->xdg_surface, 0, 0, W * f, H * f);
+      }
+    } else {
+     if (!in_handle_configure && fl_win->xdg_toplevel) {
+      // Wayland doesn't seem to provide a reliable way for the app to set the window position on screen.
+      // This is functional when the move is mouse-driven.
+      Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+      xdg_toplevel_move(fl_win->xdg_toplevel, scr_driver->seat->wl_seat, scr_driver->seat->serial);
+      }
+    }
   }
 }

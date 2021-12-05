@@ -58,8 +58,6 @@ class FL_EXPORT Fl_Wayland_Screen_Driver : public Fl_Screen_Driver
 {
   friend class Fl_Screen_Driver;
 public:
-  int poll_or_select();
-  int poll_or_select_with_delay(double time_to_wait);
   int get_mouse_unscaled(int &xx, int &yy);
   void screen_count(int count) {num_screens = count;}
   
@@ -111,7 +109,6 @@ public:
   virtual APP_SCALING_CAPABILITY rescalable() { return PER_SCREEN_APP_SCALING; }
   virtual float scale(int n);
   virtual void scale(int n, float f);
-  virtual void desktop_scale_factor();
   int screen_num_unscaled(int x, int y);
 
   void copy_image(const unsigned char* data, int W, int H);
@@ -152,7 +149,6 @@ public:
   virtual void close_display();
   // --- compute dimensions of an Fl_Offscreen
   virtual void offscreen_size(Fl_Offscreen o, int &width, int &height);
-  virtual void default_icons(const Fl_RGB_Image *icons[], int count);
   virtual int has_marked_text();
   virtual void reset_marked_text();
   static int next_marked_length; // next length of marked text after current marked text will have been replaced
