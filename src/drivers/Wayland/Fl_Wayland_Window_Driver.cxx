@@ -670,6 +670,19 @@ static void surface_enter(void *data, struct wl_surface *wl_surface, struct wl_o
   wl_list_insert(&window->outputs, &window_output->link);
   Fl_Wayland_Window_Driver *win_driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(window->fl_win);
   win_driver->update_scale();
+  if (!window->fl_win->parent()) { // for top-level, set its screen number
+    Fl_Wayland_Screen_Driver::output *running_output;
+    Fl_Wayland_Screen_Driver *scr_dr = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+    int i = 0;
+    wl_list_for_each(running_output, &scr_dr->outputs, link) { // each screen of the system
+      if (running_output == output) { // we've found our screen of the system
+        win_driver->screen_num(i);
+//fprintf(stderr,"window %p is on screen #%d\n", window->fl_win, i);
+        break;
+      }
+      i++;
+    }
+  }
 }
 
 static void surface_leave(void *data, struct wl_surface *wl_surface, struct wl_output *wl_output)
