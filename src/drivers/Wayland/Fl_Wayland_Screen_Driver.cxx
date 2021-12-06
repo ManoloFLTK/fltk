@@ -1232,11 +1232,6 @@ void Fl_Wayland_Screen_Driver::remove_timeout(Fl_Timeout_Handler cb, void *argp)
 }
 
 
-int Fl_Wayland_Screen_Driver::text_display_can_leak() {
-  return 1;
-}
-
-
 Fl_RGB_Image *Fl_Wayland_Screen_Driver::read_win_rectangle(int X, int Y, int w, int h, Fl_Window *win,
                                                            bool ignore, bool *p_ignore) {
   Window xid = win ? fl_xid(win) : NULL;
