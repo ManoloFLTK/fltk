@@ -279,6 +279,7 @@ WLCPPFILES = \
 	drivers/Posix/Fl_Posix_Printer_Driver.cxx \
         Fl_Native_File_Chooser_FLTK.cxx \
         Fl_Native_File_Chooser_GTK.cxx \
+	Fl_Native_File_Chooser_Kdialog.cxx \
 	drivers/Wayland/Fl_get_key_wayland.cxx \
         drivers/Wayland/Fl_Wayland_System_Driver.cxx \
         drivers/Nix/Fl_Nix_System_Driver.cxx \

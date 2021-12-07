@@ -258,6 +258,7 @@ elseif (OPTION_USE_WAYLAND)
     drivers/Cairo/Fl_Cairo_Graphics_Driver.cxx
     Fl_Native_File_Chooser_FLTK.cxx
     Fl_Native_File_Chooser_GTK.cxx
+    Fl_Native_File_Chooser_Kdialog.cxx
   )
 
 elseif (APPLE)
