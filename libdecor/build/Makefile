@@ -16,7 +16,7 @@
 
 include ../../makeinclude
 
-CFLAGS = -I. -I../.. -I../../src -I../src -fPIC -D_GNU_SOURCE
+CFLAGS = -I. -I../.. -I../../src -I../src -fPIC -D_GNU_SOURCE -DUSE_SYSTEM_LIBDECOR=0
 OBJECTS =  fl_libdecor.o libdecor-cairo-blur.o fl_libdecor-cairo.o libdecor-fallback.o \
   ../../src/xdg-decoration-protocol.o ../../src/xdg-shell-protocol.o cursor-settings.o
 PROTOCOLS = /usr/share/wayland-protocols

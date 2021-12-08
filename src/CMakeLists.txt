@@ -433,16 +433,29 @@ if (FLTK_USE_X11)
 endif (FLTK_USE_X11)
 
 if (OPTION_USE_WAYLAND)
-  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${CMAKE_CURRENT_BINARY_DIR} -I${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/src -fPIC -D_GNU_SOURCE -DLIBDECOR_PLUGIN_API_VERSION=1 -DLIBDECOR_PLUGIN_DIR=\\\"Unused\\\" ")
+  pkg_check_modules(DBUS dbus-1)
+  include_directories(${DBUS_INCLUDE_DIRS})
+  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${CMAKE_CURRENT_BINARY_DIR} -fPIC -D_GNU_SOURCE  -DHAS_DBUS")
+  if (OPTION_USE_SYSTEM_LIBDECOR)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_SYSTEM_LIBDECOR")
+  else()
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/src   -DLIBDECOR_PLUGIN_API_VERSION=1 -DLIBDECOR_PLUGIN_DIR=\\\"Unused\\\" ")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_SYSTEM_LIBDECOR=0")
+  endif (OPTION_USE_SYSTEM_LIBDECOR)
+
   list (APPEND CFILES
     xutf8/keysym2Ucs.c
     scandir_posix.c
-    ../libdecor/src/libdecor-fallback.c
     ../libdecor/src/cursor-settings.c
-    ../libdecor/src/plugins/cairo/libdecor-cairo-blur.c
-    ../libdecor/build/fl_libdecor.c
     ../libdecor/build/fl_libdecor-cairo.c
-  )
+    )
+  if (NOT OPTION_USE_SYSTEM_LIBDECOR)
+    list (APPEND CFILES
+    ../libdecor/build/fl_libdecor.c
+    ../libdecor/src/libdecor-fallback.c
+    ../libdecor/src/plugins/cairo/libdecor-cairo-blur.c
+    )
+  endif (NOT OPTION_USE_SYSTEM_LIBDECOR)
 endif (OPTION_USE_WAYLAND)
 
 if (WIN32)
@@ -553,6 +566,9 @@ if (OPTION_USE_WAYLAND)
   if (OPTION_USE_GL)
     list (APPEND OPTIONAL_LIBS "-lwayland-egl -lEGL")
   endif (OPTION_USE_GL)
+  if (OPTION_USE_SYSTEM_LIBDECOR)
+    list (APPEND OPTIONAL_LIBS "-ldecor-0")
+  endif (OPTION_USE_SYSTEM_LIBDECOR)
   list (APPEND OPTIONAL_LIBS "-lwayland-cursor -lwayland-client -lxkbcommon -ldl -ldbus-1")
   if (NOT OPTION_BUILD_SHARED_LIBS)
     list (APPEND OPTIONAL_LIBS "-no-pie")
