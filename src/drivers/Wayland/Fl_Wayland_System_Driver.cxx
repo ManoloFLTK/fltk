@@ -67,13 +67,11 @@ void Fl_Wayland_System_Driver::make_transient(void *ptr_gtk, void *gtk_window, F
     fl_gdk_wayland_window_get_wl_surface = (XX_gdk_wayland_window_get_wl_surface_type)dlsym(ptr_gtk, "gdk_wayland_window_get_wl_surface");
   }
   struct wl_surface *wld_surf = fl_gdk_wayland_window_get_wl_surface(gdkw);
-fprintf(stderr, "wld_surf=%p \n", wld_surf);
   // but what next?
 /* not good:
 Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
 struct xdg_surface *xdgs = xdg_wm_base_get_xdg_surface(scr_driver->xdg_wm_base, wld_surf);
 struct xdg_toplevel *top = xdg_surface_get_toplevel(xdgs);
-fprintf(stderr, "wld_surf=%p xdgs=%p top=%p \n", wld_surf, xdgs, top);
 xdg_toplevel_set_parent(top, fl_xid(win)->xdg_toplevel);
 */
 }
