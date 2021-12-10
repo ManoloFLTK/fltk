@@ -676,8 +676,13 @@ static void surface_enter(void *data, struct wl_surface *wl_surface, struct wl_o
     int i = 0;
     wl_list_for_each(running_output, &scr_dr->outputs, link) { // each screen of the system
       if (running_output == output) { // we've found our screen of the system
+        int old = win_driver->screen_num();
         win_driver->screen_num(i);
-//fprintf(stderr,"window %p is on screen #%d\n", window->fl_win, i);
+//fprintf(stderr,"window %p is on screen #%d (old=%d)\n", window->fl_win, i, old);
+        if (old != i && window->scale != output->wld_scale) {
+          Fl_Wayland_Graphics_Driver::buffer_release(window);
+          window->fl_win->redraw();
+        }
         break;
       }
       i++;
