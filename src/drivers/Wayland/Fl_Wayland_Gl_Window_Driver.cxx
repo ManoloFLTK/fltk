@@ -219,9 +219,11 @@ void Fl_Wayland_Gl_Window_Driver::delete_gl_context(GLContext context) {
     cached_context = 0;
     cached_window = 0;
   }
-  EGLBoolean b = eglDestroyContext(egl_display, context);
+//EGLBoolean b =
+  eglDestroyContext(egl_display, context);
 //fprintf(stderr,"EGL context %p destroyed %s\n", context, b==EGL_TRUE?"successfully":"w/ error");
-  b = eglDestroySurface(egl_display, egl_surface);
+//b =
+  eglDestroySurface(egl_display, egl_surface);
 //fprintf(stderr,"EGLSurface %p destroyed %s\n", egl_surface, b==EGL_TRUE?"successfully":"w/ error");
   egl_surface = NULL;
   wl_egl_window_destroy(egl_window);

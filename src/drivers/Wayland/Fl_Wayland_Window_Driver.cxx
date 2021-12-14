@@ -1353,6 +1353,7 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
 }
 
 
+#if defined(USE_SYSTEM_LIBDECOR) && USE_SYSTEM_LIBDECOR
 // This is only to fix a bug in libdecor where what libdecor_frame_set_min_content_size()
 // does is often destroyed by libdecor-cairo.
 static void delayed_minsize(Fl_Window *win) {
@@ -1368,6 +1369,7 @@ static void delayed_minsize(Fl_Window *win) {
   if (H < driver->minh()) { H = driver->minh(); need_resize = true; }
   if (need_resize) win->size(W, H);
 }
+#endif
 
 
 void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
