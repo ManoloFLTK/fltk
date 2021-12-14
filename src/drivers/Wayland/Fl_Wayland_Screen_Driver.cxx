@@ -337,7 +337,7 @@ static void pointer_button(void *data,
   if (!win) return;
   fl_event_time = time;
   if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED && seat->pointer_focus == NULL &&
-      fl_xid(win)->frame) {
+      fl_xid(win)->kind == Fl_Wayland_Window_Driver::DECORATED/*frame*/) {
     // click on titlebar
     libdecor_frame_move(fl_xid(win)->frame, seat->wl_seat, serial);
     return;

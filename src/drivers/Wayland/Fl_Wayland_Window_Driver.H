@@ -49,20 +49,6 @@ struct Fl_Window_Driver::shape_data_type {
   cairo_pattern_t *mask_pattern_;
 };
 
-struct wld_window {
-  struct wl_surface *wl_surface;
-  struct wl_subsurface *subsurface;
-  struct buffer *buffer;
-  struct libdecor_frame *frame;
-  struct xdg_surface *xdg_surface;
-  struct xdg_toplevel *xdg_toplevel;
-  struct xdg_popup *xdg_popup;
-  int configured_width;
-  int configured_height;
-  struct wl_list outputs;
-  int scale;
-  Fl_Window *fl_win;
-};
 
 class FL_EXPORT Fl_Wayland_Window_Driver : public Fl_Window_Driver
 {
@@ -97,6 +83,8 @@ public:
   void update_scale();
 
 public:
+  enum kind {DECORATED, SUBWINDOW, POPUP, UNFRAMED};
+  struct xdg_toplevel *xdg_toplevel();
   Fl_Wayland_Window_Driver(Fl_Window*);
   virtual ~Fl_Wayland_Window_Driver();
   static void redraw(struct wld_window *window);
@@ -145,6 +133,26 @@ public:
   virtual void capture_titlebar_and_borders(Fl_RGB_Image*& top, Fl_RGB_Image*& left, Fl_RGB_Image*& bottom, Fl_RGB_Image*& right);
   virtual int scroll(int src_x, int src_y, int src_w, int src_h, int dest_x, int dest_y, void (*draw_area)(void*, int,int,int,int), void* data);
 };
+
+
+struct wld_window {
+  struct wl_list outputs;
+  struct wl_surface *wl_surface;
+  struct buffer *buffer;
+  struct xdg_surface *xdg_surface;
+  union {
+    struct libdecor_frame *frame;
+    struct wl_subsurface *subsurface;
+    struct xdg_popup *xdg_popup;
+    struct xdg_toplevel *xdg_toplevel;
+  };
+  Fl_Window *fl_win;
+  enum Fl_Wayland_Window_Driver::kind kind;
+  int configured_width;
+  int configured_height;
+  int scale;
+};
+
 
 class Fl_Wayland_Plugin : public Fl_Plugin {
 public:
