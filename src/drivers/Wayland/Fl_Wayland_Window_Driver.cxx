@@ -754,8 +754,8 @@ static void handle_configure(struct libdecor_frame *frame,
   }
     
   if (width == 0) {
-    width = window->floating_width;
-    height = window->floating_height;
+    width = window->fl_win->w() * f;
+    height = window->fl_win->h() * f;
   }
   if (width < 128) width = 128; // enforce minimal size of decorated windows for libdecor
   if (height < 56) height = 56;
@@ -791,13 +791,7 @@ static void handle_configure(struct libdecor_frame *frame,
   libdecor_frame_commit(frame, state, configuration);
   libdecor_state_free(state);
   window->fl_win->redraw();
-  
-  if (libdecor_frame_is_floating(frame)) { // store floating dimensions
-    window->floating_width = int(ceil(width/f)*f);
-    window->floating_height = int(ceil(height/f)*f);
-    //fprintf(stderr,"set floating_width+height %dx%d\n",width,height);
-  }
-  
+    
   driver->in_handle_configure = true;
   if (!window->fl_win->as_gl_window()) {
     driver->flush();
@@ -1017,9 +1011,6 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
       libdecor_frame_set_min_content_size(new_window->frame, 128, 56);// libdecor wants width ≥ 128 & height ≥ 56
     }
     libdecor_frame_map(new_window->frame);
-    float f = Fl::screen_scale(pWindow->screen_num());
-    new_window->floating_width = pWindow->w() * f;
-    new_window->floating_height = pWindow->h() * f;
 
   } else if (pWindow->parent()) { // for subwindows (GL or non-GL)
     struct wld_window *parent = fl_xid(pWindow->window());
@@ -1409,10 +1400,6 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
           struct libdecor_state *state = libdecor_state_new(int(W * f), int(H * f));
           libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
           libdecor_state_free(state);
-          if (libdecor_frame_is_floating(fl_win->frame)) {
-            fl_win->floating_width = int(W*f);
-            fl_win->floating_height = int(H*f);
-          }
         }
       } else if (fl_win->subsurface) { // a subwindow
         wl_subsurface_set_position(fl_win->subsurface, X * f, Y * f);

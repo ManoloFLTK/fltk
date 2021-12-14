@@ -59,8 +59,6 @@ struct wld_window {
   struct xdg_popup *xdg_popup;
   int configured_width;
   int configured_height;
-  int floating_width;
-  int floating_height;
   struct wl_list outputs;
   int scale;
   Fl_Window *fl_win;
