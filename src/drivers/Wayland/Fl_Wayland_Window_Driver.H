@@ -55,7 +55,9 @@ class FL_EXPORT Fl_Wayland_Window_Driver : public Fl_Window_Driver
   friend class Fl_X;
 private:
   static bool in_flush; // useful for progressive window drawing
+  struct wl_cursor *cursor_;
 public:
+  struct wl_cursor *cursor() { return cursor_; };
   bool in_handle_configure; // distinguish OS and user window resize
   static int titlebar_height; // height of libdecor's titlebars
   struct window_output {
@@ -68,7 +70,6 @@ public:
     Fl_RGB_Image **icons;
     int count;
   } *icon_;
-  struct wl_cursor *cursor;
   // --- support for screen-specific scaling factors
   struct type_for_resize_window_between_screens {
     int screen;

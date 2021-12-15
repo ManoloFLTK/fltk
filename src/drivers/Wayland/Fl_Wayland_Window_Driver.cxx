@@ -35,6 +35,13 @@
 #include <sys/mman.h>
 #include <math.h> // for ceil()
 
+struct cursor_image { // as in wayland-cursor.c of the Wayland project source code
+  struct wl_cursor_image image;
+  struct wl_cursor_theme *theme;
+  struct wl_buffer *buffer;
+  int offset; /* data offset of this image in the shm pool */
+};
+
 extern "C" {
   uchar *fl_libdecor_cairo_titlebar_buffer(struct libdecor_frame *frame, int *w, int *h, int *stride);
   bool libdecor_configuration_get_window_size(struct libdecor_configuration *configuration,
@@ -62,7 +69,7 @@ Fl_Wayland_Window_Driver::Fl_Wayland_Window_Driver(Fl_Window *win) : Fl_Window_D
 {
   icon_ = new icon_data;
   memset(icon_, 0, sizeof(icon_data));
-  cursor = NULL;
+  cursor_ = NULL;
   in_handle_configure = false;
   screen_num_ = -1;
 }
@@ -80,6 +87,14 @@ Fl_Wayland_Window_Driver::~Fl_Wayland_Window_Driver()
     delete shape_data_;
   }
   delete icon_;
+  if (cursor_) {
+    struct cursor_image *new_image = (struct cursor_image*)cursor_->images[0];
+    wl_buffer_destroy(new_image->buffer);
+    free(new_image);
+    free(cursor_->images);
+    free(cursor_->name);
+    free(cursor_);
+  }
 }
 
 
@@ -1293,12 +1308,6 @@ void Fl_Wayland_Window_Driver::label(const char *name, const char *iname) {
 
 
 int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int hoty) {
-  struct cursor_image { // as in wayland-cursor.c of the Wayland project source code
-    struct wl_cursor_image image;
-    struct wl_cursor_theme *theme;
-    struct wl_buffer *buffer;
-    int offset; /* data offset of this image in the shm pool */
-  };
 // build a new wl_cursor and its image
   struct wl_cursor *new_cursor = (struct wl_cursor*)malloc(sizeof(struct wl_cursor));
   struct cursor_image *new_image = (struct cursor_image*)calloc(1, sizeof(struct cursor_image));
@@ -1343,16 +1352,16 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
   fake_xid.buffer = offscreen;
   Fl_Wayland_Graphics_Driver::buffer_release(&fake_xid);
   // delete previous custom cursor, if there was one
-  if (this->cursor) {
-    new_image = (struct cursor_image*)this->cursor->images[0];
+  if (this->cursor_) {
+    new_image = (struct cursor_image*)this->cursor_->images[0];
     wl_buffer_destroy(new_image->buffer);
     free(new_image);
-    free(this->cursor->images);
-    free(this->cursor->name);
-    free(this->cursor);
+    free(this->cursor_->images);
+    free(this->cursor_->name);
+    free(this->cursor_);
   }
   //have this new cursor used
-  this->cursor = new_cursor;
+  this->cursor_ = new_cursor;
   return 1;
 }
 

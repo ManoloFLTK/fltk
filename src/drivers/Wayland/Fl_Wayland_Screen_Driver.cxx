@@ -258,10 +258,10 @@ static void pointer_enter(void *data,
   struct wl_cursor *cursor = NULL;
   if (win) { // use custom cursor if present
     Fl_Wayland_Window_Driver *driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(win);
-    cursor = driver->cursor;
+    cursor = driver->cursor();
     if (win->parent() && !cursor) {
       driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(win->top_window());
-      cursor = driver->cursor;
+      cursor = driver->cursor();
     }
   }
   do_set_cursor(seat, cursor);
@@ -439,7 +439,7 @@ static void cursor_surface_enter(void *data,
   Fl_Window *win = Fl::first_window();
   if (win) {
     Fl_Wayland_Window_Driver *driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(win);
-    struct wl_cursor *cursor = driver->cursor;
+    struct wl_cursor *cursor = driver->cursor();
     if (cursor) do_set_cursor(seat, cursor);
   }
 }
