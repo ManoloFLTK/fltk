@@ -1235,7 +1235,7 @@ void Fl_Wayland_Screen_Driver::remove_timeout(Fl_Timeout_Handler cb, void *argp)
 Fl_RGB_Image *Fl_Wayland_Screen_Driver::read_win_rectangle(int X, int Y, int w, int h, Fl_Window *win,
                                                            bool ignore, bool *p_ignore) {
   Window xid = win ? fl_xid(win) : NULL;
-  struct buffer *buffer = win ? xid->buffer : (Fl_Offscreen)Fl_Surface_Device::surface()->driver()->gc();
+  struct fl_wld_buffer *buffer = win ? xid->buffer : (Fl_Offscreen)Fl_Surface_Device::surface()->driver()->gc();
   float s = win ? xid->scale * scale(win->screen_num()) :
                   Fl_Surface_Device::surface()->driver()->scale();
   int Xs, Ys, ws, hs;

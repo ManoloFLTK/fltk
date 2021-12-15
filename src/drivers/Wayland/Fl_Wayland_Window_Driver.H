@@ -138,7 +138,7 @@ public:
 struct wld_window {
   struct wl_list outputs;
   struct wl_surface *wl_surface;
-  struct buffer *buffer;
+  struct fl_wld_buffer *buffer;
   struct xdg_surface *xdg_surface;
   union {
     struct libdecor_frame *frame;

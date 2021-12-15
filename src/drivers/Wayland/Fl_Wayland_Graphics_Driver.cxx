@@ -51,9 +51,9 @@ static int create_anonymous_file(off_t size)
 }
 
 
-struct buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int height, uint32_t format, struct wld_window *window)
+struct fl_wld_buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int height, uint32_t format, struct wld_window *window)
 {
-  struct buffer *buffer;
+  struct fl_wld_buffer *buffer;
 
   int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
   int size = stride * height;
@@ -69,7 +69,7 @@ struct buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int heig
     Fl::fatal("mmap failed: %s\n", strerror(errno));
     return NULL;
   }
-  buffer = (struct buffer*)calloc(1, sizeof *buffer);
+  buffer = (struct fl_wld_buffer*)calloc(1, sizeof *buffer);
   buffer->stride = stride;
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   struct wl_shm_pool *pool = wl_shm_create_pool(scr_driver->wl_shm, fd, size);
@@ -99,7 +99,7 @@ void Fl_Wayland_Graphics_Driver::buffer_commit(struct wld_window *window) {
 }
 
 
-void Fl_Wayland_Graphics_Driver::cairo_init(struct buffer *buffer, int width, int height, int stride, cairo_format_t format) {
+void Fl_Wayland_Graphics_Driver::cairo_init(struct fl_wld_buffer *buffer, int width, int height, int stride, cairo_format_t format) {
   cairo_surface_t *surf = cairo_image_surface_create_for_data(buffer->draw_buffer, format,
                                                         width, height, stride);
   if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
@@ -155,7 +155,7 @@ Fl_Wayland_Graphics_Driver::~Fl_Wayland_Graphics_Driver() {
 }
 
 
-void Fl_Wayland_Graphics_Driver::activate(struct buffer *buffer, float scale) {
+void Fl_Wayland_Graphics_Driver::activate(struct fl_wld_buffer *buffer, float scale) {
   if (dummy_pango_layout_) {
     cairo_surface_t *surf = cairo_get_target(cairo_);
     cairo_destroy(cairo_);

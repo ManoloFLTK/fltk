@@ -618,7 +618,7 @@ int Fl_Wayland_Window_Driver::scroll(int src_x, int src_y, int src_w, int src_h,
                                  void (*draw_area)(void*, int,int,int,int), void* data)
 {
   Window xid = fl_xid(pWindow);
-  struct buffer *buffer = xid->buffer;
+  struct fl_wld_buffer *buffer = xid->buffer;
   int s = xid->scale;
   if (s != 1) {
     src_x *= s; src_y *= s; src_w *= s; src_h *= s; dest_x *= s; dest_y *= s;
@@ -1310,7 +1310,7 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
   new_image->image.delay = 0;
   new_image->offset = 0;
   //create a Wayland buffer and have it used as an image of the new cursor
-  struct buffer *offscreen = Fl_Wayland_Graphics_Driver::create_shm_buffer(new_image->image.width, new_image->image.height, WL_SHM_FORMAT_ARGB8888, NULL);
+  struct fl_wld_buffer *offscreen = Fl_Wayland_Graphics_Driver::create_shm_buffer(new_image->image.width, new_image->image.height, WL_SHM_FORMAT_ARGB8888, NULL);
   new_image->buffer = offscreen->wl_buffer;
   new_cursor->image_count = 1;
   new_cursor->images = (struct wl_cursor_image**)malloc(sizeof(struct wl_cursor_image*));

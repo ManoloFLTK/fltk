@@ -48,7 +48,7 @@ Fl_Wayland_Image_Surface_Driver::Fl_Wayland_Image_Surface_Driver(int w, int h, i
       w = int(w*d);
       h = int(h*d);
     }
-    offscreen = (struct buffer*)calloc(1, sizeof(struct buffer));
+    offscreen = (struct fl_wld_buffer*)calloc(1, sizeof(struct fl_wld_buffer));
     offscreen->stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, w);
     offscreen->data_size = offscreen->stride * h;
     offscreen->draw_buffer = (uchar*)malloc(offscreen->data_size);

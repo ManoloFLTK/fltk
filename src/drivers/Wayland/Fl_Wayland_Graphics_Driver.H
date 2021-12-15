@@ -26,7 +26,7 @@
 /* Implementation note about buffers FLTK uses to support display graphics under Wayland.
  
  Each window is associated to an FLTK-defined object of type struct wld_window
- containing itself an FLTK-defined struct buffer object holding all graphics data.
+ containing itself an FLTK-defined struct fl_wld_buffer object holding all graphics data.
  Among members of this latter structure are:
  - struct wl_buffer wl_buffer
  is a Wayland-defined type for a graphics buffer able to be attached to a wl_surface;
@@ -61,7 +61,7 @@
 #include <stdint.h> // for uint32_t
 typedef struct _PangoLayout  PangoLayout;
 
-struct buffer {
+struct fl_wld_buffer {
   struct wl_buffer *wl_buffer;
   void *data;
   size_t data_size; // of wl_buffer and draw_buffer
@@ -77,14 +77,14 @@ struct wld_window;
 
 class FL_EXPORT Fl_Wayland_Graphics_Driver : public Fl_Cairo_Graphics_Driver {
 private:
-  struct buffer *buffer;
+  struct fl_wld_buffer *buffer;
   PangoLayout *dummy_pango_layout_; // used to measure text width before showing a window
   int linestyle_;
   void draw_cached_pattern_(Fl_Image *img, cairo_pattern_t *pat, int X, int Y, int W, int H, int cx, int cy);
 public:
   Fl_Wayland_Graphics_Driver();
   ~Fl_Wayland_Graphics_Driver();
-  void activate(struct buffer *buffer, float scale);
+  void activate(struct fl_wld_buffer *buffer, float scale);
   void font(Fl_Font fnum, Fl_Fontsize s);
   Fl_Font font() { return Fl_Graphics_Driver::font(); }
   void draw(const char* s, int nBytes, int x, int y) { draw(s, nBytes, float(x), float(y)); }
@@ -128,10 +128,10 @@ public:
   void uncache_pixmap(fl_uintptr_t p);
   void overlay_rect(int x, int y, int w , int h);
   static void init_built_in_fonts();
-  static struct buffer *create_shm_buffer(int width, int height, uint32_t format, struct wld_window *window);
+  static struct fl_wld_buffer *create_shm_buffer(int width, int height, uint32_t format, struct wld_window *window);
   static void buffer_release(struct wld_window *window);
   static void buffer_commit(struct wld_window *window);
-  static void cairo_init(struct buffer *buffer, int width, int height, int stride, cairo_format_t format);
+  static void cairo_init(struct fl_wld_buffer *buffer, int width, int height, int stride, cairo_format_t format);
 void line(int x1, int y1, int x2, int y2);
 void line(int x1, int y1, int x2, int y2, int x3, int y3);
 void xyline(int x, int y, int x1);
