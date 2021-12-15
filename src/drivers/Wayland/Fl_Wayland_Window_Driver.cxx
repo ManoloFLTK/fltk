@@ -537,7 +537,7 @@ void Fl_Wayland_Window_Driver::size_range() {
     Fl_X* ip = Fl_X::i(pWindow);
     struct wld_window *wl_win = ip->xid;
     float f = Fl::screen_scale(pWindow->screen_num());
-    if (wl_win->kind == DECORATED/*frame*/) {
+    if (wl_win->kind == DECORATED/*frame*/ && wl_win->frame) {
       libdecor_frame_set_min_content_size(wl_win->frame, minw()*f, minh()*f);
       if (maxw() && maxh()) {
         libdecor_frame_set_max_content_size(wl_win->frame, maxw()*f, maxh()*f);
@@ -1293,8 +1293,6 @@ void Fl_Wayland_Window_Driver::label(const char *name, const char *iname) {
 
 
 int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int hoty) {
-  static struct wl_cursor *previous_custom_cursor = NULL;
-  static struct buffer *previous_offscreen = NULL;
   struct cursor_image { // as in wayland-cursor.c of the Wayland project source code
     struct wl_cursor_image image;
     struct wl_cursor_theme *theme;
@@ -1339,21 +1337,22 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
       to += 4;
     }
   }*/
+  // delete offscreen while keeping its wl_buffer
+  offscreen->wl_buffer = NULL;
+  struct wld_window fake_xid;
+  fake_xid.buffer = offscreen;
+  Fl_Wayland_Graphics_Driver::buffer_release(&fake_xid);
+  // delete previous custom cursor, if there was one
+  if (this->cursor) {
+    new_image = (struct cursor_image*)this->cursor->images[0];
+    wl_buffer_destroy(new_image->buffer);
+    free(new_image);
+    free(this->cursor->images);
+    free(this->cursor->name);
+    free(this->cursor);
+  }
   //have this new cursor used
   this->cursor = new_cursor;
-  //memorize new cursor
-  if (previous_custom_cursor) {
-    struct wld_window fake_xid;
-    new_image = (struct cursor_image*)previous_custom_cursor->images[0];
-    fake_xid.buffer = previous_offscreen;
-    Fl_Wayland_Graphics_Driver::buffer_release(&fake_xid);
-    free(new_image);
-    free(previous_custom_cursor->images);
-    free(previous_custom_cursor->name);
-    free(previous_custom_cursor);
-  }
-  previous_custom_cursor = new_cursor;
-  previous_offscreen = offscreen;
   return 1;
 }
 
