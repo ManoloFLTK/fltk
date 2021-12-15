@@ -56,6 +56,7 @@ class FL_EXPORT Fl_Wayland_Window_Driver : public Fl_Window_Driver
 private:
   static bool in_flush; // useful for progressive window drawing
   struct wl_cursor *cursor_;
+  void delete_cursor_();
 public:
   struct wl_cursor *cursor() { return cursor_; };
   bool in_handle_configure; // distinguish OS and user window resize

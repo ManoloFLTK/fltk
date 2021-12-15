@@ -74,6 +74,18 @@ Fl_Wayland_Window_Driver::Fl_Wayland_Window_Driver(Fl_Window *win) : Fl_Window_D
   screen_num_ = -1;
 }
 
+void Fl_Wayland_Window_Driver::delete_cursor_() {
+  if (cursor_) {
+    struct cursor_image *new_image = (struct cursor_image*)cursor_->images[0];
+    wl_buffer_destroy(new_image->buffer);
+    free(new_image);
+    free(cursor_->images);
+    free(cursor_->name);
+    free(cursor_);
+    cursor_ = NULL;
+  }
+}
+
 
 Fl_Wayland_Window_Driver::~Fl_Wayland_Window_Driver()
 {
@@ -87,14 +99,7 @@ Fl_Wayland_Window_Driver::~Fl_Wayland_Window_Driver()
     delete shape_data_;
   }
   delete icon_;
-  if (cursor_) {
-    struct cursor_image *new_image = (struct cursor_image*)cursor_->images[0];
-    wl_buffer_destroy(new_image->buffer);
-    free(new_image);
-    free(cursor_->images);
-    free(cursor_->name);
-    free(cursor_);
-  }
+  delete_cursor_();
 }
 
 
@@ -1352,16 +1357,9 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
   fake_xid.buffer = offscreen;
   Fl_Wayland_Graphics_Driver::buffer_release(&fake_xid);
   // delete previous custom cursor, if there was one
-  if (this->cursor_) {
-    new_image = (struct cursor_image*)this->cursor_->images[0];
-    wl_buffer_destroy(new_image->buffer);
-    free(new_image);
-    free(this->cursor_->images);
-    free(this->cursor_->name);
-    free(this->cursor_);
-  }
+  delete_cursor_();
   //have this new cursor used
-  this->cursor_ = new_cursor;
+  cursor_ = new_cursor;
   return 1;
 }
 
