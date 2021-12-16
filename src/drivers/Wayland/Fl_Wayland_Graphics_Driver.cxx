@@ -123,7 +123,7 @@ void Fl_Wayland_Graphics_Driver::cairo_init(struct fl_wld_buffer *buffer, int wi
 void Fl_Wayland_Graphics_Driver::buffer_release(struct wld_window *window)
 {
   if (window->buffer) {
-    if (window->buffer->wl_buffer) wl_buffer_destroy(window->buffer->wl_buffer);
+    wl_buffer_destroy(window->buffer->wl_buffer);
     munmap(window->buffer->data, window->buffer->data_size);
     delete[] window->buffer->draw_buffer;
     window->buffer->draw_buffer = NULL;

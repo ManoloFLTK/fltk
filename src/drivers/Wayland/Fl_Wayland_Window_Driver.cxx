@@ -77,7 +77,10 @@ Fl_Wayland_Window_Driver::Fl_Wayland_Window_Driver(Fl_Window *win) : Fl_Window_D
 void Fl_Wayland_Window_Driver::delete_cursor_() {
   if (cursor_) {
     struct cursor_image *new_image = (struct cursor_image*)cursor_->images[0];
-    wl_buffer_destroy(new_image->buffer);
+    struct fl_wld_buffer *offscreen = (struct fl_wld_buffer *)wl_buffer_get_user_data(new_image->buffer);
+    struct wld_window fake_xid;
+    fake_xid.buffer = offscreen;
+    Fl_Wayland_Graphics_Driver::buffer_release(&fake_xid);
     free(new_image);
     free(cursor_->images);
     free(cursor_->name);
@@ -1326,6 +1329,7 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
   //create a Wayland buffer and have it used as an image of the new cursor
   struct fl_wld_buffer *offscreen = Fl_Wayland_Graphics_Driver::create_shm_buffer(new_image->image.width, new_image->image.height, WL_SHM_FORMAT_ARGB8888, NULL);
   new_image->buffer = offscreen->wl_buffer;
+  wl_buffer_set_user_data(new_image->buffer, offscreen);
   new_cursor->image_count = 1;
   new_cursor->images = (struct wl_cursor_image**)malloc(sizeof(struct wl_cursor_image*));
   new_cursor->images[0] = (struct wl_cursor_image*)new_image;
@@ -1340,23 +1344,7 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
   Fl_Surface_Device::pop_current();
   delete img_surf;
   memcpy(offscreen->data, offscreen->draw_buffer, offscreen->data_size);
-  /*if (new_image->image.width <= 64 && new_image->image.height <= 64) {
-    // for some mysterious reason, small cursor images want RGBA whereas big ones want BGRA !!!
-    //fprintf(stderr, "exchange R and B\n");
-    char *to = (char*)offscreen->data, *last = to + offscreen->data_size, xchg;
-    while (to < last) {
-      xchg = *to;
-      *to = *(to+2);
-      *(to+2) = xchg;
-      to += 4;
-    }
-  }*/
-  // delete offscreen while keeping its wl_buffer
-  offscreen->wl_buffer = NULL;
-  struct wld_window fake_xid;
-  fake_xid.buffer = offscreen;
-  Fl_Wayland_Graphics_Driver::buffer_release(&fake_xid);
-  // delete previous custom cursor, if there was one
+  // delete the previous custom cursor, if there was one
   delete_cursor_();
   //have this new cursor used
   cursor_ = new_cursor;
