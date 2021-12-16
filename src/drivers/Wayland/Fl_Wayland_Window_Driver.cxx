@@ -1409,7 +1409,7 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
           libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
           libdecor_state_free(state);
         }
-      } else if (fl_win->kind == SUBWINDOW/*subsurface*/) { // a subwindow
+      } else if (fl_win->kind == SUBWINDOW/*subsurface*/ && fl_win->subsurface) { // a subwindow
         wl_subsurface_set_position(fl_win->subsurface, X * f, Y * f);
         if (!pWindow->as_gl_window()) Fl_Wayland_Graphics_Driver::buffer_release(fl_win);
         fl_win->configured_width = W;
