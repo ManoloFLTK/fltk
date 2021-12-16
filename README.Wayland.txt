@@ -51,16 +51,23 @@ cmake -S <path-to-source> -B <path-to-build> -DCMAKE_BUILD_TYPE=Release -DOPTION
 
 cd <path-to-build>; make
 
+The FLTK wayland platform uses a library called libdecor which handles window decorations
+(i.e., titlebars, shade). Libdecor is bundled in the FLTK source code and FLTK uses by default
+this form of libdecor. Optionally, OPTION_USE_SYSTEM_LIBDECOR can be turned on to have FLTK
+use the system's version of libdecor which is available on recent Linux distributions (e.g.,
+Debian bookworm or more recent in packages libdecor-0-0 and libdecor-0-plugin-1-cairo).
+
  Currently unsupported features
 -------------------------------
 
-* Complex text-input methods are not supported (but dead and compose keys are supported).
-* With Wayland, there is no way to know if a window is currently minimized, nor is there any way to
-unset minimization on this window. Consequently, Fl_Window::show() of a minimized window does nothing.
+* Complex text-input methods are not yet supported (but dead and compose keys are supported).
+* With Wayland, there is no way to know if a window is currently minimized, nor is there any
+way to unset minimization on this window. Consequently, Fl_Window::show() of a minimized
+window does nothing.
 * A deliberate design trait of Wayland makes application windows ignorant of their exact
-placement on screen. It's possible, though, to position a popup window relatively to another window.
-This allows FLTK to properly position menu and tooltip windows. But Fl_Window::position() has
-no effect on other top-level windows.
+placement on screen. It's possible, though, to position a popup window relatively to another
+window. This allows FLTK to properly position menu and tooltip windows. But Fl_Window::position()
+has no effect on other top-level windows.
 
 
 3 PLATFORM SPECIFIC NOTES
@@ -88,3 +95,4 @@ These packages are necessary, in addition to those for usual X11-based platforms
 May 29 2021 - Manolo: Initial version.
 Oct 28 2021 - Manolo: --enable-shared configure option is now supported.
 Nov 21 2021 - Manolo: CMake-based building is now supported.
+Dec 16 2021 - Manolo: present CMake option OPTION_USE_SYSTEM_LIBDECOR
