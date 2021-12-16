@@ -1358,7 +1358,7 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
 static void delayed_minsize(Fl_Window *win) {
   struct wld_window *wl_win = fl_xid(win);
   Fl_Window_Driver *driver = Fl_Window_Driver::driver(win);
-  if (wl_win->kind == Fl_Window_Driver::DECORATED/*frame*/) {
+  if (wl_win->kind == Fl_Wayland_Window_Driver::DECORATED/*frame*/) {
     float f = Fl::screen_scale(win->screen_num());
     libdecor_frame_set_min_content_size(wl_win->frame, driver->minw()*f, driver->minh()*f);
   }
