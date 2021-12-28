@@ -26,7 +26,7 @@ all : demo egl
 depend:
 	: echo "libdecor/build: make depend..."
 
-fl_libdecor.o : fl_libdecor.c ../src/libdecor.c ../../src/xdg-shell-protocol.c ../../src/xdg-decoration-protocol.c
+fl_libdecor.o : fl_libdecor.c ../src/libdecor.c ../../src/xdg-shell-protocol.c ../../src/xdg-decoration-protocol.c ../../src/text-input-protocol.c
 	$(CC) $(CFLAGS) -c  fl_libdecor.c -DLIBDECOR_PLUGIN_API_VERSION=1 -DLIBDECOR_PLUGIN_DIR=\"Unused\"
 
 libdecor-fallback.o : ../src/libdecor-fallback.c
@@ -55,6 +55,13 @@ cursor-settings.o : ../src/cursor-settings.c
 	    $(PROTOCOLS)/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml \
 	    ../../src/xdg-decoration-client-protocol.h
 
+../../src/text-input-protocol.c :
+	wayland-scanner private-code \
+	    $(PROTOCOLS)/unstable/text-input/text-input-unstable-v3.xml \
+	    ../../src/text-input-protocol.c
+	wayland-scanner client-header \
+	    $(PROTOCOLS)/unstable/xdg-decoration/text-input-unstable-v3.xml \
+	    ../../src/text-input-client-protocol.h
 	
 demo : ../demo/demo.c $(OBJECTS)
 	$(CC)  -o demo ../demo/demo.c -D_GNU_SOURCE -I../.. -I../src -I. -I../../src $(OBJECTS)  -lwayland-cursor -lwayland-client -lxkbcommon `pkg-config --libs pangocairo` -ldl -ldbus-1 -lm -no-pie -Wl,--defsym=fl_libdecor_using_weston=0
@@ -69,4 +76,4 @@ install:
 uninstall:
 
 clean:
-	$(RM) *.o ../../src/xdg-*.c ../../src/xdg-*.h ../../src/xdg-*.o demo egl
+	$(RM) *.o ../../src/xdg-*.c ../../src/xdg-*.h ../../src/xdg-*.o ../../src/text-input-* demo egl

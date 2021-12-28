@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-compose.h>
+#include "text-input-client-protocol.h"
 #include <assert.h>
 #include <sys/mman.h>
 extern "C" {
@@ -546,8 +547,8 @@ static void key_repeat_timer_cb(key_repeat_data_t *key_repeat_data) {
 
 int Fl_Wayland_Screen_Driver::next_marked_length = 0;
 
-int Fl_Wayland_Screen_Driver::has_marked_text() {
-  return true;
+int Fl_Wayland_Screen_Driver::has_marked_text() const {
+  return 1;
 }
 
 void Fl_Wayland_Screen_Driver::reset_marked_text() {
@@ -559,13 +560,16 @@ int Fl_Wayland_Screen_Driver::compose(int& del) {
   unsigned char ascii = (unsigned char)Fl::e_text[0];
   int condition = (Fl::e_state & (FL_ALT | FL_META | FL_CTRL)) && ascii < 128 ; // letter+modifier key
   condition |= (Fl::e_keysym >= FL_Shift_L && Fl::e_keysym <= FL_Alt_R); // pressing modifier key
+  condition |= (Fl::e_keysym >= FL_Home && Fl::e_keysym <= FL_Help);
 //fprintf(stderr, "compose: condition=%d e_state=%x ascii=%d\n", condition, Fl::e_state, ascii);
   if (condition) { del = 0; return 0;}
 //fprintf(stderr, "compose: del=%d compose_state=%d next_marked_length=%d \n", del, Fl::compose_state, next_marked_length);
   del = Fl::compose_state;
   Fl::compose_state = next_marked_length;
   // no-underlined-text && (ascii non-printable || ascii == delete)
-  if ( (!Fl::compose_state) && (ascii <= 31 || ascii == 127)) { del = 0; return 0; }
+  if (!seat->text_input_enabled || ascii) {
+    if ( (!Fl::compose_state) && (ascii <= 31 || ascii == 127)) { del = 0; return 0; }
+  }
   return 1;
 }
 
@@ -602,11 +606,22 @@ static dead_key_struct dead_keys[] = {
 
 const int dead_key_count = sizeof(dead_keys)/sizeof(struct dead_key_struct);
 
+// text_input_enter() enables text-input-method, sets doing_text_input_enter to true,
+// and then FLTK considers what comes next :
+//   * if wl_keyboard_key() comes next, FLTK disables the complex text input method;
+//   * if text_input_done() comes next, FLTK uses the complex text input method.
+static bool doing_text_input_enter = false;
 
 static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
                uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
 {
   struct seat *seat = (struct seat*)data;
+  if (seat->text_input && doing_text_input_enter) {
+    zwp_text_input_v3_disable(seat->text_input);
+    seat->text_input_enabled = false;
+    zwp_text_input_v3_commit(seat->text_input);
+    doing_text_input_enter = false;
+  }
   seat->serial = serial;
   static char buf[128];
   uint32_t keycode = key + 8;
@@ -624,7 +639,7 @@ fprintf(stderr, "key %s: sym: %-12s(%d) code:%u fl_win=%p, ", action, buf, sym, 
   Fl::e_length = strlen(buf);
   // Process dead keys and compose sequences :
   enum xkb_compose_status status = XKB_COMPOSE_NOTHING;
-  Fl::compose_state = 0;
+  if (!seat->text_input_enabled) Fl::compose_state = 0;
   if (state == WL_KEYBOARD_KEY_STATE_PRESSED && !(sym >= FL_Shift_L && sym <= FL_Alt_R) &&
       sym != XKB_KEY_ISO_Level3_Shift) {
     xkb_compose_state_feed(seat->xkb_compose_state, sym);
@@ -710,6 +725,87 @@ static const struct wl_keyboard_listener wl_keyboard_listener = {
 };
 
                                                 
+void text_input_enter(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
+                      struct wl_surface *surface) {
+//puts("text_input_enter");
+  doing_text_input_enter = true;
+  zwp_text_input_v3_enable(zwp_text_input_v3);
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+  scr_driver->seat->text_input_enabled = true;
+  zwp_text_input_v3_commit(zwp_text_input_v3);
+  zwp_text_input_v3_set_user_data(zwp_text_input_v3, surface);
+}
+
+void text_input_leave(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
+                      struct wl_surface *surface) {
+//puts("text_input_leave");
+  doing_text_input_enter = false;
+  zwp_text_input_v3_disable(zwp_text_input_v3);
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+  scr_driver->seat->text_input_enabled = false;
+  zwp_text_input_v3_commit(zwp_text_input_v3);
+}
+
+void text_input_preedit_string(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
+           const char *text, int32_t cursor_begin, int32_t cursor_end) {
+//printf("text_input_preedit_string %s cursor_begin=%d cursor_end=%d\n",text, cursor_begin, cursor_end);
+  // goes to widget as marked text
+  Fl_Wayland_Screen_Driver::next_marked_length = text ? strlen(text) : 0;
+  Fl::e_text = text ? (char*)text : (char*)"";
+  Fl::e_length = text ? strlen(text) : 0;
+  Fl::e_state = 0;
+  if (!text) Fl::e_keysym = 0;
+  struct wl_surface *surface = (struct wl_surface*)data;
+  Fl_Window *win =  Fl_Wayland_Screen_Driver::surface_to_window(surface);
+  set_event_xy(win);
+  Fl::e_is_click = 0;
+  Fl::handle(FL_KEYDOWN, win);
+}
+
+void text_input_commit_string(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
+                              const char *text) {
+//printf("text_input_commit_string %s\n",text);
+  Fl::e_text = (char*)text;
+  Fl::e_length = strlen(text);
+  struct wl_surface *surface = (struct wl_surface*)data;
+  Fl_Window *win =  Fl_Wayland_Screen_Driver::surface_to_window(surface);
+  set_event_xy(win);
+  Fl::e_is_click = 0;
+  Fl::handle(FL_KEYDOWN, win);
+  zwp_text_input_v3_commit(zwp_text_input_v3);
+  Fl_Wayland_Screen_Driver::next_marked_length = 0;
+  Fl::compose_state = 0;
+}
+
+void text_input_delete_surrounding_text(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
+        uint32_t before_length, uint32_t after_length) {
+  fprintf(stderr, "delete_surrounding_text before=%d adfter=%d\n",before_length,after_length);
+}
+
+void text_input_done(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
+                     uint32_t serial) {
+//puts("text_input_done");
+  if (doing_text_input_enter) doing_text_input_enter = false;
+}
+
+static const struct zwp_text_input_v3_listener text_input_listener = {
+  .enter = text_input_enter,
+  .leave = text_input_leave,
+  .preedit_string = text_input_preedit_string,
+  .commit_string = text_input_commit_string,
+  .delete_surrounding_text = text_input_delete_surrounding_text,
+  .done = text_input_done,
+};
+
+void Fl_Wayland_Screen_Driver::insertion_point_location(int x, int y, int height) {
+//printf("insertion_point_location %dx%d\n",x,y);
+  if (seat->text_input) {
+    float s = fl_graphics_driver->scale();
+    zwp_text_input_v3_set_cursor_rectangle(seat->text_input,  s*x,  s*y,  s*5/*width*/,  s*height);
+    zwp_text_input_v3_commit(seat->text_input);
+  }
+}
+
 static void seat_capabilities(void *data, struct wl_seat *wl_seat, uint32_t capabilities)
 {
   struct seat *seat = (struct seat*)data;
@@ -733,6 +829,12 @@ static void seat_capabilities(void *data, struct wl_seat *wl_seat, uint32_t capa
   } else if (!have_keyboard && seat->wl_keyboard != NULL) {
           wl_keyboard_release(seat->wl_keyboard);
           seat->wl_keyboard = NULL;
+  }
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+  if (scr_driver->text_input_base) {
+    seat->text_input = zwp_text_input_manager_v3_get_text_input(scr_driver->text_input_base, seat->wl_seat);
+//printf("seat->text_input=%p\n",seat->text_input);
+    zwp_text_input_v3_add_listener(seat->text_input, &text_input_listener, NULL);
   }
 }
 
@@ -898,6 +1000,10 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
     Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::KDE;
     //fprintf(stderr, "Running the KDE compositor\n");
   }
+  else if (strcmp(interface, zwp_text_input_manager_v3_interface.name) == 0) {
+    scr_driver->text_input_base = (struct zwp_text_input_manager_v3 *) wl_registry_bind(wl_registry, id, &zwp_text_input_manager_v3_interface, 1);
+    //printf("scr_driver->text_input_base=%p version=%d\n",scr_driver->text_input_base,version);
+  }
 }
 
 
@@ -944,6 +1050,7 @@ static void fd_callback(int unused, struct wl_display *display) {
 Fl_Wayland_Screen_Driver::Fl_Wayland_Screen_Driver() : Fl_Screen_Driver() {
   libdecor_context = NULL;
   seat = NULL;
+  text_input_base = NULL;
   reset_cursor();
 }
 

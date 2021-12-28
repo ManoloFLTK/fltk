@@ -563,6 +563,15 @@ if (OPTION_USE_WAYLAND)
   )
   list (APPEND STATIC_FILES "xdg-decoration-protocol.c")
   list (APPEND SHARED_FILES "xdg-decoration-protocol.c")
+  add_custom_command(
+    OUTPUT text-input-protocol.c text-input-client-protocol.h
+    COMMAND wayland-scanner private-code /usr/share/wayland-protocols/unstable/text-input/text-input-unstable-v3.xml text-input-protocol.c
+    COMMAND wayland-scanner client-header /usr/share/wayland-protocols/unstable/text-input/text-input-unstable-v3.xml text-input-client-protocol.h
+    DEPENDS /usr/share/wayland-protocols/unstable/text-input/text-input-unstable-v3.xml
+    VERBATIM
+  )
+  list (APPEND STATIC_FILES "text-input-protocol.c")
+  list (APPEND SHARED_FILES "text-input-protocol.c")
 
   if (OPTION_USE_GL)
     list (APPEND OPTIONAL_LIBS "-lwayland-egl -lEGL")

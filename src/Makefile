@@ -379,7 +379,7 @@ CFILES_XFT = $(XLIBCFILES)
 CFILES_WAYLAND = $(WLCFILES)
 EXTRA_OBJECTS_WAYLAND =  ../libdecor/build/fl_libdecor.o ../libdecor/build/libdecor-cairo-blur.o \
   ../libdecor/build/fl_libdecor-cairo.o ../libdecor/build/libdecor-fallback.o \
-  xdg-decoration-protocol.o xdg-shell-protocol.o \
+  xdg-decoration-protocol.o xdg-shell-protocol.o text-input-protocol.o \
   ../libdecor/build/cursor-settings.o
 EXTRA_CXXFLAGS_WAYLAND = -I.
 

@@ -21,7 +21,8 @@ CONTENTS
 ==============
 
 The support of the Wayland platform is work in progress of the FLTK library.
-This work is quite advanced, though : all test/ and examples/ programs build and run.
+This work is quite advanced, though : all test/ and examples/ programs build and run,
+and CJK text-input methods as well as dead and compose keys are supported.
 It requires a Wayland-equipped OS which means Linux.
 The code has been tested on Debian and Ubuntu with 3 distinct compositors: mutter, weston, and KDE.
 
@@ -60,7 +61,6 @@ Debian bookworm or more recent in packages libdecor-0-0 and libdecor-0-plugin-1-
  Currently unsupported features
 -------------------------------
 
-* Complex text-input methods are not yet supported (but dead and compose keys are supported).
 * With Wayland, there is no way to know if a window is currently minimized, nor is there any
 way to unset minimization on this window. Consequently, Fl_Window::show() of a minimized
 window does nothing.
@@ -96,3 +96,4 @@ May 29 2021 - Manolo: Initial version.
 Oct 28 2021 - Manolo: --enable-shared configure option is now supported.
 Nov 21 2021 - Manolo: CMake-based building is now supported.
 Dec 16 2021 - Manolo: present CMake option OPTION_USE_SYSTEM_LIBDECOR
+Dec 28 2021 - Manolo: added support for text input methods.
