@@ -18,7 +18,8 @@ include ../../makeinclude
 
 CFLAGS = -I. -I../.. -I../../src -I../src -fPIC -D_GNU_SOURCE -DUSE_SYSTEM_LIBDECOR=0
 OBJECTS =  fl_libdecor.o libdecor-cairo-blur.o fl_libdecor-cairo.o libdecor-fallback.o \
-  ../../src/xdg-decoration-protocol.o ../../src/xdg-shell-protocol.o cursor-settings.o
+  ../../src/xdg-decoration-protocol.o ../../src/xdg-shell-protocol.o \
+  ../../src/text-input-protocol.o cursor-settings.o
 PROTOCOLS = /usr/share/wayland-protocols
 
 all : demo egl
@@ -60,7 +61,7 @@ cursor-settings.o : ../src/cursor-settings.c
 	    $(PROTOCOLS)/unstable/text-input/text-input-unstable-v3.xml \
 	    ../../src/text-input-protocol.c
 	wayland-scanner client-header \
-	    $(PROTOCOLS)/unstable/xdg-decoration/text-input-unstable-v3.xml \
+	    $(PROTOCOLS)/unstable/text-input/text-input-unstable-v3.xml \
 	    ../../src/text-input-client-protocol.h
 	
 demo : ../demo/demo.c $(OBJECTS)
