@@ -51,7 +51,6 @@ struct seat {
   struct xkb_compose_state *xkb_compose_state;
   char *name;
   struct zwp_text_input_v3 *text_input;
-  bool text_input_enabled; // false when xkb processing is enough
 };
 
 class FL_EXPORT Fl_Wayland_Screen_Driver : public Fl_Screen_Driver

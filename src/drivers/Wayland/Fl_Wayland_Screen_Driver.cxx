@@ -567,7 +567,7 @@ int Fl_Wayland_Screen_Driver::compose(int& del) {
   del = Fl::compose_state;
   Fl::compose_state = next_marked_length;
   // no-underlined-text && (ascii non-printable || ascii == delete)
-  if (!seat->text_input_enabled || ascii) {
+  if (ascii) {
     if ( (!Fl::compose_state) && (ascii <= 31 || ascii == 127)) { del = 0; return 0; }
   }
   return 1;
@@ -606,22 +606,10 @@ static dead_key_struct dead_keys[] = {
 
 const int dead_key_count = sizeof(dead_keys)/sizeof(struct dead_key_struct);
 
-// text_input_enter() enables text-input-method, sets doing_text_input_enter to true,
-// and then FLTK considers what comes next :
-//   * if wl_keyboard_key() comes next, FLTK disables the complex text input method;
-//   * if text_input_done() comes next, FLTK uses the complex text input method.
-static bool doing_text_input_enter = false;
-
 static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
                uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
 {
   struct seat *seat = (struct seat*)data;
-  if (seat->text_input && doing_text_input_enter) {
-    zwp_text_input_v3_disable(seat->text_input);
-    seat->text_input_enabled = false;
-    zwp_text_input_v3_commit(seat->text_input);
-    doing_text_input_enter = false;
-  }
   seat->serial = serial;
   static char buf[128];
   uint32_t keycode = key + 8;
@@ -630,7 +618,7 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 const char *action = (state == WL_KEYBOARD_KEY_STATE_PRESSED ? "press" : "release");
 fprintf(stderr, "key %s: sym: %-12s(%d) code:%u fl_win=%p, ", action, buf, sym, keycode, Fl_Wayland_Screen_Driver::surface_to_window(seat->keyboard_surface));*/
   xkb_state_key_get_utf8(seat->xkb_state, keycode, buf, sizeof(buf));
-//fprintf(stderr, "utf8: '%s' e_length=%d\n", buf, (int)strlen(buf));
+//fprintf(stderr, "utf8: '%s' e_length=%d [%d]\n", buf, (int)strlen(buf), *buf);
   Fl::e_keysym = sym;
   // special processing for number keys == keycodes 10-19 :
   if (keycode >= 10 && keycode <= 18) Fl::e_keysym = keycode + 39;
@@ -639,7 +627,7 @@ fprintf(stderr, "key %s: sym: %-12s(%d) code:%u fl_win=%p, ", action, buf, sym, 
   Fl::e_length = strlen(buf);
   // Process dead keys and compose sequences :
   enum xkb_compose_status status = XKB_COMPOSE_NOTHING;
-  if (!seat->text_input_enabled) Fl::compose_state = 0;
+//  if (0) Fl::compose_state = 0;
   if (state == WL_KEYBOARD_KEY_STATE_PRESSED && !(sym >= FL_Shift_L && sym <= FL_Alt_R) &&
       sym != XKB_KEY_ISO_Level3_Shift) {
     xkb_compose_state_feed(seat->xkb_compose_state, sym);
@@ -728,10 +716,8 @@ static const struct wl_keyboard_listener wl_keyboard_listener = {
 void text_input_enter(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
                       struct wl_surface *surface) {
 //puts("text_input_enter");
-  doing_text_input_enter = true;
   zwp_text_input_v3_enable(zwp_text_input_v3);
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-  scr_driver->seat->text_input_enabled = true;
   zwp_text_input_v3_commit(zwp_text_input_v3);
   zwp_text_input_v3_set_user_data(zwp_text_input_v3, surface);
 }
@@ -739,10 +725,8 @@ void text_input_enter(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
 void text_input_leave(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
                       struct wl_surface *surface) {
 //puts("text_input_leave");
-  doing_text_input_enter = false;
   zwp_text_input_v3_disable(zwp_text_input_v3);
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-  scr_driver->seat->text_input_enabled = false;
   zwp_text_input_v3_commit(zwp_text_input_v3);
 }
 
@@ -784,8 +768,7 @@ void text_input_delete_surrounding_text(void *data, struct zwp_text_input_v3 *zw
 
 void text_input_done(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
                      uint32_t serial) {
-//puts("text_input_done");
-  if (doing_text_input_enter) doing_text_input_enter = false;
+puts("text_input_done");
 }
 
 static const struct zwp_text_input_v3_listener text_input_listener = {
