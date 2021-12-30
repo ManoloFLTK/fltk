@@ -736,7 +736,7 @@ void text_input_preedit_string(void *data, struct zwp_text_input_v3 *zwp_text_in
   Fl_Wayland_Screen_Driver::next_marked_length = text ? strlen(text) : 0;
   Fl::e_text = text ? (char*)text : (char*)"";
   Fl::e_length = text ? strlen(text) : 0;
-  Fl::e_keysym = text ? *text : 0;
+  Fl::e_keysym = 'a'; // fake a simple key
   struct wl_surface *surface = (struct wl_surface*)data;
   Fl_Window *win =  Fl_Wayland_Screen_Driver::surface_to_window(surface);
   set_event_xy(win);
