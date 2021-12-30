@@ -578,7 +578,6 @@ void Fl_Wayland_Screen_Driver::compose_reset()
   xkb_compose_state_reset(seat->xkb_compose_state);
 }
 
-/* All that becomes useless with protocol text-input-unstable-v3
 struct dead_key_struct {
   xkb_keysym_t keysym; // the keysym obtained when hitting a dead key
   const char *marked_text; // the temporary text to display for that dead key
@@ -603,7 +602,7 @@ static dead_key_struct dead_keys[] = {
   {XKB_KEY_dead_doublegrave, " ̏"},
 };
 
-const int dead_key_count = sizeof(dead_keys)/sizeof(struct dead_key_struct);*/
+const int dead_key_count = sizeof(dead_keys)/sizeof(struct dead_key_struct);
 
 static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
                uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
@@ -626,7 +625,7 @@ fprintf(stderr, "key %s: sym: %-12s(%d) code:%u fl_win=%p, ", action, buf, sym, 
   Fl::e_length = strlen(buf);
   // Process dead keys and compose sequences :
   enum xkb_compose_status status = XKB_COMPOSE_NOTHING;
-  /* All that becomes useless with protocol text-input-unstable-v3
+  // This part is useful only if the compositor doesn't support protocol text-input-unstable-v3
   if (state == WL_KEYBOARD_KEY_STATE_PRESSED && !(sym >= FL_Shift_L && sym <= FL_Alt_R) &&
       sym != XKB_KEY_ISO_Level3_Shift) {
     xkb_compose_state_feed(seat->xkb_compose_state, sym);
@@ -653,7 +652,8 @@ fprintf(stderr, "key %s: sym: %-12s(%d) code:%u fl_win=%p, ", action, buf, sym, 
       Fl_Wayland_Screen_Driver::next_marked_length = 0;
     }
 //fprintf(stderr, "xkb_compose_status=%d ctxt=%p state=%p l=%d[%s]\n", status, seat->xkb_context, seat->xkb_compose_state, Fl::e_length, buf);
-  }*/
+  }
+  // end of part used only without text-input-unstable-v3
   
   fl_event_time = time;
   int event = (state == WL_KEYBOARD_KEY_STATE_PRESSED ? FL_KEYDOWN : FL_KEYUP);
