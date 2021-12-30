@@ -567,9 +567,7 @@ int Fl_Wayland_Screen_Driver::compose(int& del) {
   del = Fl::compose_state;
   Fl::compose_state = next_marked_length;
   // no-underlined-text && (ascii non-printable || ascii == delete)
-  if (ascii) {
-    if ( (!Fl::compose_state) && (ascii <= 31 || ascii == 127)) { del = 0; return 0; }
-  }
+  if (ascii && (!Fl::compose_state) && (ascii <= 31 || ascii == 127)) { del = 0; return 0; }
   return 1;
 }
 
@@ -580,6 +578,7 @@ void Fl_Wayland_Screen_Driver::compose_reset()
   xkb_compose_state_reset(seat->xkb_compose_state);
 }
 
+/* All that becomes useless with protocol text-input-unstable-v3
 struct dead_key_struct {
   xkb_keysym_t keysym; // the keysym obtained when hitting a dead key
   const char *marked_text; // the temporary text to display for that dead key
@@ -590,7 +589,7 @@ static dead_key_struct dead_keys[] = {
   {XKB_KEY_dead_acute, "´"},
   {XKB_KEY_dead_circumflex, "^"},
   {XKB_KEY_dead_tilde, "~"},
-  {XKB_KEY_dead_perispomeni, "~"}, /* alias for dead_tilde */
+  {XKB_KEY_dead_perispomeni, "~"}, // alias for dead_tilde
   {XKB_KEY_dead_macron, "¯"},
   {XKB_KEY_dead_breve, "˘"},
   {XKB_KEY_dead_abovedot, "˙"},
@@ -604,7 +603,7 @@ static dead_key_struct dead_keys[] = {
   {XKB_KEY_dead_doublegrave, " ̏"},
 };
 
-const int dead_key_count = sizeof(dead_keys)/sizeof(struct dead_key_struct);
+const int dead_key_count = sizeof(dead_keys)/sizeof(struct dead_key_struct);*/
 
 static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
                uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
@@ -627,7 +626,7 @@ fprintf(stderr, "key %s: sym: %-12s(%d) code:%u fl_win=%p, ", action, buf, sym, 
   Fl::e_length = strlen(buf);
   // Process dead keys and compose sequences :
   enum xkb_compose_status status = XKB_COMPOSE_NOTHING;
-//  if (0) Fl::compose_state = 0;
+  /* All that becomes useless with protocol text-input-unstable-v3
   if (state == WL_KEYBOARD_KEY_STATE_PRESSED && !(sym >= FL_Shift_L && sym <= FL_Alt_R) &&
       sym != XKB_KEY_ISO_Level3_Shift) {
     xkb_compose_state_feed(seat->xkb_compose_state, sym);
@@ -654,7 +653,7 @@ fprintf(stderr, "key %s: sym: %-12s(%d) code:%u fl_win=%p, ", action, buf, sym, 
       Fl_Wayland_Screen_Driver::next_marked_length = 0;
     }
 //fprintf(stderr, "xkb_compose_status=%d ctxt=%p state=%p l=%d[%s]\n", status, seat->xkb_context, seat->xkb_compose_state, Fl::e_length, buf);
-  }
+  }*/
   
   fl_event_time = time;
   int event = (state == WL_KEYBOARD_KEY_STATE_PRESSED ? FL_KEYDOWN : FL_KEYUP);
@@ -737,8 +736,7 @@ void text_input_preedit_string(void *data, struct zwp_text_input_v3 *zwp_text_in
   Fl_Wayland_Screen_Driver::next_marked_length = text ? strlen(text) : 0;
   Fl::e_text = text ? (char*)text : (char*)"";
   Fl::e_length = text ? strlen(text) : 0;
-  Fl::e_state = 0;
-  if (!text) Fl::e_keysym = 0;
+  Fl::e_keysym = text ? *text : 0;
   struct wl_surface *surface = (struct wl_surface*)data;
   Fl_Window *win =  Fl_Wayland_Screen_Driver::surface_to_window(surface);
   set_event_xy(win);
@@ -768,7 +766,7 @@ void text_input_delete_surrounding_text(void *data, struct zwp_text_input_v3 *zw
 
 void text_input_done(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
                      uint32_t serial) {
-puts("text_input_done");
+//puts("text_input_done");
 }
 
 static const struct zwp_text_input_v3_listener text_input_listener = {
