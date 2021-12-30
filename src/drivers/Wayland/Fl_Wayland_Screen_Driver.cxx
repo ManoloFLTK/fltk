@@ -715,16 +715,15 @@ static const struct wl_keyboard_listener wl_keyboard_listener = {
 void text_input_enter(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
                       struct wl_surface *surface) {
 //puts("text_input_enter");
+  zwp_text_input_v3_set_user_data(zwp_text_input_v3, surface);
   zwp_text_input_v3_enable(zwp_text_input_v3);
   zwp_text_input_v3_commit(zwp_text_input_v3);
-  zwp_text_input_v3_set_user_data(zwp_text_input_v3, surface);
 }
 
 void text_input_leave(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
                       struct wl_surface *surface) {
 //puts("text_input_leave");
   zwp_text_input_v3_disable(zwp_text_input_v3);
-  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   zwp_text_input_v3_commit(zwp_text_input_v3);
 }
 
