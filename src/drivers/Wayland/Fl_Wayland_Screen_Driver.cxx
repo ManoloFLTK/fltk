@@ -258,10 +258,10 @@ static void pointer_enter(void *data,
   Fl_Window *win = Fl_Wayland_Screen_Driver::surface_to_window(surface);
   struct wl_cursor *cursor = NULL;
   if (win) { // use custom cursor if present
-    Fl_Wayland_Window_Driver *driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(win);
+    Fl_Wayland_Window_Driver *driver = Fl_Wayland_Window_Driver::driver(win);
     cursor = driver->cursor();
     if (win->parent() && !cursor) {
-      driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(win->top_window());
+      driver = Fl_Wayland_Window_Driver::driver(win->top_window());
       cursor = driver->cursor();
     }
   }
@@ -338,7 +338,7 @@ static void pointer_button(void *data,
   if (!win) return;
   fl_event_time = time;
   if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED && seat->pointer_focus == NULL &&
-      fl_xid(win)->kind == Fl_Wayland_Window_Driver::DECORATED/*frame*/) {
+      fl_xid(win)->kind == Fl_Wayland_Window_Driver::DECORATED) {
     // click on titlebar
     libdecor_frame_move(fl_xid(win)->frame, seat->wl_seat, serial);
     return;
@@ -439,7 +439,7 @@ static void cursor_surface_enter(void *data,
   // maintain custom window cursor
   Fl_Window *win = Fl::first_window();
   if (win) {
-    Fl_Wayland_Window_Driver *driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(win);
+    Fl_Wayland_Window_Driver *driver = Fl_Wayland_Window_Driver::driver(win);
     struct wl_cursor *cursor = driver->cursor();
     if (cursor) do_set_cursor(seat, cursor);
   }
@@ -865,7 +865,7 @@ static void output_done(void *data, struct wl_output *wl_output)
     struct wld_window *win = xp->xid;
     wl_list_for_each(window_output, &(win->outputs), link) { // all Fl_Wayland_Window_Driver::window_output for this window
       if (window_output->output == output) {
-        Fl_Wayland_Window_Driver *win_driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(win->fl_win);
+        Fl_Wayland_Window_Driver *win_driver = Fl_Wayland_Window_Driver::driver(win->fl_win);
         if (output->wld_scale != win->scale) win_driver->update_scale();
       }
     }

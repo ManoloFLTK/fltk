@@ -315,7 +315,7 @@ void Fl_Wayland_Gl_Window_Driver::swap_buffers() {
   }
 
   if (egl_surface) {
-    Fl_Wayland_Window_Driver *driver = (Fl_Wayland_Window_Driver*)Fl_Window_Driver::driver(pWindow);
+    Fl_Wayland_Window_Driver *driver = Fl_Wayland_Window_Driver::driver(pWindow);
     if ( !driver->in_handle_configure ) {
       eglSwapInterval(egl_display, 0);
       // Register a frame callback to know when we can draw the next frame
