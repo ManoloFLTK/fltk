@@ -780,7 +780,7 @@ void Fl_Wayland_Screen_Driver::insertion_point_location(int x, int y, int height
 //printf("insertion_point_location %dx%d\n",x,y);
   if (seat->text_input) {
     float s = fl_graphics_driver->scale();
-    zwp_text_input_v3_set_cursor_rectangle(seat->text_input,  s*x,  s*y,  s*5/*width*/,  s*height);
+    zwp_text_input_v3_set_cursor_rectangle(seat->text_input,  s*x,  s*(y-height),  s*5/*width*/,  s*height);
     zwp_text_input_v3_commit(seat->text_input);
   }
 }
