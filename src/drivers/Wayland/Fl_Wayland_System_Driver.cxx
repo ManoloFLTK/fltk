@@ -91,3 +91,15 @@ char *Fl_Wayland_System_Driver::get_prog_name() {
   }
   return NULL;
 }
+
+int Fl_Wayland_System_Driver::event_key(int k) {
+  if (k > FL_Button && k <= FL_Button+8)
+    return Fl::event_state(8<<(k-FL_Button));
+  int sym = Fl::event_key();
+  if (sym >= 'a' && sym <= 'z' ) sym -= 32;
+  return (Fl::event() == FL_KEYDOWN || Fl::event() == FL_SHORTCUT) && sym == k;
+}
+
+int Fl_Wayland_System_Driver::get_key(int k) {
+  return event_key(k);
+}

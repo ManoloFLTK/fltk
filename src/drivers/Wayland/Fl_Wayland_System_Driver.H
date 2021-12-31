@@ -34,7 +34,6 @@ public:
   virtual void make_transient(void *ptr_gtk, void*, Fl_Window*);
   virtual int need_menu_handle_part2() {return 0;}
   char *get_prog_name();
-  // these 2 are in Fl_get_key_wayland.cxx
   int event_key(int k);
   int get_key(int k);
 };
