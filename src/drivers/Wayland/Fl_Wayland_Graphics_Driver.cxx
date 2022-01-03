@@ -59,7 +59,7 @@ static int create_anonymous_file(int size, char **pshared)
 }
 
 
-struct fl_wld_buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int height, uint32_t format, struct wld_window *window)
+struct fl_wld_buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int height, uint32_t format)
 {
   struct fl_wld_buffer *buffer;
 

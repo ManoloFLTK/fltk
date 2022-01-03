@@ -402,7 +402,7 @@ void Fl_Wayland_Window_Driver::make_current() {
   fl_graphics_driver->clip_region(0);
   fl_window = window;
   if (!window->buffer) window->buffer = Fl_Wayland_Graphics_Driver::create_shm_buffer(
-           pWindow->w() * scale, pWindow->h() * scale, WL_SHM_FORMAT_ARGB8888, window);
+           pWindow->w() * scale, pWindow->h() * scale, WL_SHM_FORMAT_ARGB8888);
   ((Fl_Wayland_Graphics_Driver*)fl_graphics_driver)->activate(window->buffer, scale);
 
 #ifdef FLTK_USE_CAIRO
@@ -1326,7 +1326,7 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
   new_image->image.delay = 0;
   new_image->offset = 0;
   //create a Wayland buffer and have it used as an image of the new cursor
-  struct fl_wld_buffer *offscreen = Fl_Wayland_Graphics_Driver::create_shm_buffer(new_image->image.width, new_image->image.height, WL_SHM_FORMAT_ARGB8888, NULL);
+  struct fl_wld_buffer *offscreen = Fl_Wayland_Graphics_Driver::create_shm_buffer(new_image->image.width, new_image->image.height, WL_SHM_FORMAT_ARGB8888);
   new_image->buffer = offscreen->wl_buffer;
   wl_buffer_set_user_data(new_image->buffer, offscreen);
   new_cursor->image_count = 1;
