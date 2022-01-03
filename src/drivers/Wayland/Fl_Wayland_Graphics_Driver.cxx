@@ -1,7 +1,7 @@
 //
 // Implementation of the Wayland graphics driver.
 //
-// Copyright 2021 by Bill Spitzak and others.
+// Copyright 2021-2022 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this

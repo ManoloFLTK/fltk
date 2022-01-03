@@ -1,7 +1,7 @@
 //
 // Tiny OpenGL v3 + glut demo program for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 1998-2021 by Bill Spitzak and others.
+// Copyright 1998-2022 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -198,7 +198,7 @@ int main (int argc, char* argv[])
   glutCreateWindow("Triangle Test");
 #ifndef __APPLE__
   GLenum err = glewInit(); // defines pters to functions of OpenGL V 1.2 and above
-#ifdef USE_WAYLAND
+#ifdef FLTK_USE_WAYLAND
   if (err == GLEW_ERROR_NO_GLX_DISPLAY) err = GLEW_OK;
 #endif
   if (err != GLEW_OK) Fl::error("glewInit() failed returning %u", err);

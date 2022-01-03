@@ -3,7 +3,7 @@ dnl the "configure" script is made from this by running GNU "autoconf"
 dnl
 dnl Configuration script for the Fast Light Tool Kit (FLTK).
 dnl
-dnl Copyright 1998-2021 by Bill Spitzak and others.
+dnl Copyright 1998-2022 by Bill Spitzak and others.
 dnl
 dnl This library is free software. Distribution and use rights are outlined in
 dnl the file "COPYING" which should have been included with this file.  If this
@@ -1011,7 +1011,7 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
       graphics="Wayland"
       LIBS="$LIBS $($PKGCONFIG --libs wayland-cursor) $($PKGCONFIG --libs wayland-client) $($PKGCONFIG --libs xkbcommon)"
       LIBS="$LIBS $($PKGCONFIG --libs dbus-1) -ldl"
-      CXXFLAGS="$CXXFLAGS -DUSE_WAYLAND -I../libdecor/src"
+      CXXFLAGS="$CXXFLAGS -DFLTK_USE_WAYLAND -I../libdecor/src"
       DSOFLAGS="$LIBS $DSOFLAGS"
       enable_pango=yes
       LIBDECORDIR="libdecor/build"
