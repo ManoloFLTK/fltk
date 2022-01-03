@@ -33,11 +33,13 @@
 extern unsigned fl_cmap[256]; // defined in fl_color.cxx
 
 
-static int create_anonymous_file(off_t size)
+static int create_anonymous_file(int size, char **pshared)
 {
   int ret;
   int fd = memfd_create("FLTK-for-Wayland", MFD_CLOEXEC | MFD_ALLOW_SEALING);
-  if (fd < 0) return -1;
+  if (fd < 0) {
+    Fl::fatal("memfd_create failed: %s\n", strerror(errno));
+  }
   fcntl(fd, F_ADD_SEALS, F_SEAL_SHRINK);
   do {
     ret = posix_fallocate(fd, 0, size);
@@ -45,8 +47,14 @@ static int create_anonymous_file(off_t size)
   if (ret != 0) {
     close(fd);
     errno = ret;
-    return -1;
+    Fl::fatal("creating anonymous file of size %d failed: %s\n", size, strerror(errno));
   }
+  *pshared = (char*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  if (*pshared == MAP_FAILED) {
+    close(fd);
+    Fl::fatal("mmap failed: %s\n", strerror(errno));
+  }
+//printf("create_anonymous_file: %d\n",size);
   return fd;
 }
 
@@ -57,31 +65,32 @@ struct fl_wld_buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, i
 
   int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
   int size = stride * height;
-  int fd = create_anonymous_file(size);
-  if (fd < 0) {
-    Fl::fatal("creating a buffer file for %d B failed: %s\n",
-      size, strerror(errno));
-    return NULL;
+  static char *pool_memory = NULL;
+  static int pool_size = 10000000; // gets increased if necessary
+  static int chunk_offset = pool_size;
+  static int fd = -1;
+  static struct wl_shm_pool *pool = NULL;
+  if (chunk_offset + size > pool_size) {
+    chunk_offset = 0;
+    if (pool) {
+      wl_shm_pool_destroy(pool);
+      close(fd);
+    }
+    if (size > pool_size) pool_size = 2 * size;
+    fd = create_anonymous_file(pool_size, &pool_memory);
+    Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+    pool = wl_shm_create_pool(scr_driver->wl_shm, fd, pool_size);
   }
-  void *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  if (data == MAP_FAILED) {
-    close(fd);
-    Fl::fatal("mmap failed: %s\n", strerror(errno));
-    return NULL;
-  }
-  buffer = (struct fl_wld_buffer*)calloc(1, sizeof *buffer);
+  buffer = (struct fl_wld_buffer*)calloc(1, sizeof(struct fl_wld_buffer));
   buffer->stride = stride;
-  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-  struct wl_shm_pool *pool = wl_shm_create_pool(scr_driver->wl_shm, fd, size);
-  buffer->wl_buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride, format);
-  wl_shm_pool_destroy(pool);
-  close(fd);
-  buffer->data = data;
+  buffer->wl_buffer = wl_shm_pool_create_buffer(pool, chunk_offset, width, height, stride, format);
+  buffer->data = (void*)(pool_memory + chunk_offset);
+  chunk_offset += size;
   buffer->data_size = size;
   buffer->width = width;
   buffer->draw_buffer = new uchar[buffer->data_size];
   buffer->draw_buffer_needs_commit = false;
-//fprintf(stderr, "create_shm_buffer: %dx%d\n", width, height);
+//fprintf(stderr, "create_shm_buffer: %dx%d = %d\n", width, height, size);
   cairo_init(buffer, width, height, stride, CAIRO_FORMAT_ARGB32);
   return buffer;
 }
@@ -124,7 +133,6 @@ void Fl_Wayland_Graphics_Driver::buffer_release(struct wld_window *window)
 {
   if (window->buffer) {
     wl_buffer_destroy(window->buffer->wl_buffer);
-    munmap(window->buffer->data, window->buffer->data_size);
     delete[] window->buffer->draw_buffer;
     window->buffer->draw_buffer = NULL;
     cairo_surface_t *surf = cairo_get_target(window->buffer->cairo_);
