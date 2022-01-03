@@ -84,6 +84,8 @@ private:
 public:
   Fl_Wayland_Graphics_Driver();
   ~Fl_Wayland_Graphics_Driver();
+  static const uint32_t wld_format;
+  static const cairo_format_t cairo_format;
   void activate(struct fl_wld_buffer *buffer, float scale);
   void font(Fl_Font fnum, Fl_Fontsize s);
   Fl_Font font() { return Fl_Graphics_Driver::font(); }
@@ -128,7 +130,7 @@ public:
   void uncache_pixmap(fl_uintptr_t p);
   void overlay_rect(int x, int y, int w , int h);
   static void init_built_in_fonts();
-  static struct fl_wld_buffer *create_shm_buffer(int width, int height, uint32_t format);
+  static struct fl_wld_buffer *create_shm_buffer(int width, int height);
   static void buffer_release(struct wld_window *window);
   static void buffer_commit(struct wld_window *window);
   static void cairo_init(struct fl_wld_buffer *buffer, int width, int height, int stride, cairo_format_t format);

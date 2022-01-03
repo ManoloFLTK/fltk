@@ -59,11 +59,10 @@ static int create_anonymous_file(int size, char **pshared)
 }
 
 
-struct fl_wld_buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int height, uint32_t format)
+struct fl_wld_buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, int height)
 {
   struct fl_wld_buffer *buffer;
-
-  int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
+  int stride = cairo_format_stride_for_width(Fl_Wayland_Graphics_Driver::cairo_format, width);
   int size = stride * height;
   static char *pool_memory = NULL;
   static int pool_size = 10000000; // gets increased if necessary
@@ -83,7 +82,7 @@ struct fl_wld_buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, i
   }
   buffer = (struct fl_wld_buffer*)calloc(1, sizeof(struct fl_wld_buffer));
   buffer->stride = stride;
-  buffer->wl_buffer = wl_shm_pool_create_buffer(pool, chunk_offset, width, height, stride, format);
+  buffer->wl_buffer = wl_shm_pool_create_buffer(pool, chunk_offset, width, height, stride, Fl_Wayland_Graphics_Driver::wld_format);
   buffer->data = (void*)(pool_memory + chunk_offset);
   chunk_offset += size;
   buffer->data_size = size;
@@ -91,7 +90,7 @@ struct fl_wld_buffer *Fl_Wayland_Graphics_Driver::create_shm_buffer(int width, i
   buffer->draw_buffer = new uchar[buffer->data_size];
   buffer->draw_buffer_needs_commit = false;
 //fprintf(stderr, "create_shm_buffer: %dx%d = %d\n", width, height, size);
-  cairo_init(buffer, width, height, stride, CAIRO_FORMAT_ARGB32);
+  cairo_init(buffer, width, height, stride, Fl_Wayland_Graphics_Driver::cairo_format);
   return buffer;
 }
 
@@ -143,6 +142,10 @@ void Fl_Wayland_Graphics_Driver::buffer_release(struct wld_window *window)
     window->buffer = NULL;
   }
 }
+
+// these 2 refer to the same memory layout for pixel data
+const uint32_t Fl_Wayland_Graphics_Driver::wld_format = WL_SHM_FORMAT_ARGB8888;
+const cairo_format_t Fl_Wayland_Graphics_Driver::cairo_format = CAIRO_FORMAT_ARGB32;
 
 
 Fl_Wayland_Graphics_Driver::Fl_Wayland_Graphics_Driver () : Fl_Cairo_Graphics_Driver() {
@@ -266,7 +269,7 @@ void Fl_Wayland_Graphics_Driver::font(Fl_Font fnum, Fl_Fontsize s) {
   if (font() == fnum && size() == s) return;
   if (!font_descriptor()) fl_open_display();
   if (!pango_layout_) {
-    cairo_surface_t *surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 100, 100);
+    cairo_surface_t *surf = cairo_image_surface_create(Fl_Wayland_Graphics_Driver::cairo_format, 100, 100);
     cairo_ = cairo_create(surf);
     dummy_pango_layout_ = pango_cairo_create_layout(cairo_);
     pango_layout_ = dummy_pango_layout_;
@@ -600,7 +603,7 @@ void Fl_Wayland_Graphics_Driver::copy_offscreen(int x, int y, int w, int h, Fl_O
   cairo_save(cairo_);
   cairo_rectangle(cairo_, x, y, w, h);
   cairo_clip(cairo_);
-  cairo_surface_t *surf = cairo_image_surface_create_for_data(osrc->draw_buffer, CAIRO_FORMAT_ARGB32, osrc->width, height, osrc->stride);
+  cairo_surface_t *surf = cairo_image_surface_create_for_data(osrc->draw_buffer, Fl_Wayland_Graphics_Driver::cairo_format, osrc->width, height, osrc->stride);
   cairo_pattern_t *pat = cairo_pattern_create_for_surface(surf);
   cairo_set_source(cairo_, pat);
   cairo_matrix_init_scale(&matrix, s, s);
@@ -778,7 +781,7 @@ static void dealloc_surface_data(void *data) {
 
 
 void Fl_Wayland_Graphics_Driver::cache(Fl_RGB_Image *rgb) {
-  int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, rgb->data_w());
+  int stride = cairo_format_stride_for_width(Fl_Wayland_Graphics_Driver::cairo_format, rgb->data_w());
   uchar *BGRA = new uchar[stride * rgb->data_h()];
   memset(BGRA, 0, stride * rgb->data_h());
   int lrgb = rgb->ld() ? rgb->ld() : rgb->data_w() * rgb->d();
@@ -822,7 +825,7 @@ void Fl_Wayland_Graphics_Driver::cache(Fl_RGB_Image *rgb) {
       }
     }
   }
-  cairo_surface_t *surf = cairo_image_surface_create_for_data(BGRA, CAIRO_FORMAT_ARGB32, rgb->data_w(), rgb->data_h(), stride);
+  cairo_surface_t *surf = cairo_image_surface_create_for_data(BGRA, Fl_Wayland_Graphics_Driver::cairo_format, rgb->data_w(), rgb->data_h(), stride);
   if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) return;
   (void)cairo_surface_set_user_data(surf, &data_key_for_surface, BGRA, dealloc_surface_data);
   cairo_pattern_t *pat = cairo_pattern_create_for_surface(surf);

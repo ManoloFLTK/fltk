@@ -176,7 +176,7 @@ static bool has_xrgb = false;
 
 static void shm_format(void *data, struct wl_shm *wl_shm, uint32_t format)
 {
-  if (format == WL_SHM_FORMAT_ARGB8888)
+  if (format == Fl_Wayland_Graphics_Driver::wld_format)
     has_xrgb = true;
 }
 
