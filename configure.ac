@@ -1008,10 +1008,12 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
       ])
 
       BUILD="WAYLAND"
+      AC_DEFINE([FLTK_USE_WAYLAND])
       graphics="Wayland"
       LIBS="$LIBS $($PKGCONFIG --libs wayland-cursor) $($PKGCONFIG --libs wayland-client) $($PKGCONFIG --libs xkbcommon)"
       LIBS="$LIBS $($PKGCONFIG --libs dbus-1) -ldl"
-      CXXFLAGS="$CXXFLAGS -DFLTK_USE_WAYLAND -I../libdecor/src"
+#      CXXFLAGS="$CXXFLAGS -DFLTK_USE_WAYLAND -I../libdecor/src"
+      CXXFLAGS="$CXXFLAGS -I../libdecor/src"
       DSOFLAGS="$LIBS $DSOFLAGS"
       enable_pango=yes
       LIBDECORDIR="libdecor/build"
