@@ -1235,6 +1235,7 @@ int Fl_Wayland_Window_Driver::set_cursor(Fl_Cursor c) {
     default:
       return 0;
   }
+  if (cursor_) delete_cursor_();
   scr_driver->set_cursor();
   return 1;
 }
