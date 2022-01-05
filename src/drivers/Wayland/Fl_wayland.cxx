@@ -382,14 +382,13 @@ static void data_device_handle_motion(void *data, struct wl_data_device *data_de
 
 static void data_device_handle_leave(void *data, struct wl_data_device *data_device) {
 //printf("Drag left our surface\n");
-  doing_dnd = false;
 }
 
 
 static void data_device_handle_drop(void *data, struct wl_data_device *data_device) {
   if (!current_drag_offer) return;
   int ret = Fl::handle(FL_DND_RELEASE, fl_dnd_target_window);
-//printf("data_device_handle_drop ret=%d\n", ret);
+//printf("data_device_handle_drop ret=%d doing_dnd=%d\n", ret, doing_dnd);
 
   if (!ret) {
     wl_data_offer_destroy(current_drag_offer);
@@ -398,6 +397,7 @@ static void data_device_handle_drop(void *data, struct wl_data_device *data_devi
   }
 
   if (doing_dnd) {
+    doing_dnd = false;
     Fl::e_text = fl_selection_buffer[0];
     Fl::e_length = fl_selection_length[0];
   } else {
