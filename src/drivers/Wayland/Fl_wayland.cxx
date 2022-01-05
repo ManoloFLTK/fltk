@@ -117,11 +117,13 @@ static void data_source_handle_send(void *data, struct wl_data_source *source, c
 }
 
 static Fl_Window *fl_dnd_target_window = 0;
+static bool doing_dnd = false; // helps identify DnD within the app itself
 
 static void data_source_handle_cancelled(void *data, struct wl_data_source *source) {
   // An application has replaced the clipboard contents or DnD finished
 //fprintf(stderr, "data_source_handle_cancelled: %p\n", source);
   wl_data_source_destroy(source);
+  doing_dnd = false;
   fl_i_own_selection[1] = 0;
   if (data == 0) { // at end of DnD
     Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
@@ -181,7 +183,6 @@ static const struct wl_data_source_listener data_source_listener = {
   .action = data_source_handle_action,
 };
 
-static bool doing_dnd = false; // helps identify DnD within the app itself
 
 int Fl_Wayland_Screen_Driver::dnd(int unused) {
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
@@ -397,7 +398,6 @@ static void data_device_handle_drop(void *data, struct wl_data_device *data_devi
   }
 
   if (doing_dnd) {
-    doing_dnd = false;
     Fl::e_text = fl_selection_buffer[0];
     Fl::e_length = fl_selection_length[0];
   } else {
