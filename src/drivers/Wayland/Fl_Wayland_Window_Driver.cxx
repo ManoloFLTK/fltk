@@ -1347,6 +1347,8 @@ int Fl_Wayland_Window_Driver::set_cursor(const Fl_RGB_Image *rgb, int hotx, int 
   delete_cursor_();
   //have this new cursor used
   cursor_ = new_cursor;
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+  scr_driver->default_cursor(cursor_);
   return 1;
 }
 
