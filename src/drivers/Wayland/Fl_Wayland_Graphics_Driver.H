@@ -77,7 +77,7 @@ struct wld_window;
 
 class FL_EXPORT Fl_Wayland_Graphics_Driver : public Fl_Cairo_Graphics_Driver {
 private:
-  struct fl_wld_buffer *buffer;
+  struct fl_wld_buffer *buffer_;
   PangoLayout *dummy_pango_layout_; // used to measure text width before showing a window
   int linestyle_;
   void draw_cached_pattern_(Fl_Image *img, cairo_pattern_t *pat, int X, int Y, int W, int H, int cx, int cy);

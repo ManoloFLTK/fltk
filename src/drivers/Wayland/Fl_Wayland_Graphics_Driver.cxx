@@ -182,7 +182,7 @@ void Fl_Wayland_Graphics_Driver::activate(struct fl_wld_buffer *buffer, float sc
     g_object_ref(pango_layout_);
     Fl_Graphics_Driver::font(-1, -1); // signal that no font is current yet
   }
-  this->buffer = buffer;
+  this->buffer_ = buffer;
   cairo_restore(cairo_);
   cairo_save(cairo_);
   cairo_scale(cairo_, scale, scale);
@@ -409,7 +409,7 @@ void Fl_Wayland_Graphics_Driver::draw(const char* str, int n, float x, float y) 
   pango_layout_set_text(pango_layout_, str, n);
   pango_cairo_show_layout(cairo_, pango_layout_);
   cairo_restore(cairo_);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 
@@ -712,7 +712,7 @@ void Fl_Wayland_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
   cairo_close_path(cairo_);
   cairo_stroke(cairo_);
   cairo_restore(cairo_);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 
@@ -750,7 +750,7 @@ void Fl_Wayland_Graphics_Driver::draw_cached_pattern_(Fl_Image *img, cairo_patte
   cairo_pattern_set_matrix(pat, &matrix);
   cairo_mask(cairo_, pat);
   cairo_restore(cairo_);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 
@@ -942,85 +942,85 @@ void Fl_Wayland_Graphics_Driver::uncache_pixmap(fl_uintptr_t p) {
 
 void Fl_Wayland_Graphics_Driver::line(int x1, int y1, int x2, int y2) {
   Fl_Cairo_Graphics_Driver::line(x1, y1, x2, y2);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::line(int x1, int y1, int x2, int y2, int x3, int y3) {
   Fl_Cairo_Graphics_Driver::line(x1, y1, x2, y2, x3, y3);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::xyline(int x, int y, int x1) {
   Fl_Cairo_Graphics_Driver::xyline(x, y, x1);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::xyline(int x, int y, int x1, int y2) {
   Fl_Cairo_Graphics_Driver::xyline(x, y, x1, y2);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::xyline(int x, int y, int x1, int y2, int x3) {
   Fl_Cairo_Graphics_Driver::xyline(x, y, x1, y2, x3);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::yxline(int x, int y, int y1) {
   Fl_Cairo_Graphics_Driver::yxline(x, y, y1);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::yxline(int x, int y, int y1, int x2) {
   Fl_Cairo_Graphics_Driver::yxline(x, y, y1, x2);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::yxline(int x, int y, int y1, int x2, int y3) {
   Fl_Cairo_Graphics_Driver::yxline(x, y, y1, x2, y3);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, int y2) {
   Fl_Cairo_Graphics_Driver::loop(x0, y0, x1, y1, x2, y2);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) {
   Fl_Cairo_Graphics_Driver::loop(x0, y0, x1, y1, x2, y2, x3, y3);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::rectf(int x, int y, int w, int h) {
   Fl_Cairo_Graphics_Driver::rectf(x, y, w, h);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::rect(int x, int y, int w, int h) {
   Fl_Cairo_Graphics_Driver::rect(x, y, w, h);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2, int y2) {
   Fl_Cairo_Graphics_Driver::polygon(x0, y0, x1, y1, x2, y2);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) {
   Fl_Cairo_Graphics_Driver::polygon(x0, y0, x1, y1, x2, y2, x3, y3);
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::end_line() {
   Fl_Cairo_Graphics_Driver::end_line();
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::end_loop(){
   Fl_Cairo_Graphics_Driver::end_loop();
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
 
 void Fl_Wayland_Graphics_Driver::end_polygon() {
   Fl_Cairo_Graphics_Driver::end_polygon();
-  buffer->draw_buffer_needs_commit = true;
+  buffer_->draw_buffer_needs_commit = true;
 }
