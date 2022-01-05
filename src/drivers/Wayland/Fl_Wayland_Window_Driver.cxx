@@ -750,7 +750,6 @@ static void handle_configure(struct libdecor_frame *frame,
   Fl_Wayland_Window_Driver *driver = Fl_Wayland_Window_Driver::driver(window->fl_win);
   float f = Fl::screen_scale(window->fl_win->screen_num());
 
-  //if (!window->xdg_toplevel) window->xdg_toplevel = libdecor_frame_get_xdg_toplevel(frame);
   if (!window->xdg_surface) window->xdg_surface = libdecor_frame_get_xdg_surface(frame);
     
   if (window->fl_win->fullscreen_active()) {
@@ -773,7 +772,7 @@ static void handle_configure(struct libdecor_frame *frame,
 
   int tmpW, tmpH;
 // under KDE, libdecor_configuration_get_window_size() always returns false,
-// and we set the titlebar height to 0
+// and we let the titlebar height to 0
   if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KDE && height == 0) {
     if (window->configured_width) driver->wait_for_expose_value = 0;
   }
