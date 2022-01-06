@@ -118,12 +118,15 @@ static void data_source_handle_send(void *data, struct wl_data_source *source, c
 }
 
 static Fl_Window *fl_dnd_target_window = 0;
-static wl_surface *dnd_icon = NULL; // non null when DnD is in action
+static bool doing_dnd = false; // true when DnD is in action
+static wl_surface *dnd_icon = NULL; // non null when DnD uses text as cursor
+static wl_cursor* save_cursor = NULL; // non null when DnD uses "dnd-copy" cursor
 
 static void data_source_handle_cancelled(void *data, struct wl_data_source *source) {
   // An application has replaced the clipboard contents or DnD finished
 //fprintf(stderr, "data_source_handle_cancelled: %p\n", source);
   wl_data_source_destroy(source);
+  doing_dnd = false;
   if (dnd_icon) {
     Fl_Offscreen off = (Fl_Offscreen)wl_surface_get_user_data(dnd_icon);
     struct wld_window fake_window;
@@ -134,6 +137,12 @@ static void data_source_handle_cancelled(void *data, struct wl_data_source *sour
   }
   fl_i_own_selection[1] = 0;
   if (data == 0) { // at end of DnD
+    if (save_cursor) {
+      Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+      scr_driver->default_cursor(save_cursor);
+      scr_driver->set_cursor();
+      save_cursor = NULL;
+    }
     if (fl_dnd_target_window) {
       Fl::handle(FL_DND_LEAVE, fl_dnd_target_window);
       fl_dnd_target_window = 0;
@@ -207,7 +216,7 @@ static Fl_Offscreen offscreen_from_text(const char *text, int scale) {
     w2 = int(fl_width(p));
     if (w2 > width) width = w2;
   }
-  if (width > 500) width = 500;
+  if (width > 300*scale) width = 300*scale;
   height = nl * fl_height() + 3;
   width += 6;
   Fl_Offscreen off = Fl_Wayland_Graphics_Driver::create_shm_buffer(width, height);
@@ -237,7 +246,7 @@ static Fl_Offscreen offscreen_from_text(const char *text, int scale) {
 }
 
 
-int Fl_Wayland_Screen_Driver::dnd(int unused) {
+int Fl_Wayland_Screen_Driver::dnd(int use_selection) {
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
 
   struct wl_data_source *source =
@@ -246,18 +255,32 @@ int Fl_Wayland_Screen_Driver::dnd(int unused) {
   wl_data_source_add_listener(source, &data_source_listener, (void*)0);
   wl_data_source_offer(source, wld_plain_text_clipboard);
   wl_data_source_set_actions(source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
-  // use the text as dragging icon
-  Fl_Widget *current = Fl::pushed() ? Fl::pushed() : Fl::first_window();
-  int s = fl_xid(current->top_window())->scale;
-  Fl_Offscreen off = offscreen_from_text(fl_selection_buffer[0], s);
-  dnd_icon = wl_compositor_create_surface(scr_driver->wl_compositor);
+  Fl_Offscreen off = NULL;
+  int s = 1;
+  if (use_selection) {
+    // use the text as dragging icon
+    Fl_Widget *current = Fl::pushed() ? Fl::pushed() : Fl::first_window();
+    s = fl_xid(current->top_window())->scale;
+    off = offscreen_from_text(fl_selection_buffer[0], s);
+    dnd_icon = wl_compositor_create_surface(scr_driver->wl_compositor);
+  } else dnd_icon = NULL;
+  doing_dnd = true;
   wl_data_device_start_drag(scr_driver->seat->data_device, source,
                             scr_driver->seat->pointer_focus, dnd_icon, scr_driver->seat->serial);
-  wl_surface_attach(dnd_icon, off->wl_buffer, 0, 0);
-  wl_surface_set_buffer_scale(dnd_icon, s);
-  wl_surface_damage(dnd_icon, 0, 0, 10000, 10000);
-  wl_surface_commit(dnd_icon);
-  wl_surface_set_user_data(dnd_icon, off);
+  if (use_selection) {
+    wl_surface_attach(dnd_icon, off->wl_buffer, 0, 0);
+    wl_surface_set_buffer_scale(dnd_icon, s);
+    wl_surface_damage(dnd_icon, 0, 0, 10000, 10000);
+    wl_surface_commit(dnd_icon);
+    wl_surface_set_user_data(dnd_icon, off);
+  } else {
+    static struct wl_cursor *dnd_cursor = scr_driver->cache_cursor("dnd-copy");
+    if (dnd_cursor) {
+      save_cursor = scr_driver->default_cursor();
+      scr_driver->default_cursor(dnd_cursor);
+      scr_driver->set_cursor();
+    } else save_cursor = NULL;
+  }
   return 1;
 }
 
@@ -449,7 +472,7 @@ static void data_device_handle_leave(void *data, struct wl_data_device *data_dev
 static void data_device_handle_drop(void *data, struct wl_data_device *data_device) {
   if (!current_drag_offer) return;
   int ret = Fl::handle(FL_DND_RELEASE, fl_dnd_target_window);
-//printf("data_device_handle_drop ret=%d dnd_icon=%p\n", ret, dnd_icon);
+//printf("data_device_handle_drop ret=%d doing_dnd=%d\n", ret, doing_dnd);
 
   if (!ret) {
     wl_data_offer_destroy(current_drag_offer);
@@ -457,7 +480,7 @@ static void data_device_handle_drop(void *data, struct wl_data_device *data_devi
     return;
   }
 
-  if (dnd_icon) {
+  if (doing_dnd) {
     Fl::e_text = fl_selection_buffer[0];
     Fl::e_length = fl_selection_length[0];
   } else {
