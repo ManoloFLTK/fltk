@@ -118,6 +118,7 @@ static void data_source_handle_send(void *data, struct wl_data_source *source, c
 
 static Fl_Window *fl_dnd_target_window = 0;
 static bool doing_dnd = false; // helps identify DnD within the app itself
+static wl_cursor* save_cursor = NULL;
 
 static void data_source_handle_cancelled(void *data, struct wl_data_source *source) {
   // An application has replaced the clipboard contents or DnD finished
@@ -127,7 +128,11 @@ static void data_source_handle_cancelled(void *data, struct wl_data_source *sour
   fl_i_own_selection[1] = 0;
   if (data == 0) { // at end of DnD
     Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-    scr_driver->xc_arrow = scr_driver->cache_cursor("left_ptr");
+    if (save_cursor) {
+      scr_driver->default_cursor(save_cursor);
+      scr_driver->set_cursor();
+      save_cursor = NULL;
+    }
     if (fl_dnd_target_window) {
       Fl::handle(FL_DND_LEAVE, fl_dnd_target_window);
       fl_dnd_target_window = 0;
@@ -194,9 +199,14 @@ int Fl_Wayland_Screen_Driver::dnd(int unused) {
   wl_data_source_offer(source, wld_plain_text_clipboard);
   wl_data_source_set_actions(source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
 
-  struct wl_surface *icon = NULL;
-  scr_driver->xc_arrow = scr_driver->cache_cursor("dnd-copy");
-  wl_data_device_start_drag(scr_driver->seat->data_device, source, scr_driver->seat->pointer_focus, icon, scr_driver->seat->serial);
+  static struct wl_cursor *dnd_cursor = scr_driver->cache_cursor("dnd-copy");
+  if (dnd_cursor) {
+    save_cursor = scr_driver->default_cursor();
+    scr_driver->default_cursor(dnd_cursor);
+    scr_driver->set_cursor();
+  } else save_cursor = NULL;
+  wl_data_device_start_drag(scr_driver->seat->data_device, source,
+                            scr_driver->seat->pointer_focus, NULL, scr_driver->seat->serial);
   doing_dnd = true;
   return 1;
 }
