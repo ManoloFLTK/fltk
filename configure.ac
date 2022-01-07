@@ -1280,7 +1280,6 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
     INSTALL_DESKTOP="install-linux"
     UNINSTALL_DESKTOP="uninstall-linux"
 ])
-])
 
 AC_SUBST([GLDEMOS])
 AC_SUBST([GLLIBS])
