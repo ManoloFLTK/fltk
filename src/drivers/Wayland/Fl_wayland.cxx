@@ -40,11 +40,6 @@ Window fl_xim_win = 0;
 char fl_is_over_the_spot = 0;
 
 
-void fl_set_status(int x, int y, int w, int h)
-{
-}
-
-
 int Fl_Wayland_Screen_Driver::get_mouse_unscaled(int &mx, int &my) {
   open_display();
   mx = Fl::e_x_root; my = Fl::e_y_root;
