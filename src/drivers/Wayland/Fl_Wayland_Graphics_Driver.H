@@ -151,6 +151,8 @@ public:
   void end_loop();
   void end_line();
   void end_polygon();
+  void set_spot(int font, int height, int x, int y, int w, int h, Fl_Window *win);
+  void reset_spot();
 };
 
 #endif // FL_WAYLAND_GRAPHICS_DRIVER_H

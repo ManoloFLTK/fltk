@@ -20,6 +20,7 @@
 #include "Fl_Wayland_Screen_Driver.H"
 #include "Fl_Wayland_Window_Driver.H"
 #include "Fl_Font.H"
+#include "text-input-client-protocol.h"
 #include <pango/pangocairo.h>
 #if ! PANGO_VERSION_CHECK(1,22,0)
 #  error "Requires Pango 1.22 or higher"
@@ -937,6 +938,30 @@ void Fl_Wayland_Graphics_Driver::uncache_pixmap(fl_uintptr_t p) {
     cairo_pattern_destroy(pat);
     cairo_surface_destroy(surf);
   }
+}
+
+
+void Fl_Wayland_Graphics_Driver::set_spot(int font, int height, int x, int y, int w, int h, Fl_Window *win) {
+//printf("set_spot %dx%d\n",x,y);
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+  if (scr_driver->seat->text_input) {
+    if (Fl::focus()) {
+      Fl_Widget *focuswin = Fl::focus()->window();
+      while (focuswin && focuswin->parent()) {
+        x += focuswin->x(); y += focuswin->y();
+        focuswin = focuswin->window();
+      }
+    }
+    float s = fl_graphics_driver->scale();
+    zwp_text_input_v3_set_cursor_rectangle(scr_driver->seat->text_input,  s*x,  s*(y-height),  s*5/*width*/,  s*height);
+    zwp_text_input_v3_commit(scr_driver->seat->text_input);
+  }
+}
+
+
+void Fl_Wayland_Graphics_Driver::reset_spot() {
+  Fl::compose_state = 0;
+  Fl_Wayland_Screen_Driver::next_marked_length = 0;
 }
 
 

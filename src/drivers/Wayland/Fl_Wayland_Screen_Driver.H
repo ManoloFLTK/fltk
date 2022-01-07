@@ -104,7 +104,6 @@ public:
   struct libdecor *libdecor_context;
   struct xdg_wm_base *xdg_wm_base;
   struct zwp_text_input_manager_v3 *text_input_base;
-  virtual void insertion_point_location(int x, int y, int height);
   
   Fl_Wayland_Screen_Driver();
   virtual APP_SCALING_CAPABILITY rescalable() { return PER_SCREEN_APP_SCALING; }
@@ -148,7 +147,6 @@ public:
   // --- compute dimensions of an Fl_Offscreen
   virtual void offscreen_size(Fl_Offscreen o, int &width, int &height);
   virtual int has_marked_text() const;
-  virtual void reset_marked_text();
   static int next_marked_length; // next length of marked text after current marked text will have been replaced
   // --- Wayland-special
   void set_cursor();

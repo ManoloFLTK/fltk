@@ -551,10 +551,6 @@ int Fl_Wayland_Screen_Driver::has_marked_text() const {
   return 1;
 }
 
-void Fl_Wayland_Screen_Driver::reset_marked_text() {
-  Fl::compose_state = 0;
-  next_marked_length = 0;
-}
 
 int Fl_Wayland_Screen_Driver::compose(int& del) {
   unsigned char ascii = (unsigned char)Fl::e_text[0];
@@ -776,21 +772,6 @@ static const struct zwp_text_input_v3_listener text_input_listener = {
   .done = text_input_done,
 };
 
-void Fl_Wayland_Screen_Driver::insertion_point_location(int x, int y, int height) {
-//printf("insertion_point_location %dx%d\n",x,y);
-  if (seat->text_input) {
-    if (Fl::focus()) {
-      Fl_Widget *focuswin = Fl::focus()->window();
-      while (focuswin && focuswin->parent()) {
-        x += focuswin->x(); y += focuswin->y();
-        focuswin = focuswin->window();
-      }
-    }
-    float s = fl_graphics_driver->scale();
-    zwp_text_input_v3_set_cursor_rectangle(seat->text_input,  s*x,  s*(y-height),  s*5/*width*/,  s*height);
-    zwp_text_input_v3_commit(seat->text_input);
-  }
-}
 
 static void seat_capabilities(void *data, struct wl_seat *wl_seat, uint32_t capabilities)
 {
