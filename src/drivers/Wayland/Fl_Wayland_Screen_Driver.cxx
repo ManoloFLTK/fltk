@@ -553,6 +553,11 @@ int Fl_Wayland_Screen_Driver::has_marked_text() const {
 
 
 int Fl_Wayland_Screen_Driver::compose(int& del) {
+  if (Fl::focus()) {
+    // Force the Input Method auxiliary window to move too when window is moved.
+    // Does good but still not perfect, e.g., with Japanese.
+    ((Fl_Wayland_Graphics_Driver*)fl_graphics_driver)->set_spot(0, fl_size(), Fl::focus()->x(), Fl::focus()->y(), 0, 0, NULL);
+  }
   unsigned char ascii = (unsigned char)Fl::e_text[0];
   int condition = (Fl::e_state & (FL_ALT | FL_META | FL_CTRL)) && ascii < 128 ; // letter+modifier key
   condition |= (Fl::e_keysym >= FL_Shift_L && Fl::e_keysym <= FL_Alt_R); // pressing modifier key
