@@ -56,7 +56,15 @@ struct seat {
 class FL_EXPORT Fl_Wayland_Screen_Driver : public Fl_Screen_Driver
 {
   friend class Fl_Screen_Driver;
+  friend class Fl_Wayland_Graphics_Driver;
+  static int insertion_point_x;
+  static int insertion_point_y;
+  static int insertion_point_width;
+  static int insertion_point_height;
+  static bool insertion_point_location_is_valid;
 public:
+  static void insertion_point_location(int x, int y, int height);
+  static bool insertion_point_location(int *px, int *py, int *pwidth, int *pheight);
   int get_mouse_unscaled(int &xx, int &yy);
   void screen_count(int count) {num_screens = count;}
   

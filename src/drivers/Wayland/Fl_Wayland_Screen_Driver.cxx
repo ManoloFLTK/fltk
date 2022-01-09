@@ -551,13 +551,51 @@ int Fl_Wayland_Screen_Driver::has_marked_text() const {
   return 1;
 }
 
+int Fl_Wayland_Screen_Driver::insertion_point_x = 0;
+int Fl_Wayland_Screen_Driver::insertion_point_y = 0;
+int Fl_Wayland_Screen_Driver::insertion_point_width = 0;
+int Fl_Wayland_Screen_Driver::insertion_point_height = 0;
+bool Fl_Wayland_Screen_Driver::insertion_point_location_is_valid = false;
+
+
+// inform TIM about location of the insertion point, and memorize this info.
+void Fl_Wayland_Screen_Driver::insertion_point_location(int x, int y, int height) {
+//printf("insertion_point_location %dx%d\n",x,y);
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+  if (scr_driver->seat->text_input) {
+    if (Fl::focus()) {
+      Fl_Widget *focuswin = Fl::focus()->window();
+      while (focuswin && focuswin->parent()) {
+        x += focuswin->x(); y += focuswin->y();
+        focuswin = focuswin->window();
+      }
+    }
+    float s = fl_graphics_driver->scale();
+    insertion_point_location_is_valid = true;
+    insertion_point_x = s*x;
+    insertion_point_y = s*(y-height);
+    insertion_point_width = s*5;
+    insertion_point_height = s*height;
+    zwp_text_input_v3_set_cursor_rectangle(scr_driver->seat->text_input, insertion_point_x,
+      insertion_point_y, insertion_point_width, insertion_point_height);
+    zwp_text_input_v3_commit(scr_driver->seat->text_input);
+  }
+}
+
+
+// computes window coordinates & size of insertion point
+bool Fl_Wayland_Screen_Driver::insertion_point_location(int *px, int *py, int *pwidth, int *pheight)
+// return true if the current coordinates and size of the insertion point are available
+{
+  if ( ! insertion_point_location_is_valid ) return false;
+  *px = insertion_point_x;
+  *py = insertion_point_y;
+  *pwidth = insertion_point_width;
+  *pheight = insertion_point_height;
+  return true;
+}
 
 int Fl_Wayland_Screen_Driver::compose(int& del) {
-  if (Fl::focus()) {
-    // Force the Input Method auxiliary window to move too when window is moved.
-    // Does good but still not perfect, e.g., with Japanese.
-    ((Fl_Wayland_Graphics_Driver*)fl_graphics_driver)->set_spot(0, fl_size(), Fl::focus()->x(), Fl::focus()->y(), 0, 0, NULL);
-  }
   unsigned char ascii = (unsigned char)Fl::e_text[0];
   int condition = (Fl::e_state & (FL_ALT | FL_META | FL_CTRL)) && ascii < 128 ; // letter+modifier key
   condition |= (Fl::e_keysym >= FL_Shift_L && Fl::e_keysym <= FL_Alt_R); // pressing modifier key
@@ -718,6 +756,10 @@ void text_input_enter(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
 //puts("text_input_enter");
   zwp_text_input_v3_set_user_data(zwp_text_input_v3, surface);
   zwp_text_input_v3_enable(zwp_text_input_v3);
+  int x, y, width, height;
+  if (Fl_Wayland_Screen_Driver::insertion_point_location(&x, &y, &width, &height)) {
+    zwp_text_input_v3_set_cursor_rectangle(zwp_text_input_v3,  x,  y,  width, height);
+  }
   zwp_text_input_v3_commit(zwp_text_input_v3);
 }
 
