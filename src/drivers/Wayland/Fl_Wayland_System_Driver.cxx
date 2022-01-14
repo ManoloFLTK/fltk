@@ -77,21 +77,6 @@ xdg_toplevel_set_parent(top, fl_xid(win)->xdg_toplevel);
 }
 
 
-char *Fl_Wayland_System_Driver::get_prog_name() {
-  pid_t pid = getpid();
-  char fname[100];
-  sprintf(fname, "/proc/%u/cmdline", pid);
-  FILE *in = fopen(fname, "r");
-  if (in) {
-    static char line[200];
-    char *p = fgets(line, sizeof(line), in);
-    fclose(in);
-    p = strrchr(line, '/'); if (!p) p = line; else p++;
-    return p;
-  }
-  return NULL;
-}
-
 int Fl_Wayland_System_Driver::event_key(int k) {
   if (k > FL_Button && k <= FL_Button+8)
     return Fl::event_state(8<<(k-FL_Button));

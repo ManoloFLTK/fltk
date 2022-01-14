@@ -34,6 +34,8 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <math.h> // for ceil()
+#include <sys/types.h> // for pid_t
+#include <unistd.h> // for getpid()
 
 struct cursor_image { // as in wayland-cursor.c of the Wayland project source code
   struct wl_cursor_image image;
@@ -971,6 +973,22 @@ static Fl_Window *calc_transient_parent(int &center_x, int &center_y) {
 }
 
 
+static char *get_prog_name() {
+  pid_t pid = getpid();
+  char fname[100];
+  sprintf(fname, "/proc/%u/cmdline", pid);
+  FILE *in = fopen(fname, "r");
+  if (in) {
+    static char line[200];
+    char *p = fgets(line, sizeof(line), in);
+    fclose(in);
+    p = strrchr(line, '/'); if (!p) p = line; else p++;
+    return p;
+  }
+  return NULL;
+}
+
+
 Fl_X *Fl_Wayland_Window_Driver::makeWindow()
 {
   struct wld_window *new_window;
@@ -1033,7 +1051,7 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
     new_window->frame = libdecor_decorate(scr_driver->libdecor_context, new_window->wl_surface,
                                               &libdecor_frame_iface, new_window);
 //fprintf(stderr, "makeWindow: libdecor_decorate=%p pos:%dx%d\n", new_window->frame, pWindow->x(), pWindow->y());
-    libdecor_frame_set_app_id(new_window->frame, ((Fl_Wayland_System_Driver*)Fl::system_driver())->get_prog_name()); // appears in the Gnome desktop menu bar
+    libdecor_frame_set_app_id(new_window->frame, get_prog_name()); // appears in the Gnome desktop menu bar
     libdecor_frame_set_title(new_window->frame, pWindow->label()?pWindow->label():"");
     if (!pWindow->resizable()) {
       libdecor_frame_unset_capabilities(new_window->frame, LIBDECOR_ACTION_RESIZE);
