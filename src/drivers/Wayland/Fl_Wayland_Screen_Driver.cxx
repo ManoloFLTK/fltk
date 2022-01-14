@@ -576,9 +576,11 @@ void Fl_Wayland_Screen_Driver::insertion_point_location(int x, int y, int height
     insertion_point_y = s*(y-height);
     insertion_point_width = s*5;
     insertion_point_height = s*height;
-    zwp_text_input_v3_set_cursor_rectangle(scr_driver->seat->text_input, insertion_point_x,
-      insertion_point_y, insertion_point_width, insertion_point_height);
-    zwp_text_input_v3_commit(scr_driver->seat->text_input);
+    if (zwp_text_input_v3_get_user_data(scr_driver->seat->text_input) ) {
+      zwp_text_input_v3_set_cursor_rectangle(scr_driver->seat->text_input, insertion_point_x,
+        insertion_point_y, insertion_point_width, insertion_point_height);
+      zwp_text_input_v3_commit(scr_driver->seat->text_input);
+    }
   }
 }
 
@@ -761,12 +763,14 @@ void text_input_enter(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
     zwp_text_input_v3_set_cursor_rectangle(zwp_text_input_v3,  x,  y,  width, height);
   }
   zwp_text_input_v3_commit(zwp_text_input_v3);
+  wl_display_roundtrip(fl_display);
 }
 
 void text_input_leave(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
                       struct wl_surface *surface) {
 //puts("text_input_leave");
   zwp_text_input_v3_disable(zwp_text_input_v3);
+  zwp_text_input_v3_set_user_data(zwp_text_input_v3, NULL);
   zwp_text_input_v3_commit(zwp_text_input_v3);
 }
 
