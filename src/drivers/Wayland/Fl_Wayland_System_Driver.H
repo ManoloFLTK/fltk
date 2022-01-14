@@ -31,7 +31,6 @@ public:
   virtual void paste(Fl_Widget &receiver, int clipboard, const char *type);
   // this one is in Fl_wayland.cxx
   virtual int clipboard_contains(const char *type);
-  virtual void make_transient(void *ptr_gtk, void*, Fl_Window*);
   virtual int need_menu_handle_part2() {return 0;}
   int event_key(int k);
   int get_key(int k);
