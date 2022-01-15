@@ -21,9 +21,9 @@
 #include "../Posix/Fl_Posix_System_Driver.H"
 class Fl_RGB_Image;
 
-class FL_EXPORT Fl_Nix_System_Driver : public Fl_Posix_System_Driver {
+class FL_EXPORT Fl_Unix_System_Driver : public Fl_Posix_System_Driver {
 public:
-  Fl_Nix_System_Driver() : Fl_Posix_System_Driver() {
+  Fl_Unix_System_Driver() : Fl_Posix_System_Driver() {
   }
   virtual void display_arg(const char *arg);
   virtual int clocale_printf(FILE *output, const char *format, va_list args);

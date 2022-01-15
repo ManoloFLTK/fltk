@@ -570,7 +570,7 @@ static int get_clipboard_image() {
 //fprintf(stderr, "get_clipboard_image: image/bmp %dx%d rest=%lu\n", w,h,rest);
     }
     close(fds[0]);
-    Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+    Fl_Unix_System_Driver *sys_dr = (Fl_Unix_System_Driver*)Fl::system_driver();
     if (!rest) Fl::e_clipboard_data = sys_dr->own_bmp_to_RGB(bmp);
     delete[] bmp;
     if (rest) return 1;
@@ -651,7 +651,7 @@ void Fl_Wayland_System_Driver::copy(const char *stuff, int len, int clipboard, c
 void Fl_Wayland_Screen_Driver::copy_image(const unsigned char *data, int W, int H){
   if (!data || W <= 0 || H <= 0) return;
   delete[] fl_selection_buffer[1];
-  Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+  Fl_Unix_System_Driver *sys_dr = (Fl_Unix_System_Driver*)Fl::system_driver();
   fl_selection_buffer[1] = (char *)sys_dr->create_bmp(data,W,H,&fl_selection_length[1]);
   fl_selection_buffer_length[1] = fl_selection_length[1];
   fl_i_own_selection[1] = 1;

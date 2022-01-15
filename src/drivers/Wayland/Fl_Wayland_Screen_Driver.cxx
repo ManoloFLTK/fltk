@@ -1241,14 +1241,14 @@ void Fl_Wayland_Screen_Driver::flush()
 
 double Fl_Wayland_Screen_Driver::wait(double time_to_wait)
 {
-  static Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+  static Fl_Unix_System_Driver *sys_dr = (Fl_Unix_System_Driver*)Fl::system_driver();
   return sys_dr->wait(time_to_wait);
 }
 
 
 int Fl_Wayland_Screen_Driver::ready()
 {
-  Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+  Fl_Unix_System_Driver *sys_dr = (Fl_Unix_System_Driver*)Fl::system_driver();
   return sys_dr->ready();
 }
 
@@ -1327,12 +1327,12 @@ const char *Fl_Wayland_Screen_Driver::get_system_scheme()
 
 
 void Fl_Wayland_Screen_Driver::add_timeout(double time, Fl_Timeout_Handler cb, void *argp) {
-  Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+  Fl_Unix_System_Driver *sys_dr = (Fl_Unix_System_Driver*)Fl::system_driver();
   sys_dr->add_timeout(time, cb, argp);
 }
 
 void Fl_Wayland_Screen_Driver::repeat_timeout(double time, Fl_Timeout_Handler cb, void *argp) {
-  Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+  Fl_Unix_System_Driver *sys_dr = (Fl_Unix_System_Driver*)Fl::system_driver();
   sys_dr->repeat_timeout(time, cb, argp);
 }
 
@@ -1340,7 +1340,7 @@ void Fl_Wayland_Screen_Driver::repeat_timeout(double time, Fl_Timeout_Handler cb
   Returns true if the timeout exists and has not been called yet.
 */
 int Fl_Wayland_Screen_Driver::has_timeout(Fl_Timeout_Handler cb, void *argp) {
-  Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+  Fl_Unix_System_Driver *sys_dr = (Fl_Unix_System_Driver*)Fl::system_driver();
   return sys_dr->has_timeout(cb, argp);
 }
 
@@ -1352,7 +1352,7 @@ int Fl_Wayland_Screen_Driver::has_timeout(Fl_Timeout_Handler cb, void *argp) {
         This may change in the future.
 */
 void Fl_Wayland_Screen_Driver::remove_timeout(Fl_Timeout_Handler cb, void *argp) {
-  Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+  Fl_Unix_System_Driver *sys_dr = (Fl_Unix_System_Driver*)Fl::system_driver();
   sys_dr->remove_timeout(cb, argp);
 }
 

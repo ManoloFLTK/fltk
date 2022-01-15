@@ -15,7 +15,7 @@
 //     https://www.fltk.org/bugs.php
 //
 
-#include "Fl_Nix_System_Driver.H"
+#include "Fl_Unix_System_Driver.H"
 #include <FL/Fl_File_Browser.H>
 #include <FL/platform.H>
 #include "../../flstring.h"
@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 
-int Fl_Nix_System_Driver::clocale_printf(FILE *output, const char *format, va_list args) {
+int Fl_Unix_System_Driver::clocale_printf(FILE *output, const char *format, va_list args) {
 #if defined(__linux__) && defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700
   static locale_t c_locale = newlocale(LC_NUMERIC_MASK, "C", duplocale(LC_GLOBAL_LOCALE));
   locale_t previous_locale = uselocale(c_locale);
@@ -88,7 +88,7 @@ static char *path_find(const char *program, char *filename, int filesize) {
 }
 
 
-int Fl_Nix_System_Driver::open_uri(const char *uri, char *msg, int msglen)
+int Fl_Unix_System_Driver::open_uri(const char *uri, char *msg, int msglen)
 {
   // Run any of several well-known commands to open the URI.
   //
@@ -191,7 +191,7 @@ int Fl_Nix_System_Driver::open_uri(const char *uri, char *msg, int msglen)
 }
 
 
-int Fl_Nix_System_Driver::file_browser_load_filesystem(Fl_File_Browser *browser, char *filename, int lname, Fl_File_Icon *icon)
+int Fl_Unix_System_Driver::file_browser_load_filesystem(Fl_File_Browser *browser, char *filename, int lname, Fl_File_Icon *icon)
 {
   int num_files = 0;
   //
@@ -244,7 +244,7 @@ int Fl_Nix_System_Driver::file_browser_load_filesystem(Fl_File_Browser *browser,
   return num_files;
 }
 
-void Fl_Nix_System_Driver::newUUID(char *uuidBuffer)
+void Fl_Unix_System_Driver::newUUID(char *uuidBuffer)
 {
   unsigned char b[16];
 #if HAVE_DLSYM && HAVE_DLFCN_H
@@ -302,7 +302,7 @@ void Fl_Nix_System_Driver::newUUID(char *uuidBuffer)
           b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
 }
 
-char *Fl_Nix_System_Driver::preference_rootnode(Fl_Preferences *prefs, Fl_Preferences::Root root, const char *vendor,
+char *Fl_Unix_System_Driver::preference_rootnode(Fl_Preferences *prefs, Fl_Preferences::Root root, const char *vendor,
                                                 const char *application)
 {
   static char *filename = 0L;
@@ -341,7 +341,7 @@ char *Fl_Nix_System_Driver::preference_rootnode(Fl_Preferences *prefs, Fl_Prefer
   return filename;
 }
 
-void Fl_Nix_System_Driver::display_arg(const char *arg) {
+void Fl_Unix_System_Driver::display_arg(const char *arg) {
   Fl::display(arg);
 }
 
@@ -349,7 +349,7 @@ void Fl_Nix_System_Driver::display_arg(const char *arg) {
 // Needs some docs
 // Returns -1 on error, errmsg will contain OS error if non-NULL.
 //
-int Fl_Nix_System_Driver::filename_list(const char *d,
+int Fl_Unix_System_Driver::filename_list(const char *d,
                                         dirent ***list,
                                         int (*sort)(struct dirent **, struct dirent **),
                                         char *errmsg, int errmsg_sz) {
@@ -429,7 +429,7 @@ int Fl_Nix_System_Driver::filename_list(const char *d,
   return n;
 }
 
-int Fl_Nix_System_Driver::utf8locale() {
+int Fl_Unix_System_Driver::utf8locale() {
   static int ret = 2;
   if (ret == 2) {
     char* s;
@@ -445,7 +445,7 @@ int Fl_Nix_System_Driver::utf8locale() {
 
 
 // returns pointer to the filename, or null if name ends with '/'
-const char *Fl_Nix_System_Driver::filename_name(const char *name) {
+const char *Fl_Unix_System_Driver::filename_name(const char *name) {
   const char *p,*q;
   if (!name) return (0);
   for (p=q=name; *p;) if (*p++ == '/') q = p;
@@ -488,7 +488,7 @@ struct FD {
 
 static FD *fd = 0;
 
-void Fl_Nix_System_Driver::add_fd(int n, int events, void (*cb)(int, void*), void *v) {
+void Fl_Unix_System_Driver::add_fd(int n, int events, void (*cb)(int, void*), void *v) {
   remove_fd(n,events);
   int i = nfds++;
   if (i >= fd_array_size) {
@@ -526,11 +526,11 @@ void Fl_Nix_System_Driver::add_fd(int n, int events, void (*cb)(int, void*), voi
 #  endif
 }
 
-void Fl_Nix_System_Driver::add_fd(int n, void (*cb)(int, void*), void* v) {
+void Fl_Unix_System_Driver::add_fd(int n, void (*cb)(int, void*), void* v) {
   add_fd(n, POLLIN, cb, v);
 }
 
-void Fl_Nix_System_Driver::remove_fd(int n, int events) {
+void Fl_Unix_System_Driver::remove_fd(int n, int events) {
   int i,j;
 # if !USE_POLL
   maxfd = -1; // recalculate maxfd on the fly
@@ -567,7 +567,7 @@ void Fl_Nix_System_Driver::remove_fd(int n, int events) {
 #  endif
 }
 
-void Fl_Nix_System_Driver::remove_fd(int n) {
+void Fl_Unix_System_Driver::remove_fd(int n) {
   remove_fd(n, -1);
 }
 
@@ -581,7 +581,7 @@ void (*fl_unlock_function)() = nothing;
 // This is never called with time_to_wait < 0.0:
 // It should return negative on error, 0 if nothing happens before
 // timeout, and >0 if any callbacks were done.
-int Fl_Nix_System_Driver::poll_or_select_with_delay(double time_to_wait) {
+int Fl_Unix_System_Driver::poll_or_select_with_delay(double time_to_wait) {
 #  if !USE_POLL
     fd_set fdt[3];
     fdt[0] = fdsets[0];
@@ -627,7 +627,7 @@ int Fl_Nix_System_Driver::poll_or_select_with_delay(double time_to_wait) {
     return n;
 }
 
-int Fl_Nix_System_Driver::poll_or_select() {
+int Fl_Unix_System_Driver::poll_or_select() {
   if (!nfds) return 0; // nothing to select or poll
 #  if USE_POLL
   return ::poll(pollfds, nfds, 0);
@@ -692,13 +692,13 @@ static void elapse_timeouts() {
 static double missed_timeout_by;
 
 
-void Fl_Nix_System_Driver::add_timeout(double time, Fl_Timeout_Handler cb, void *argp) {
+void Fl_Unix_System_Driver::add_timeout(double time, Fl_Timeout_Handler cb, void *argp) {
   elapse_timeouts();
   missed_timeout_by = 0;
   repeat_timeout(time, cb, argp);
 }
 
-void Fl_Nix_System_Driver::repeat_timeout(double time, Fl_Timeout_Handler cb, void *argp) {
+void Fl_Unix_System_Driver::repeat_timeout(double time, Fl_Timeout_Handler cb, void *argp) {
   time += missed_timeout_by; if (time < -.05) time = 0;
   Timeout* t = free_timeout;
   if (t) {
@@ -719,7 +719,7 @@ void Fl_Nix_System_Driver::repeat_timeout(double time, Fl_Timeout_Handler cb, vo
 /**
   Returns true if the timeout exists and has not been called yet.
 */
-int Fl_Nix_System_Driver::has_timeout(Fl_Timeout_Handler cb, void *argp) {
+int Fl_Unix_System_Driver::has_timeout(Fl_Timeout_Handler cb, void *argp) {
   for (Timeout* t = first_timeout; t; t = t->next)
     if (t->cb == cb && t->arg == argp) return 1;
   return 0;
@@ -732,7 +732,7 @@ int Fl_Nix_System_Driver::has_timeout(Fl_Timeout_Handler cb, void *argp) {
   \note This version removes all matching timeouts, not just the first one.
         This may change in the future.
 */
-void Fl_Nix_System_Driver::remove_timeout(Fl_Timeout_Handler cb, void *argp) {
+void Fl_Unix_System_Driver::remove_timeout(Fl_Timeout_Handler cb, void *argp) {
   for (Timeout** p = &first_timeout; *p;) {
     Timeout* t = *p;
     if (t->cb == cb && (t->arg == argp || !argp)) {
@@ -746,7 +746,7 @@ void Fl_Nix_System_Driver::remove_timeout(Fl_Timeout_Handler cb, void *argp) {
 }
 
 
-double Fl_Nix_System_Driver::wait(double time_to_wait)
+double Fl_Unix_System_Driver::wait(double time_to_wait)
 {
   static char in_idle;
 
@@ -782,7 +782,7 @@ double Fl_Nix_System_Driver::wait(double time_to_wait)
   if (first_timeout && first_timeout->time < time_to_wait)
     time_to_wait = first_timeout->time;
 //fprintf(stderr,"time_to_wait=%g\n", time_to_wait);
-  static Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+  static Fl_Unix_System_Driver *sys_dr = (Fl_Unix_System_Driver*)Fl::system_driver();
   if (time_to_wait <= 0.0) {
     // do flush second so that the results of events are visible:
     int ret = sys_dr->poll_or_select_with_delay(0.0);
@@ -802,7 +802,7 @@ double Fl_Nix_System_Driver::wait(double time_to_wait)
 }
 
 
-int Fl_Nix_System_Driver::ready()
+int Fl_Unix_System_Driver::ready()
 {
   if (first_timeout) {
     elapse_timeouts();
@@ -810,7 +810,7 @@ int Fl_Nix_System_Driver::ready()
   } else {
     reset_clock = 1;
   }
-  Fl_Nix_System_Driver *sys_dr = (Fl_Nix_System_Driver*)Fl::system_driver();
+  Fl_Unix_System_Driver *sys_dr = (Fl_Unix_System_Driver*)Fl::system_driver();
   return sys_dr->poll_or_select();
 }
 
@@ -832,7 +832,7 @@ static void write_int(unsigned char **cp, int i) {
 }
 
 
-unsigned char *Fl_Nix_System_Driver::create_bmp(const unsigned char *data, int W, int H, int *return_size) {
+unsigned char *Fl_Unix_System_Driver::create_bmp(const unsigned char *data, int W, int H, int *return_size) {
   int R = ((3*W+3)/4) * 4; // the number of bytes per row, rounded up to multiple of 4
   int s=H*R;
   int fs=14+40+s;
@@ -884,7 +884,7 @@ static void read_int(uchar *c, int& i) {
 
 
 // turn BMP image FLTK produced by create_bmp() back to Fl_RGB_Image
-Fl_RGB_Image *Fl_Nix_System_Driver::own_bmp_to_RGB(char *bmp) {
+Fl_RGB_Image *Fl_Unix_System_Driver::own_bmp_to_RGB(char *bmp) {
   int w, h;
   read_int((uchar*)bmp + 18, w);
   read_int((uchar*)bmp + 22, h);

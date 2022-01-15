@@ -18,11 +18,11 @@
 #ifndef FL_WAYLAND_SYSTEM_DRIVER_H
 #define FL_WAYLAND_SYSTEM_DRIVER_H
 
-#include "../Nix/Fl_Nix_System_Driver.H"
+#include "../Unix/Fl_Unix_System_Driver.H"
 
-class FL_EXPORT Fl_Wayland_System_Driver : public Fl_Nix_System_Driver {
+class FL_EXPORT Fl_Wayland_System_Driver : public Fl_Unix_System_Driver {
 public:
-  Fl_Wayland_System_Driver() : Fl_Nix_System_Driver() {
+  Fl_Wayland_System_Driver() : Fl_Unix_System_Driver() {
     // Wayland system driver uses the default key table
   }
   // this one is in Fl_wayland.cxx
