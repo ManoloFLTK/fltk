@@ -569,6 +569,9 @@ void Fl_Wayland_Window_Driver::size_range() {
         if (minw() >= maxw() || minh() >= maxh()) {
           libdecor_frame_unset_capabilities(wl_win->frame, LIBDECOR_ACTION_RESIZE);
         }
+      } else if (maxw() == 0 && maxh() == 0 && pWindow->resizable()) {
+        libdecor_frame_set_capabilities(wl_win->frame, LIBDECOR_ACTION_RESIZE);
+        libdecor_frame_set_capabilities(wl_win->frame, LIBDECOR_ACTION_FULLSCREEN);
       }
     } else if (wl_win->kind == UNFRAMED && wl_win->xdg_toplevel) {
       xdg_toplevel_set_min_size(wl_win->xdg_toplevel, minw()*f, minh()*f);
