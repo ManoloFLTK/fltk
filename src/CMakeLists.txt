@@ -553,15 +553,17 @@ if (OPTION_USE_WAYLAND)
   )
   list (APPEND STATIC_FILES "xdg-shell-protocol.c")
   list (APPEND SHARED_FILES "xdg-shell-protocol.c")
-  add_custom_command(
-    OUTPUT xdg-decoration-protocol.c xdg-decoration-client-protocol.h
-    COMMAND wayland-scanner private-code /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml xdg-decoration-protocol.c
-    COMMAND wayland-scanner client-header /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml xdg-decoration-client-protocol.h
-    DEPENDS /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
-    VERBATIM
-  )
-  list (APPEND STATIC_FILES "xdg-decoration-protocol.c")
-  list (APPEND SHARED_FILES "xdg-decoration-protocol.c")
+  if (NOT OPTION_USE_SYSTEM_LIBDECOR)
+    add_custom_command(
+      OUTPUT xdg-decoration-protocol.c xdg-decoration-client-protocol.h
+      COMMAND wayland-scanner private-code /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml xdg-decoration-protocol.c
+      COMMAND wayland-scanner client-header /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml xdg-decoration-client-protocol.h
+      DEPENDS /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
+      VERBATIM
+    )
+    list (APPEND STATIC_FILES "xdg-decoration-protocol.c")
+    list (APPEND SHARED_FILES "xdg-decoration-protocol.c")
+  endif (NOT OPTION_USE_SYSTEM_LIBDECOR)
   add_custom_command(
     OUTPUT text-input-protocol.c text-input-client-protocol.h
     COMMAND wayland-scanner private-code /usr/share/wayland-protocols/unstable/text-input/text-input-unstable-v3.xml text-input-protocol.c
