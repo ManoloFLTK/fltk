@@ -441,6 +441,9 @@ if (OPTION_USE_WAYLAND)
   else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/../libdecor/src   -DLIBDECOR_PLUGIN_API_VERSION=1 -DLIBDECOR_PLUGIN_DIR=\\\"Unused\\\" ")
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_SYSTEM_LIBDECOR=0")
+    if (GTK_FOUND)
+      set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_GTK")
+    endif (GTK_FOUND)
   endif (OPTION_USE_SYSTEM_LIBDECOR)
 
   list (APPEND CFILES
@@ -544,6 +547,10 @@ if (USE_XFT)
 endif (USE_XFT)
 
 if (OPTION_USE_WAYLAND)
+  if (GTK_FOUND)
+    list (APPEND OPTIONAL_LIBS ${HAVE_LIB_GTK} ${HAVE_LIB_GDK} ${HAVE_LIB_GLIB} ${HAVE_LIB_GIO})
+    #message (STATUS "OPTIONAL_LIBS=" ${OPTIONAL_LIBS}) 
+  endif (GTK_FOUND)
   add_custom_command(
     OUTPUT xdg-shell-protocol.c xdg-shell-client-protocol.h
     COMMAND wayland-scanner private-code /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol.c

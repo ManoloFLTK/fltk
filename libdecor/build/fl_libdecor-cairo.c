@@ -127,20 +127,33 @@ struct libdecor_frame;
 extern void fl_libdecor_frame_clamp_min_content_size(struct libdecor_frame *frame,
                                                    int content_width, int content_height);
 #define libdecor_frame_set_min_content_size fl_libdecor_frame_clamp_min_content_size
-#include "../src/plugins/cairo/libdecor-cairo.c"
+#ifdef HAVE_GTK
+#  include "../src/plugins/gtk/libdecor-gtk.c"
+#else
+#  include "../src/plugins/cairo/libdecor-cairo.c"
+#endif
 #undef libdecor_frame_set_min_content_size
 
 #endif // USE_SYSTEM_LIBDECOR
 
-/*
- FLTK-added utility function to give access to the pixel array representing
- the titlebar of a window decorated by the cairo plugin of libdecor.
-   frame: a libdecor-defined pointer given by fl_xid(win)->frame (with Fl_Window *win);
-   *width, *height: returned assigned to the width and height in pixels of the titlebar;
-   *stride: returned assigned to the number of bytes per line of the pixel array;
-   return value: start of the pixel array, which is in BGRA order.
- */
-unsigned char *fl_libdecor_cairo_titlebar_buffer(struct libdecor_frame *frame,
+
+#ifdef HAVE_GTK
+
+static unsigned char *gtk_titlebar_buffer(struct libdecor_frame *frame,
+                                                 int *width, int *height, int *stride)
+{
+  struct libdecor_frame_gtk *lfg = (struct libdecor_frame_gtk *)frame;
+  struct border_component *bc = &lfg->headerbar;
+  struct buffer *buffer = bc->buffer;
+  *width = buffer->buffer_width;
+  *height = buffer->buffer_height;
+  *stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
+  return (unsigned char*)buffer->data;
+}
+
+#else
+
+static unsigned char *cairo_titlebar_buffer(struct libdecor_frame *frame,
                                                  int *width, int *height, int *stride)
 {
   struct libdecor_frame_cairo *lfc = (struct libdecor_frame_cairo *)frame;
@@ -150,4 +163,24 @@ unsigned char *fl_libdecor_cairo_titlebar_buffer(struct libdecor_frame *frame,
   *height = buffer->buffer_height;
   *stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
   return (unsigned char*)buffer->data;
+}
+
+#endif // HAVE_GTK
+
+/*
+ FLTK-added utility function to give access to the pixel array representing
+ the titlebar of a window decorated by the cairo plugin of libdecor.
+   frame: a libdecor-defined pointer given by fl_xid(win)->frame (with Fl_Window *win);
+   *width, *height: returned assigned to the width and height in pixels of the titlebar;
+   *stride: returned assigned to the number of bytes per line of the pixel array;
+   return value: start of the pixel array, which is in BGRA order.
+ */
+unsigned char *fl_libdecor_titlebar_buffer(struct libdecor_frame *frame,
+                                                 int *width, int *height, int *stride)
+{
+#ifdef HAVE_GTK
+  return gtk_titlebar_buffer(frame, width, height, stride);
+#else
+  return cairo_titlebar_buffer(frame, width, height, stride);
+#endif
 }

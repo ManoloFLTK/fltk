@@ -45,7 +45,7 @@ struct cursor_image { // as in wayland-cursor.c of the Wayland project source co
 };
 
 extern "C" {
-  uchar *fl_libdecor_cairo_titlebar_buffer(struct libdecor_frame *frame, int *w, int *h, int *stride);
+  uchar *fl_libdecor_titlebar_buffer(struct libdecor_frame *frame, int *w, int *h, int *stride);
   bool libdecor_configuration_get_window_size(struct libdecor_configuration *configuration,
                int *width, int *height);
 }
@@ -342,7 +342,7 @@ void Fl_Wayland_Window_Driver::capture_titlebar_and_borders(Fl_RGB_Image*& top, 
   int htop = pWindow->decorated_h() - pWindow->h();
   struct wld_window *wwin = fl_xid(pWindow);
   int width, height, stride;
-  uchar *cairo_data = fl_libdecor_cairo_titlebar_buffer(wwin->frame, &width, &height, &stride);
+  uchar *cairo_data = fl_libdecor_titlebar_buffer(wwin->frame, &width, &height, &stride);
   uchar *data = new uchar[width * height * 3];
   uchar *p = data;
   for (int j = 0; j < height; j++) {
