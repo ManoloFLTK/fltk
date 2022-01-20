@@ -343,6 +343,7 @@ void Fl_Wayland_Window_Driver::capture_titlebar_and_borders(Fl_RGB_Image*& top, 
   struct wld_window *wwin = fl_xid(pWindow);
   int width, height, stride;
   uchar *cairo_data = fl_libdecor_titlebar_buffer(wwin->frame, &width, &height, &stride);
+  if (!cairo_data) return;
   uchar *data = new uchar[width * height * 3];
   uchar *p = data;
   for (int j = 0; j < height; j++) {
