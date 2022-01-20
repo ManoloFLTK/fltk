@@ -824,6 +824,13 @@ static void handle_configure(struct libdecor_frame *frame,
   else state = libdecor_state_new(int(ceil(width/f)*f), int(ceil(height/f)*f));
   libdecor_frame_commit(frame, state, configuration);
   libdecor_state_free(state);
+  if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::MUTTER && Fl_Wayland_Window_Driver::titlebar_height == 0 && (window_state & LIBDECOR_WINDOW_STATE_ACTIVE) ) {
+    // useful with libdecor-gtk and fixed-size windows
+    int dummy;
+    fl_libdecor_titlebar_buffer(frame, &dummy, &Fl_Wayland_Window_Driver::titlebar_height, &dummy);
+    //printf("titlebar_height(2°)=%d\n", Fl_Wayland_Window_Driver::titlebar_height);
+  }
+
   window->fl_win->redraw();
     
   driver->in_handle_configure = true;
