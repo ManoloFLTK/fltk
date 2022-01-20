@@ -128,6 +128,18 @@ extern void fl_libdecor_frame_clamp_min_content_size(struct libdecor_frame *fram
                                                    int content_width, int content_height);
 #define libdecor_frame_set_min_content_size fl_libdecor_frame_clamp_min_content_size
 #ifdef HAVE_GTK
+
+#  include <gtk/gtk.h>
+static int gtk_widget_get_allocated_height_null(GtkWidget *wid) {
+  return wid ? gtk_widget_get_allocated_height(wid) : 0;
+}
+#  define gtk_widget_get_allocated_height gtk_widget_get_allocated_height_null
+
+static void gtk_widget_get_allocation_null(GtkWidget *wid, GtkAllocation *allocation) {
+  if (wid) gtk_widget_get_allocation(wid, allocation);
+}
+#  define gtk_widget_get_allocation gtk_widget_get_allocation_null
+
 #  include "../src/plugins/gtk/libdecor-gtk.c"
 #else
 #  include "../src/plugins/cairo/libdecor-cairo.c"
