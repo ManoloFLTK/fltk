@@ -248,23 +248,32 @@ static unsigned char *cairo_titlebar_buffer(struct libdecor_frame *frame,
 #endif // USE_SYSTEM_LIBDECOR || !defined(HAVE_GTK)
 
 
+/*
+ Although each plugin declares an exported global variable
+ LIBDECOR_EXPORT const struct libdecor_plugin_description libdecor_plugin_description;
+ these plugins are dlopen()'ed without the RTLD_GLOBAL flag. Consequently their symbols
+ are not discovered by dlsym(RTLD_DEFAULT, "symbol-name").
+ Too bad.
+ We therefore repeat the dlopen() for the same plugin with the RTLD_GLOBAL flag,
+ then dlsym() will report the address of symbol libdecor_plugin_description.
+ */
  char *fl_get_libdecor_plugin_description() {
-  const struct libdecor_plugin_description *plugin_description = NULL;
-  plugin_description = (const struct libdecor_plugin_description*)dlsym(RTLD_DEFAULT, "libdecor_plugin_description");
-  if (!plugin_description) {
-    char fname[PATH_MAX];
-    const char *dir = getenv("LIBDECOR_PLUGIN_DIR");
-    if (!dir) dir = LIBDECOR_PLUGIN_DIR;
-    if (dir) {
-      sprintf(fname, "%s/libdecor-gtk.so", dir);
-      void *dl = dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
-      if (!dl) {
-        sprintf(fname, "%s/libdecor-cairo.so", dir);
-        dl = dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
-      }
-      if (dl) plugin_description = (const struct libdecor_plugin_description*)dlsym(dl, "libdecor_plugin_description");
+   const struct libdecor_plugin_description *plugin_description = NULL;
+#if USE_SYSTEM_LIBDECOR
+   char fname[PATH_MAX];
+   const char *dir = getenv("LIBDECOR_PLUGIN_DIR");
+   if (!dir) dir = LIBDECOR_PLUGIN_DIR;
+   sprintf(fname, "%s/libdecor-gtk.so", dir);
+   void *dl = dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
+   if (!dl) {
+     sprintf(fname, "%s/libdecor-cairo.so", dir);
+     dl = dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
     }
-  }
+   if (dl) plugin_description = (const struct libdecor_plugin_description*)dlsym(dl, "libdecor_plugin_description");
+#else
+   extern const struct libdecor_plugin_description libdecor_plugin_description;
+   plugin_description = &libdecor_plugin_description;
+#endif
   return plugin_description ? plugin_description->description : NULL;
 }
 
