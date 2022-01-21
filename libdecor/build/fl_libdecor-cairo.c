@@ -131,7 +131,7 @@ extern void fl_libdecor_frame_clamp_min_content_size(struct libdecor_frame *fram
 
 #  include <gtk/gtk.h>
 static int gtk_widget_get_allocated_height_null(GtkWidget *wid) {
-  return wid ? gtk_widget_get_allocated_height(wid) : 0;
+  return GTK_IS_WIDGET(wid) ? gtk_widget_get_allocated_height(wid) : 0;
 }
 #  define gtk_widget_get_allocated_height gtk_widget_get_allocated_height_null
 
@@ -141,7 +141,7 @@ static void gtk_widget_get_allocation_null(GtkWidget *wid, GtkAllocation *alloca
 #  define gtk_widget_get_allocation gtk_widget_get_allocation_null
 
 static void gtk_widget_destroy_null(GtkWidget *wid) {
-  if (wid) gtk_widget_destroy(wid);
+  if (GTK_IS_WIDGET(wid)) gtk_widget_destroy(wid);
 }
 #  define gtk_widget_destroy gtk_widget_destroy_null
 
