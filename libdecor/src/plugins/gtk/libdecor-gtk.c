@@ -1360,7 +1360,9 @@ draw_title_bar(struct libdecor_frame_gtk *frame_gtk)
 	gtk_widget_get_preferred_height(frame_gtk->header, NULL, &allocation.height);
 
 	int pref_width;
-	gtk_widget_get_preferred_width(frame_gtk->header, NULL, &pref_width);
+//******FLTK change here to fix crash of test/animated *******
+      //gtk_widget_get_preferred_width(frame_gtk->header, NULL, &pref_width);
+gtk_widget_get_preferred_width(frame_gtk->header, &pref_width, NULL);
 	libdecor_frame_set_min_content_size(&frame_gtk->frame, pref_width, 1);
 
 	gtk_widget_size_allocate(frame_gtk->header, &allocation);
