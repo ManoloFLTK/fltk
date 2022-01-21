@@ -1,21 +1,28 @@
+//
+// Interface with the libdecor library for the Fast Light Tool Kit (FLTK).
+//
+// Copyright 2022 by Bill Spitzak and others.
+//
+// This library is free software. Distribution and use rights are outlined in
+// the file "COPYING" which should have been included with this file.  If this
+// file is missing or damaged, see the license at:
+//
+//     https://www.fltk.org/COPYING.php
+//
+// Please see the following page on how to report bugs and issues:
+//
+//     https://www.fltk.org/bugs.php
+//
+
+#include <dlfcn.h>
+#include <string.h>
+
 #if USE_SYSTEM_LIBDECOR
 
-#include "../src/libdecor.h"
+#include "../src/libdecor-plugin.h"
 #include <pango/pangocairo.h>
 
-// these definitions are copied from libdecor/src/plugins/cairo/libdecor-cairo.c
-struct libdecor_frame_private;
-
-struct libdecor_frame {
-  struct libdecor_frame_private *priv;
-  struct wl_list link;
-};
-
-struct libdecor_plugin_private;
-
-struct libdecor_plugin {
-  struct libdecor_plugin_private *priv;
-};
+/* these definitions are copied from libdecor/src/plugins/cairo/libdecor-cairo.c */
 
 struct libdecor_plugin_cairo {
   struct libdecor_plugin plugin;
@@ -121,6 +128,53 @@ struct libdecor_frame_cairo {
   struct wl_list link;
 };
 
+/* Definitions inspired from libdecor-gtk.c */
+
+typedef struct _GtkWidget GtkWidget;
+enum header_element { HDR_NONE };
+typedef enum { GTK_STATE_FLAG_NORMAL = 0 } GtkStateFlags;
+
+struct border_component_gtk {
+  enum component type;
+  struct wl_surface *wl_surface;
+  struct wl_subsurface *wl_subsurface;
+  struct buffer *buffer;
+  bool opaque;
+  struct wl_list output_list;
+  int scale;
+  struct wl_list child_components; /* border_component::link */
+  struct wl_list link; /* border_component::child_components */
+};
+
+struct header_element_data {
+  const char* name;
+  enum header_element type;
+  GtkWidget *widget;
+  GtkStateFlags state;
+};
+
+struct libdecor_frame_gtk {
+  struct libdecor_frame frame;
+  struct libdecor_plugin_gtk *plugin_gtk;
+  int content_width;
+  int content_height;
+  enum libdecor_window_state window_state;
+  enum decoration_type decoration_type;
+  char *title;
+  enum libdecor_capabilities capabilities;
+  struct border_component_gtk *active;
+  struct border_component_gtk *focus;
+  struct border_component_gtk *grab;
+  bool shadow_showing;
+  struct border_component_gtk shadow;
+  GtkWidget *window; /* offscreen window for rendering */
+  GtkWidget *header; /* header bar with widgets */
+  struct border_component_gtk headerbar;
+  struct header_element_data hdr_focus;
+  cairo_surface_t *shadow_blur;
+  struct wl_list link;
+};
+
 #else // USE_SYSTEM_LIBDECOR
 
 struct libdecor_frame;
@@ -145,31 +199,34 @@ static void gtk_widget_destroy_null(GtkWidget *wid) {
 }
 #  define gtk_widget_destroy gtk_widget_destroy_null
 
+#  define border_component border_component_gtk
 #  include "../src/plugins/gtk/libdecor-gtk.c"
-#else
+
+#else // HAVE_GTK
 #  include "../src/plugins/cairo/libdecor-cairo.c"
-#endif
+#endif // HAVE_GTK
+
 #undef libdecor_frame_set_min_content_size
 
 #endif // USE_SYSTEM_LIBDECOR
 
 
-#ifdef HAVE_GTK
-
+#if USE_SYSTEM_LIBDECOR || defined(HAVE_GTK)
 static unsigned char *gtk_titlebar_buffer(struct libdecor_frame *frame,
                                                  int *width, int *height, int *stride)
 {
   struct libdecor_frame_gtk *lfg = (struct libdecor_frame_gtk *)frame;
-  struct border_component *bc = &lfg->headerbar;
+  struct border_component_gtk *bc = &lfg->headerbar;
   struct buffer *buffer = bc->buffer;
   *width = buffer->buffer_width;
   *height = buffer->buffer_height;
   *stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
   return (unsigned char*)buffer->data;
 }
+#endif // USE_SYSTEM_LIBDECOR || defined(HAVE_GTK)
 
-#else
 
+#if USE_SYSTEM_LIBDECOR || !defined(HAVE_GTK)
 static unsigned char *cairo_titlebar_buffer(struct libdecor_frame *frame,
                                                  int *width, int *height, int *stride)
 {
@@ -181,8 +238,29 @@ static unsigned char *cairo_titlebar_buffer(struct libdecor_frame *frame,
   *stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
   return (unsigned char*)buffer->data;
 }
+#endif // USE_SYSTEM_LIBDECOR || !defined(HAVE_GTK)
 
-#endif // HAVE_GTK
+
+ char *fl_get_libdecor_plugin_description() {
+  const struct libdecor_plugin_description *plugin_description = NULL;
+  plugin_description = (const struct libdecor_plugin_description*)dlsym(RTLD_DEFAULT, "libdecor_plugin_description");
+  if (!plugin_description) {
+    char fname[PATH_MAX];
+    const char *dir = getenv("LIBDECOR_PLUGIN_DIR");
+    if (!dir) dir = LIBDECOR_PLUGIN_DIR;
+    if (dir) {
+      sprintf(fname, "%s/libdecor-gtk.so", dir);
+      void *dl = dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
+      if (!dl) {
+        sprintf(fname, "%s/libdecor-cairo.so", dir);
+        dl = dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
+      }
+      if (dl) plugin_description = (const struct libdecor_plugin_description*)dlsym(dl, "libdecor_plugin_description");
+    }
+  }
+  return plugin_description ? plugin_description->description : NULL;
+}
+
 
 /*
  FLTK-added utility function to give access to the pixel array representing
@@ -190,14 +268,23 @@ static unsigned char *cairo_titlebar_buffer(struct libdecor_frame *frame,
    frame: a libdecor-defined pointer given by fl_xid(win)->frame (with Fl_Window *win);
    *width, *height: returned assigned to the width and height in pixels of the titlebar;
    *stride: returned assigned to the number of bytes per line of the pixel array;
-   return value: start of the pixel array, which is in BGRA order.
+   return value: start of the pixel array, which is in BGRA order, or NULL.
  */
 unsigned char *fl_libdecor_titlebar_buffer(struct libdecor_frame *frame,
                                                  int *width, int *height, int *stride)
 {
-#ifdef HAVE_GTK
-  return gtk_titlebar_buffer(frame, width, height, stride);
-#else
-  return cairo_titlebar_buffer(frame, width, height, stride);
+  static char *my_plugin = NULL;
+  if (!my_plugin) my_plugin = fl_get_libdecor_plugin_description();
+  //puts(my_plugin?my_plugin:"");
+#if USE_SYSTEM_LIBDECOR || defined(HAVE_GTK)
+  if (my_plugin && !strcmp(my_plugin, "GTK plugin")) {
+    return gtk_titlebar_buffer(frame, width, height, stride);
+  }
 #endif
+#if USE_SYSTEM_LIBDECOR || !defined(HAVE_GTK)
+  if (my_plugin && !strcmp(my_plugin, "libdecor plugin using Cairo")) {
+    return cairo_titlebar_buffer(frame, width, height, stride);
+  }
+#endif
+  return NULL;
 }
