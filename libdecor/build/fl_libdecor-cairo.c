@@ -140,6 +140,11 @@ static void gtk_widget_get_allocation_null(GtkWidget *wid, GtkAllocation *alloca
 }
 #  define gtk_widget_get_allocation gtk_widget_get_allocation_null
 
+static void gtk_widget_destroy_null(GtkWidget *wid) {
+  if (wid) gtk_widget_destroy(wid);
+}
+#  define gtk_widget_destroy gtk_widget_destroy_null
+
 #  include "../src/plugins/gtk/libdecor-gtk.c"
 #else
 #  include "../src/plugins/cairo/libdecor-cairo.c"
