@@ -200,6 +200,13 @@ static void gtk_widget_destroy_null(GtkWidget *wid) {
 #  define gtk_widget_destroy gtk_widget_destroy_null
 
 #  define border_component border_component_gtk
+
+// Fix error in libdecor-gtk.c
+void gtk_widget_get_preferred_width_fixed(GtkWidget* widget, gint* minimum_width, gint* preferred_width) {
+  gtk_widget_get_preferred_width(widget, minimum_width, preferred_width);
+}
+#  define gtk_widget_get_preferred_width(A, B, C) gtk_widget_get_preferred_width_fixed(A, C, B)
+
 #  include "../src/plugins/gtk/libdecor-gtk.c"
 
 #else // HAVE_GTK
