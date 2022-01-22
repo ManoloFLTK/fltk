@@ -1100,7 +1100,6 @@ void Fl_Wayland_Screen_Driver::open_display_platform() {
     Fl::warning("FLTK could not identify the type of the running Wayland compositor");
   }
   Fl::add_fd(wl_display_get_fd(wl_display), FL_READ, (Fl_FD_Handler)fd_callback, wl_display);
-  Fl_Wayland_Window_Driver::titlebar_height = (compositor == WESTON ? 24 : 0);
 }
 
 void Fl_Wayland_Screen_Driver::close_display() {

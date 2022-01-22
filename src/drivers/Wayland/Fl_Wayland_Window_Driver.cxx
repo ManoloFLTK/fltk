@@ -784,8 +784,6 @@ static void handle_configure(struct libdecor_frame *frame,
   }
   if ( libdecor_configuration_get_window_size(configuration, &tmpW, &tmpH) ) {
     driver->wait_for_expose_value = 0;
-    Fl_Wayland_Window_Driver::titlebar_height = tmpH - height;
-    //fprintf(stderr, "titlebar_height=%d ", Fl_Wayland_Window_Driver::titlebar_height);
   }
     
   if (width == 0) {
@@ -825,11 +823,10 @@ static void handle_configure(struct libdecor_frame *frame,
   else state = libdecor_state_new(int(ceil(width/f)*f), int(ceil(height/f)*f));
   libdecor_frame_commit(frame, state, configuration);
   libdecor_state_free(state);
-  if (libdecor_frame_is_visible(frame) && Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::MUTTER && Fl_Wayland_Window_Driver::titlebar_height == 0 && (window_state & LIBDECOR_WINDOW_STATE_ACTIVE) ) {
-    // useful with libdecor-gtk and fixed-size windows
+  if (libdecor_frame_is_visible(frame) && Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::KDE && Fl_Wayland_Window_Driver::titlebar_height == 0 && (window_state & LIBDECOR_WINDOW_STATE_ACTIVE) ) {
     int dummy;
     fl_libdecor_titlebar_buffer(frame, &dummy, &Fl_Wayland_Window_Driver::titlebar_height, &dummy);
-    //printf("titlebar_height(2°)=%d\n", Fl_Wayland_Window_Driver::titlebar_height);
+    //printf("titlebar_height=%d\n", Fl_Wayland_Window_Driver::titlebar_height);
   }
 
   window->fl_win->redraw();
