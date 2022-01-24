@@ -152,6 +152,8 @@ struct wld_window {
   enum Fl_Wayland_Window_Driver::kind kind;
   int configured_width;
   int configured_height;
+  int floating_width;
+  int floating_height;
   int scale;
 };
 

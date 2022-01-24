@@ -787,8 +787,9 @@ static void handle_configure(struct libdecor_frame *frame,
   }
     
   if (width == 0) {
-    width = window->fl_win->w() * f;
-    height = window->fl_win->h() * f;
+    width = window->floating_width;
+    height = window->floating_height;
+    //fprintf(stderr,"handle_configure: using floating %dx%d\n",width,height);
   }
   if (width < 128) width = 128; // enforce minimal size of decorated windows for libdecor
   if (height < 56) height = 56;
@@ -823,6 +824,11 @@ static void handle_configure(struct libdecor_frame *frame,
   else state = libdecor_state_new(int(ceil(width/f)*f), int(ceil(height/f)*f));
   libdecor_frame_commit(frame, state, configuration);
   libdecor_state_free(state);
+  if (libdecor_frame_is_floating(frame)) { // store floating dimensions
+     window->floating_width = int(ceil(width/f)*f);
+     window->floating_height = int(ceil(height/f)*f);
+     //fprintf(stderr,"set floating_width+height %dx%d\n",width,height);
+   }
   if (libdecor_frame_is_visible(frame) && Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::KDE && Fl_Wayland_Window_Driver::titlebar_height == 0 && (window_state & LIBDECOR_WINDOW_STATE_ACTIVE) ) {
     int dummy;
     fl_libdecor_titlebar_buffer(frame, &dummy, &Fl_Wayland_Window_Driver::titlebar_height, &dummy);
@@ -1068,7 +1074,10 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
       libdecor_frame_set_min_content_size(new_window->frame, 128, 56);// libdecor wants width ≥ 128 & height ≥ 56
     }
     libdecor_frame_map(new_window->frame);
-
+    float f = Fl::screen_scale(pWindow->screen_num());
+    new_window->floating_width = pWindow->w() * f;
+    new_window->floating_height = pWindow->h() * f;
+    
   } else if (pWindow->parent()) { // for subwindows (GL or non-GL)
     new_window->kind = SUBWINDOW;
     struct wld_window *parent = fl_xid(pWindow->window());
@@ -1435,6 +1444,10 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
           struct libdecor_state *state = libdecor_state_new(int(W * f), int(H * f));
           libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
           libdecor_state_free(state);
+          if (libdecor_frame_is_floating(fl_win->frame)) {
+            fl_win->floating_width = int(W*f);
+            fl_win->floating_height = int(H*f);
+          }
         }
       } else if (fl_win->kind == SUBWINDOW && fl_win->subsurface) { // a subwindow
         wl_subsurface_set_position(fl_win->subsurface, X * f, Y * f);
