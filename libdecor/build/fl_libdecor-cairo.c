@@ -225,22 +225,24 @@ static unsigned char *cairo_titlebar_buffer(struct libdecor_frame *frame,
  then dlsym() will report the address of symbol libdecor_plugin_description.
  */
  char *fl_get_libdecor_plugin_description() {
-   const struct libdecor_plugin_description *plugin_description = NULL;
+   static const struct libdecor_plugin_description *plugin_description = NULL;
+   if (!plugin_description) {
 #if USE_SYSTEM_LIBDECOR
-   char fname[PATH_MAX];
-   const char *dir = getenv("LIBDECOR_PLUGIN_DIR");
-   if (!dir) dir = LIBDECOR_PLUGIN_DIR;
-   sprintf(fname, "%s/libdecor-gtk.so", dir);
-   void *dl = dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
-   if (!dl) {
-     sprintf(fname, "%s/libdecor-cairo.so", dir);
-     dl = dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
-    }
-   if (dl) plugin_description = (const struct libdecor_plugin_description*)dlsym(dl, "libdecor_plugin_description");
+     char fname[PATH_MAX];
+     const char *dir = getenv("LIBDECOR_PLUGIN_DIR");
+     if (!dir) dir = LIBDECOR_PLUGIN_DIR;
+     sprintf(fname, "%s/libdecor-gtk.so", dir);
+     void *dl = dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
+     if (!dl) {
+       sprintf(fname, "%s/libdecor-cairo.so", dir);
+       dl = dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
+     }
+     if (dl) plugin_description = (const struct libdecor_plugin_description*)dlsym(dl, "libdecor_plugin_description");
 #else
-   extern const struct libdecor_plugin_description libdecor_plugin_description;
-   plugin_description = &libdecor_plugin_description;
+     extern const struct libdecor_plugin_description libdecor_plugin_description;
+     plugin_description = &libdecor_plugin_description;
 #endif
+  }
   return plugin_description ? plugin_description->description : NULL;
 }
 

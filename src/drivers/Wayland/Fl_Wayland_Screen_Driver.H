@@ -2,7 +2,7 @@
 // Definition of X11 Screen interface
 // for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 2010-2021 by Bill Spitzak and others.
+// Copyright 2010-2022 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -63,6 +63,8 @@ class FL_EXPORT Fl_Wayland_Screen_Driver : public Fl_Screen_Driver
   static int insertion_point_height;
   static bool insertion_point_location_is_valid;
 public:
+  static int minimum_window_width;
+  static int minimum_window_height;
   static void insertion_point_location(int x, int y, int height);
   static bool insertion_point_location(int *px, int *py, int *pwidth, int *pheight);
   int get_mouse_unscaled(int &xx, int &yy);

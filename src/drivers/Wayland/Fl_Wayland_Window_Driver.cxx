@@ -1,7 +1,7 @@
 //
 // Implementation of the Wayland window driver.
 //
-// Copyright 1998-2021 by Bill Spitzak and others.
+// Copyright 1998-2022 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -48,6 +48,7 @@ extern "C" {
   uchar *fl_libdecor_titlebar_buffer(struct libdecor_frame *frame, int *w, int *h, int *stride);
   bool libdecor_configuration_get_window_size(struct libdecor_configuration *configuration,
                int *width, int *height);
+  char *fl_get_libdecor_plugin_description();
 }
 
 #define fl_max(a,b) ((a) > (b) ? (a) : (b))
@@ -791,8 +792,9 @@ static void handle_configure(struct libdecor_frame *frame,
     height = window->floating_height;
     //fprintf(stderr,"handle_configure: using floating %dx%d\n",width,height);
   }
-  if (width < 128) width = 128; // enforce minimal size of decorated windows for libdecor
-  if (height < 56) height = 56;
+  // enforce minimal size of decorated windows for libdecor
+  if (width < Fl_Wayland_Screen_Driver::minimum_window_width) width = Fl_Wayland_Screen_Driver::minimum_window_width;
+  if (height < Fl_Wayland_Screen_Driver::minimum_window_height) height = Fl_Wayland_Screen_Driver::minimum_window_height;
   driver->in_handle_configure = true;
   window->fl_win->resize(0, 0, ceil(width / f), ceil(height / f));
   driver->in_handle_configure = false;
@@ -1062,6 +1064,12 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
   } else if ( pWindow->border() && !pWindow->parent() ) { // a decorated window
     new_window->kind = DECORATED;
     if (!scr_driver->libdecor_context) scr_driver->libdecor_context = libdecor_new(fl_display, &libdecor_iface);
+    if (!Fl_Wayland_Screen_Driver::minimum_window_width) {
+      if (!strcmp(fl_get_libdecor_plugin_description(), "libdecor plugin using Cairo")) {
+        Fl_Wayland_Screen_Driver::minimum_window_width = 128;
+        Fl_Wayland_Screen_Driver::minimum_window_height = 56;
+      } else Fl_Wayland_Screen_Driver::minimum_window_width = 1;
+    }
     new_window->frame = libdecor_decorate(scr_driver->libdecor_context, new_window->wl_surface,
                                               &libdecor_frame_iface, new_window);
 //fprintf(stderr, "makeWindow: libdecor_decorate=%p pos:%dx%d\n", new_window->frame, pWindow->x(), pWindow->y());
@@ -1071,7 +1079,7 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
       libdecor_frame_unset_capabilities(new_window->frame, LIBDECOR_ACTION_RESIZE);
       libdecor_frame_unset_capabilities(new_window->frame, LIBDECOR_ACTION_FULLSCREEN);
     } else {
-      libdecor_frame_set_min_content_size(new_window->frame, 128, 56);// libdecor wants width ≥ 128 & height ≥ 56
+      libdecor_frame_set_min_content_size(new_window->frame, Fl_Wayland_Screen_Driver::minimum_window_width, Fl_Wayland_Screen_Driver::minimum_window_height);
     }
     libdecor_frame_map(new_window->frame);
     float f = Fl::screen_scale(pWindow->screen_num());
@@ -1441,6 +1449,12 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
         fl_win->configured_width = W;
         fl_win->configured_height = H;
         if (!in_handle_configure && xdg_toplevel()) {
+          if (W < Fl_Wayland_Screen_Driver::minimum_window_width ||
+              H < Fl_Wayland_Screen_Driver::minimum_window_height) {
+            Fl::fatal("Attempt to resize a window to a size smaller than minimum: %dx%d",
+                      Fl_Wayland_Screen_Driver::minimum_window_width,
+                      Fl_Wayland_Screen_Driver::minimum_window_height);
+          }
           struct libdecor_state *state = libdecor_state_new(int(W * f), int(H * f));
           libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
           libdecor_state_free(state);
