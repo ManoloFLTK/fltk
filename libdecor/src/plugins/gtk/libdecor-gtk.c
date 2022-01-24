@@ -15,7 +15,7 @@
 
 #include <cairo/cairo.h>
 
-#include "../cairo/libdecor-cairo-blur.h"
+#include "../common/libdecor-cairo-blur.h"
 #include <poll.h>
 
 #include <gtk/gtk.h>
@@ -661,8 +661,8 @@ libdecor_plugin_gtk_frame_free(struct libdecor_plugin *plugin,
 	struct libdecor_frame_gtk *frame_gtk =
 		(struct libdecor_frame_gtk *) frame;
 
-	gtk_widget_destroy(frame_gtk->header);
-	gtk_widget_destroy(frame_gtk->window);
+	if (frame_gtk->header) gtk_widget_destroy(frame_gtk->header);
+	if (frame_gtk->window) gtk_widget_destroy(frame_gtk->window);
 
 	free_border_component(&frame_gtk->headerbar);
 	free_border_component(&frame_gtk->shadow);
@@ -944,9 +944,9 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 		return;
 	case HEADER:
 		*component_x = 0;
-		*component_y = -gtk_widget_get_allocated_height(frame_gtk->header);
+		*component_y = -title_height;
 		*component_width = gtk_widget_get_allocated_width(frame_gtk->header);
-		*component_height = gtk_widget_get_allocated_height(frame_gtk->header);
+		*component_height = title_height;
 		return;
 	}
 
@@ -1414,7 +1414,7 @@ set_window_geometry(struct libdecor_frame_gtk *frame_gtk)
 	struct libdecor_frame *frame = &frame_gtk->frame;
 	int x = 0, y = 0, width = 0, height = 0;
 
-	const int title_height = gtk_widget_get_allocated_height(frame_gtk->header);
+	const int title_height = frame_gtk->header ? gtk_widget_get_allocated_height(frame_gtk->header) : 0;
 
 	switch (frame_gtk->decoration_type) {
 	case DECORATION_TYPE_NONE:
@@ -1513,14 +1513,14 @@ libdecor_plugin_gtk_frame_property_changed(struct libdecor_plugin *plugin,
 	const char *new_title;
 
 	new_title = libdecor_frame_get_title(frame);
-	if (!streq(frame_gtk->title, new_title))
-		redraw_needed = true;
-	free(frame_gtk->title);
-	if (new_title)
-		frame_gtk->title = strdup(new_title);
-	else
-		frame_gtk->title = NULL;
-
+        if (frame_gtk->title && !streq(frame_gtk->title, new_title)) {
+          redraw_needed = true;
+          free(frame_gtk->title);
+          if (new_title)
+            frame_gtk->title = strdup(new_title);
+          else
+            frame_gtk->title = NULL;
+        }
 	if (frame_gtk->capabilities != libdecor_frame_get_capabilities(frame)) {
 		frame_gtk->capabilities = libdecor_frame_get_capabilities(frame);
 		redraw_needed = true;
@@ -1546,7 +1546,7 @@ libdecor_plugin_gtk_frame_translate_coordinate(struct libdecor_plugin *plugin,
 	*frame_x = content_x;
 	*frame_y = content_y;
 
-	*frame_y += gtk_widget_get_allocated_height(frame_gtk->header);
+	*frame_y += (frame_gtk->header ? gtk_widget_get_allocated_height(frame_gtk->header) : 0);
 }
 
 static void
@@ -1757,8 +1757,9 @@ libdecor_plugin_gtk_frame_get_window_size_for(
 	enum libdecor_window_state window_state =
 		libdecor_state_get_window_state (state);
 
-	const int title_bar_height = gtk_widget_get_allocated_height(
-					     ((struct libdecor_frame_gtk *)frame)->header);
+        struct libdecor_frame_gtk *frame_gtk = (struct libdecor_frame_gtk *)frame;
+	const int title_bar_height = (frame_gtk->header ? gtk_widget_get_allocated_height(
+					     frame_gtk->header) : 0);
 
 	switch (window_state_to_decoration_type(window_state)) {
 	case DECORATION_TYPE_NONE:
