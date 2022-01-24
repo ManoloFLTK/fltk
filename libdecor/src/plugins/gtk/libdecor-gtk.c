@@ -15,7 +15,7 @@
 
 #include <cairo/cairo.h>
 
-#include "../common/libdecor-cairo-blur.h"
+#include "../cairo/libdecor-cairo-blur.h"
 #include <poll.h>
 
 #include <gtk/gtk.h>
