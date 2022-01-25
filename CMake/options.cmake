@@ -573,7 +573,6 @@ endif ((X11_Xft_FOUND OR OPTION_USE_WAYLAND) AND OPTION_USE_PANGO)
 if (OPTION_USE_WAYLAND AND NOT OPTION_USE_SYSTEM_LIBDECOR)
   pkg_check_modules(GTK gtk+-3.0)
   #set (GTK_FOUND 0) #use this to get cairo titlebars rather than GTK
-  message (STATUS "GTK_FOUND=" ${GTK_FOUND})
   if (GTK_FOUND)
     include_directories (${GTK_INCLUDE_DIRS})
   endif (GTK_FOUND)
