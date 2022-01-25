@@ -1054,6 +1054,9 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
 //fprintf(stderr, "menu parent_win=%p pos:%dx%d size:%dx%d titlebar_height=%d\n", parent_win, pWindow->x(), pWindow->y(), pWindow->w(), pWindow->h(), titlebar_height);
     xdg_positioner_set_anchor_rect(positioner, pWindow->x() * f, pWindow->y() * f + titlebar_height, 1, 1);
     xdg_positioner_set_size(positioner, pWindow->w() * f , pWindow->h() * f );
+    xdg_positioner_set_constraint_adjustment (positioner,
+                                              (XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_Y |
+                                              XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_X) );
     xdg_positioner_set_anchor(positioner, XDG_POSITIONER_ANCHOR_TOP_LEFT);
     xdg_positioner_set_gravity(positioner, XDG_POSITIONER_GRAVITY_BOTTOM_RIGHT);
     new_window->xdg_popup = xdg_surface_get_popup(new_window->xdg_surface, parent, positioner);
