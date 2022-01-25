@@ -118,7 +118,8 @@ get_header_focus(const GtkHeaderBar *header_bar, const int x, const int y)
 		struct header_element_data elem =
 			find_widget_by_type(GTK_WIDGET(header_bar), elems[i]);
 		GtkAllocation allocation;
-		gtk_widget_get_allocation(GTK_WIDGET(elem.widget), &allocation);
+          /* FLTK change */
+		if (elem.widget) gtk_widget_get_allocation(GTK_WIDGET(elem.widget), &allocation);
 		if (elem.widget && in_region(&allocation, &x, &y)) {
 			return elem;
 		}
@@ -970,8 +971,8 @@ draw_header(struct libdecor_frame_gtk *frame_gtk,
 	/* background */
 	GtkAllocation allocation;
 	GtkStyleContext* style;
-
-	gtk_widget_get_allocation(GTK_WIDGET(frame_gtk->header), &allocation);
+/* FLTK change */
+	if (frame_gtk->header) gtk_widget_get_allocation(GTK_WIDGET(frame_gtk->header), &allocation);
 	style = gtk_widget_get_style_context(frame_gtk->header);
 	gtk_render_background(style, cr, allocation.x, allocation.y, allocation.width, allocation.height);
 	}
@@ -1359,9 +1360,10 @@ draw_title_bar(struct libdecor_frame_gtk *frame_gtk)
 	/* set default height */
 	gtk_widget_get_preferred_height(frame_gtk->header, NULL, &allocation.height);
 
-	int pref_width;
+	/* FLTK change
+        int pref_width;
         gtk_widget_get_preferred_width(frame_gtk->header, NULL, &pref_width);
-	libdecor_frame_set_min_content_size(&frame_gtk->frame, pref_width, 1);
+	libdecor_frame_set_min_content_size(&frame_gtk->frame, pref_width, 1);*/
 
 	gtk_widget_size_allocate(frame_gtk->header, &allocation);
 

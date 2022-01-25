@@ -567,10 +567,12 @@ void Fl_Wayland_Window_Driver::size_range() {
       libdecor_frame_set_min_content_size(wl_win->frame, minw()*f, minh()*f);
       if (maxw() && maxh()) {
         libdecor_frame_set_max_content_size(wl_win->frame, maxw()*f, maxh()*f);
+#if 0 // prevents maximize when native file chooser runs, but makes fluid app window non resizable
         libdecor_frame_unset_capabilities(wl_win->frame, LIBDECOR_ACTION_FULLSCREEN);
         if (minw() >= maxw() || minh() >= maxh()) {
           libdecor_frame_unset_capabilities(wl_win->frame, LIBDECOR_ACTION_RESIZE);
         }
+#endif
       } else if (maxw() == 0 && maxh() == 0 && pWindow->resizable()) {
         libdecor_frame_set_capabilities(wl_win->frame, LIBDECOR_ACTION_RESIZE);
         libdecor_frame_set_capabilities(wl_win->frame, LIBDECOR_ACTION_FULLSCREEN);
@@ -1068,7 +1070,10 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
       if (!strcmp(fl_get_libdecor_plugin_description(), "libdecor plugin using Cairo")) {
         Fl_Wayland_Screen_Driver::minimum_window_width = 128;
         Fl_Wayland_Screen_Driver::minimum_window_height = 56;
-      } else Fl_Wayland_Screen_Driver::minimum_window_width = 1;
+      } else {
+        Fl_Wayland_Screen_Driver::minimum_window_width = 134;
+        Fl_Wayland_Screen_Driver::minimum_window_height = 20;
+      }
     }
     new_window->frame = libdecor_decorate(scr_driver->libdecor_context, new_window->wl_surface,
                                               &libdecor_frame_iface, new_window);
@@ -1421,6 +1426,10 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
   if (is_a_move) force_position(1);
   else if (!is_a_resize && !is_a_move) return;
   if (is_a_resize) {
+    if (shown() && fl_xid(pWindow)->kind == DECORATED) {
+      if (W < Fl_Wayland_Screen_Driver::minimum_window_width) W = Fl_Wayland_Screen_Driver::minimum_window_width;
+      if (H < Fl_Wayland_Screen_Driver::minimum_window_height) H = Fl_Wayland_Screen_Driver::minimum_window_height;
+    }
     pWindow->Fl_Group::resize(X,Y,W,H);
 //fprintf(stderr, "resize: win=%p to %dx%d\n", pWindow, W, H);
     if (shown()) {pWindow->redraw();}
@@ -1449,12 +1458,6 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
         fl_win->configured_width = W;
         fl_win->configured_height = H;
         if (!in_handle_configure && xdg_toplevel()) {
-          if (W < Fl_Wayland_Screen_Driver::minimum_window_width ||
-              H < Fl_Wayland_Screen_Driver::minimum_window_height) {
-            Fl::fatal("Attempt to resize a window to a size smaller than minimum: %dx%d",
-                      Fl_Wayland_Screen_Driver::minimum_window_width,
-                      Fl_Wayland_Screen_Driver::minimum_window_height);
-          }
           struct libdecor_state *state = libdecor_state_new(int(W * f), int(H * f));
           libdecor_frame_commit(fl_win->frame, state, NULL); // necessary only if resize is initiated by prog
           libdecor_state_free(state);

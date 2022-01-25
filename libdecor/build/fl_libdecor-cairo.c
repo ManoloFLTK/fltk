@@ -178,30 +178,41 @@ struct libdecor_frame_gtk {
 #else // USE_SYSTEM_LIBDECOR
 
 struct libdecor_frame;
+#  ifdef HAVE_GTK
+#  include <gtk/gtk.h>
+#  include "../src/plugins/gtk/libdecor-gtk.c"
+#else
+#  define libdecor_frame_set_min_content_size fl_libdecor_frame_clamp_min_content_size
 extern void fl_libdecor_frame_clamp_min_content_size(struct libdecor_frame *frame,
                                                    int content_width, int content_height);
-#define libdecor_frame_set_min_content_size fl_libdecor_frame_clamp_min_content_size
 #  include "../src/plugins/cairo/libdecor-cairo.c"
-#undef libdecor_frame_set_min_content_size
+#  undef libdecor_frame_set_min_content_size
+#endif // HAVE_GTK
 
 #endif // USE_SYSTEM_LIBDECOR
 
 
-#if USE_SYSTEM_LIBDECOR
+#if USE_SYSTEM_LIBDECOR || defined(HAVE_GTK)
 static unsigned char *gtk_titlebar_buffer(struct libdecor_frame *frame,
                                                  int *width, int *height, int *stride)
 {
   struct libdecor_frame_gtk *lfg = (struct libdecor_frame_gtk *)frame;
-  struct border_component_gtk *bc = &lfg->headerbar;
+#if USE_SYSTEM_LIBDECOR
+  struct border_component_gtk *bc;
+#else
+  struct border_component *bc;
+#endif
+  bc = &lfg->headerbar;
   struct buffer *buffer = bc->buffer;
   *width = buffer->buffer_width;
   *height = buffer->buffer_height;
   *stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
   return (unsigned char*)buffer->data;
 }
-#endif // USE_SYSTEM_LIBDECOR
+#endif // USE_SYSTEM_LIBDECOR || defined(HAVE_GTK)
 
 
+#if USE_SYSTEM_LIBDECOR || !defined(HAVE_GTK)
 static unsigned char *cairo_titlebar_buffer(struct libdecor_frame *frame,
                                                  int *width, int *height, int *stride)
 {
@@ -213,7 +224,7 @@ static unsigned char *cairo_titlebar_buffer(struct libdecor_frame *frame,
   *stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
   return (unsigned char*)buffer->data;
 }
-
+#endif // USE_SYSTEM_LIBDECOR || !defined(HAVE_GTK)
 
 /*
  Although each plugin declares an exported global variable
@@ -242,6 +253,7 @@ static unsigned char *cairo_titlebar_buffer(struct libdecor_frame *frame,
      extern const struct libdecor_plugin_description libdecor_plugin_description;
      plugin_description = &libdecor_plugin_description;
 #endif
+     //puts(plugin_description->description);
   }
   return plugin_description ? plugin_description->description : NULL;
 }
@@ -260,14 +272,15 @@ unsigned char *fl_libdecor_titlebar_buffer(struct libdecor_frame *frame,
 {
   static char *my_plugin = NULL;
   if (!my_plugin) my_plugin = fl_get_libdecor_plugin_description();
-  //puts(my_plugin?my_plugin:"");
-#if USE_SYSTEM_LIBDECOR
+#if USE_SYSTEM_LIBDECOR || defined(HAVE_GTK)
   if (my_plugin && !strcmp(my_plugin, "GTK plugin")) {
     return gtk_titlebar_buffer(frame, width, height, stride);
   }
 #endif
+#if USE_SYSTEM_LIBDECOR || !defined(HAVE_GTK)
   if (my_plugin && !strcmp(my_plugin, "libdecor plugin using Cairo")) {
     return cairo_titlebar_buffer(frame, width, height, stride);
   }
+#endif
   return NULL;
 }

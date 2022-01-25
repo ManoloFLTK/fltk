@@ -87,7 +87,7 @@ These packages are necessary, in addition to those for usual X11-based platforms
 - libopengl-dev
 - libpango1.0-dev
 - libcairo2-dev
-
+- libgtk-3-dev <== with this, windows get a GTK-style titlebar
 
 4 DOCUMENT HISTORY
 ==================

@@ -446,6 +446,10 @@ if (OPTION_USE_WAYLAND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_SYSTEM_LIBDECOR=0")
   endif (OPTION_USE_SYSTEM_LIBDECOR)
 
+  if (GTK_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_GTK")
+  endif (GTK_FOUND)
+    
   list (APPEND CFILES
     xutf8/keysym2Ucs.c
     scandir_posix.c
@@ -584,6 +588,9 @@ if (OPTION_USE_WAYLAND)
     list (APPEND OPTIONAL_LIBS "-ldecor-0")
   endif (OPTION_USE_SYSTEM_LIBDECOR)
   list (APPEND OPTIONAL_LIBS "-lwayland-cursor -lwayland-client -lxkbcommon -ldl -ldbus-1")
+  if (GTK_FOUND)
+    list (APPEND OPTIONAL_LIBS ${GTK_LDFLAGS} )
+  endif (GTK_FOUND)
   if (NOT OPTION_BUILD_SHARED_LIBS)
     list (APPEND OPTIONAL_LIBS "-no-pie")
   endif (NOT OPTION_BUILD_SHARED_LIBS)
