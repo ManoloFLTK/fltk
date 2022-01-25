@@ -1009,6 +1009,8 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
 
       BUILD="WAYLAND"
       AC_DEFINE([FLTK_USE_WAYLAND])
+      CFLAGS="$CFLAGS -DUSE_SYSTEM_LIBDECOR=0"
+      CXXFLAGS="$CXXFLAGS -DUSE_SYSTEM_LIBDECOR=0"
       graphics="Wayland"
       LIBS="$LIBS $($PKGCONFIG --libs wayland-cursor) $($PKGCONFIG --libs wayland-client) $($PKGCONFIG --libs xkbcommon)"
       LIBS="$LIBS $($PKGCONFIG --libs dbus-1) -ldl"
@@ -1023,6 +1025,15 @@ AS_CASE([$host_os_gui], [cygwin* | mingw*], [
       AC_CHECK_HEADER([GL/glu.h], [
           AC_DEFINE([HAVE_GL_GLU_H])
           GLLIBS="$($PKGCONFIG --libs wayland-egl) $($PKGCONFIG --libs egl) $($PKGCONFIG --libs glu) $GLLIBS"
+      ])
+      
+      dnl Check for GTK-3 ...
+      gtk_found=no
+      CFLAGS="$($PKGCONFIG --cflags gtk+-3.0) $CFLAGS"
+      AC_CHECK_HEADERS([gtk/gtk.h], [
+          CFLAGS="$CFLAGS -DHAVE_GTK"
+          LIBS="$LIBS $($PKGCONFIG --libs gtk+-3.0)"
+          gtk_found=yes
       ])
         
       dnl Check for the Pango library ...
