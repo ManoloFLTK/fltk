@@ -68,6 +68,7 @@ window does nothing.
 placement on screen. It's possible, though, to position a popup window relatively to another
 window. This allows FLTK to properly position menu and tooltip windows. But Fl_Window::position()
 has no effect on other top-level windows.
+* FLTK currently doesn't prevent menu windows from expanding beyond screen borders.
 
 
 3 PLATFORM SPECIFIC NOTES
