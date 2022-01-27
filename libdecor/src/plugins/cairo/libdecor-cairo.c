@@ -1025,8 +1025,13 @@ ensure_border_surfaces(struct libdecor_frame_cairo *frame_cairo)
 	ensure_component(frame_cairo, &frame_cairo->shadow);
 
 	libdecor_frame_set_min_content_size(&frame_cairo->frame,
+#if 0 // original
 					    MAX(56, 4 * BUTTON_WIDTH),
 					    MAX(56, TITLE_HEIGHT + 1));
+#else // *FLTK*
+					    0,  // width
+					    1); // height
+#endif
 }
 
 static void

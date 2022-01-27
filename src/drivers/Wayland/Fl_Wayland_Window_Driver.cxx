@@ -1078,13 +1078,13 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
   } else if ( pWindow->border() && !pWindow->parent() ) { // a decorated window
     new_window->kind = DECORATED;
     if (!scr_driver->libdecor_context) scr_driver->libdecor_context = libdecor_new(fl_display, &libdecor_iface);
-    if (!Fl_Wayland_Screen_Driver::minimum_window_width) {
-      if (!strcmp(fl_get_libdecor_plugin_description(), "libdecor plugin using Cairo")) {
-        Fl_Wayland_Screen_Driver::minimum_window_width = 128;
-        Fl_Wayland_Screen_Driver::minimum_window_height = 56;
+    if (Fl_Wayland_Screen_Driver::minimum_window_width < 0) {
+      if (!strcmp(fl_get_libdecor_plugin_description(), "GTK plugin")) {
+        Fl_Wayland_Screen_Driver::minimum_window_width  =   134;
+        Fl_Wayland_Screen_Driver::minimum_window_height =   1;
       } else {
-        Fl_Wayland_Screen_Driver::minimum_window_width = 134;
-        Fl_Wayland_Screen_Driver::minimum_window_height = 20;
+        Fl_Wayland_Screen_Driver::minimum_window_width  =   0;
+        Fl_Wayland_Screen_Driver::minimum_window_height =   1;
       }
     }
     new_window->frame = libdecor_decorate(scr_driver->libdecor_context, new_window->wl_surface,

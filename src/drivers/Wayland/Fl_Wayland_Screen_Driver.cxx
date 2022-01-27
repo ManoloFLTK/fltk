@@ -556,7 +556,7 @@ int Fl_Wayland_Screen_Driver::insertion_point_y = 0;
 int Fl_Wayland_Screen_Driver::insertion_point_width = 0;
 int Fl_Wayland_Screen_Driver::insertion_point_height = 0;
 bool Fl_Wayland_Screen_Driver::insertion_point_location_is_valid = false;
-int Fl_Wayland_Screen_Driver::minimum_window_width = 0;
+int Fl_Wayland_Screen_Driver::minimum_window_width = -1;
 int Fl_Wayland_Screen_Driver::minimum_window_height = 1;
 
 
