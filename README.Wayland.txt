@@ -69,6 +69,7 @@ placement on screen. It's possible, though, to position a popup window relativel
 window. This allows FLTK to properly position menu and tooltip windows. But Fl_Window::position()
 has no effect on other top-level windows.
 * FLTK currently doesn't prevent menu windows from expanding beyond screen borders.
+* With GTK-style window titlebars, the minimum width of a window is currently set at 134 pixels.
 
 
 3 PLATFORM SPECIFIC NOTES
