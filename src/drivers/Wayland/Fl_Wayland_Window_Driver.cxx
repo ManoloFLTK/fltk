@@ -779,16 +779,6 @@ static void handle_configure(struct libdecor_frame *frame,
     width = 0;
     height = 0;
   }
-
-  int tmpW, tmpH;
-// under KDE, libdecor_configuration_get_window_size() always returns false,
-// and we let the titlebar height to 0
-  if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KDE && height == 0) {
-    if (window->configured_width) driver->wait_for_expose_value = 0;
-  }
-  if ( libdecor_configuration_get_window_size(configuration, &tmpW, &tmpH) ) {
-    driver->wait_for_expose_value = 0;
-  }
     
   if (width == 0) {
     width = window->floating_width;
@@ -809,6 +799,9 @@ static void handle_configure(struct libdecor_frame *frame,
   }
   window->configured_width = ceil(width / f);
   window->configured_height = ceil(height / f);
+  if (Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::WESTON) {
+    driver->wait_for_expose_value = 0;
+  }
 //fprintf(stderr, "handle_configure fl_win=%p pos:%dx%d size:%dx%d state=%x wait_for_expose_value=%d \n", window->fl_win, window->fl_win->x(), window->fl_win->y(), width,height,window_state,driver->wait_for_expose_value);
 
 /* We would like to do FL_HIDE when window is minimized but :
