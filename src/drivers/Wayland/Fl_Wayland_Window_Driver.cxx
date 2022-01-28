@@ -1079,7 +1079,8 @@ Fl_X *Fl_Wayland_Window_Driver::makeWindow()
     new_window->kind = DECORATED;
     if (!scr_driver->libdecor_context) scr_driver->libdecor_context = libdecor_new(fl_display, &libdecor_iface);
     if (Fl_Wayland_Screen_Driver::minimum_window_width < 0) {
-      if (!strcmp(fl_get_libdecor_plugin_description(), "GTK plugin")) {
+      const char *description = fl_get_libdecor_plugin_description();
+      if (description && !strcmp(description, "GTK plugin")) {
         Fl_Wayland_Screen_Driver::minimum_window_width  =   134;
         Fl_Wayland_Screen_Driver::minimum_window_height =   1;
       } else {

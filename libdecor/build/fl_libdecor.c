@@ -26,8 +26,20 @@ LIBDECOR_EXPORT void libdecor_frame_set_minimized(struct libdecor_frame *frame)
 extern const struct libdecor_plugin_description libdecor_plugin_description;
 
 /*
- FLTK modifies libdecor's libdecor_new() function so it uses the plugin implemented in libdecor-cairo.c
- to decorate windows. No shared library is searched. No shared library is necessary.
+ By default, FLTK modifies libdecor's libdecor_new() function to determine the plugin as follows :
+ 1) the directory pointed by environment variable LIBDECOR_PLUGIN_DIR or, in absence of this variable,
+    by -DLIBDECOR_PLUGIN_DIR=xxx at build time is searched for a libdecor plugin;
+ 2) if this directory does not exist or contains no plugin, the built-in plugin is used.
+    * if FLTK was built with package libgtk-3-dev, the GTK plugin is used
+    * if FLTK was built without package libgtk-3-dev, the Cairo plugin is used
+ 
+ If FLTK was built with OPTION_USE_SYSTEM_LIBDECOR turned ON, the present modification
+ isn't compiled, so the plugin-searching algorithm of libdecor_new() in libdecor-0.so is used.
+ This corresponds to step 1) above and to use no titlebar is no plugin is found.
+ 
+ N.B.: only the system package is built with a meaningful value of -DLIBDECOR_PLUGIN_DIR=
+ so a plugin may be loaded that way only if FLTK was built with OPTION_USE_SYSTEM_LIBDECOR turned ON.
+ 
  */
 LIBDECOR_EXPORT struct libdecor *libdecor_new(struct wl_display *wl_display, struct libdecor_interface *iface)
 {
@@ -41,8 +53,15 @@ LIBDECOR_EXPORT struct libdecor *libdecor_new(struct wl_display *wl_display, str
   context->init_callback = wl_display_sync(context->wl_display);
   wl_callback_add_listener(context->init_callback, &init_wl_display_callback_listener, context);
   wl_list_init(&context->frames);
-
-  context->plugin = libdecor_plugin_description.constructor(context);
+  // attempt to dynamically load a libdecor plugin with dlopen()
+  FILE *old_stderr = stderr;
+  stderr = fopen("/dev/null", "w+"); // avoid "Couldn't open plugin directory" messages
+  if (init_plugins(context) != 0) { // no plugin loaded yet
+    // use built-in plugin
+    context->plugin = libdecor_plugin_description.constructor(context);
+  }
+  fclose(stderr); // restore stderr as it was before
+  stderr = old_stderr;
 
   wl_display_flush(wl_display);
   return context;
