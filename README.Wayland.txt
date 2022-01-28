@@ -81,7 +81,7 @@ on the various supported Linux distributions.
     3.1 Debian and Derivatives (like Ubuntu)
     ----------------------------------------
 Under Debian, the Wayland platform requires version 11 (a.k.a. Bullseye) or more recent.
-Under Ubuntu, the Wayland platform is known to work with version 21.04 (hirsute) or more recent.
+Under Ubuntu, the Wayland platform is known to work with version 20.04 (focal fossa) or more recent.
 
 These packages are necessary, in addition to those for usual X11-based platforms :
 - libwayland-dev
