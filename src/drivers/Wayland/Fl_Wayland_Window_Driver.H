@@ -25,7 +25,6 @@
 #include "../../Fl_Window_Driver.H"
 #include <FL/Fl_Plugin.H>
 #include "Fl_Wayland_Screen_Driver.H"
-#include "../../../libdecor/src/libdecor.h"
 
 
 /*
@@ -157,7 +156,7 @@ struct wld_window {
   int floating_width;
   int floating_height;
   int scale;
-  enum libdecor_window_state state;
+  int state;
 };
 
 

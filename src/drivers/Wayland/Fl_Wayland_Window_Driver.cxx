@@ -847,7 +847,10 @@ static void handle_configure(struct libdecor_frame *frame,
 void Fl_Wayland_Window_Driver::wait_for_expose()
 {
   Window window = fl_xid(pWindow);
-  while (window && window->kind == DECORATED && !(window->state & LIBDECOR_WINDOW_STATE_ACTIVE)) {
+  while (window && (
+                    (window->kind == DECORATED && !(window->state & LIBDECOR_WINDOW_STATE_ACTIVE))
+    || (window->kind == UNFRAMED && window->state < 2)
+                    ) ) {
     Fl::wait();
   }
 }
@@ -919,6 +922,7 @@ static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel
     width = window->fl_win->w() * f;
     height = window->fl_win->h() * f;
   }
+  ++(window->state);
   window->fl_win->size(ceil(width / f), ceil(height / f));
   if (window->buffer && (ceil(width / f) != window->configured_width || ceil(height / f) != window->configured_height)) {
     Fl_Wayland_Graphics_Driver::buffer_release(window);
