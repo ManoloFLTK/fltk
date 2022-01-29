@@ -25,6 +25,7 @@
 #include "../../Fl_Window_Driver.H"
 #include <FL/Fl_Plugin.H>
 #include "Fl_Wayland_Screen_Driver.H"
+#include "../../../libdecor/src/libdecor.h"
 
 
 /*
@@ -134,6 +135,7 @@ public:
   virtual void free_icons();
   virtual void capture_titlebar_and_borders(Fl_RGB_Image*& top, Fl_RGB_Image*& left, Fl_RGB_Image*& bottom, Fl_RGB_Image*& right);
   virtual int scroll(int src_x, int src_y, int src_w, int src_h, int dest_x, int dest_y, void (*draw_area)(void*, int,int,int,int), void* data);
+  virtual void wait_for_expose();
 };
 
 
@@ -155,6 +157,7 @@ struct wld_window {
   int floating_width;
   int floating_height;
   int scale;
+  enum libdecor_window_state state;
 };
 
 

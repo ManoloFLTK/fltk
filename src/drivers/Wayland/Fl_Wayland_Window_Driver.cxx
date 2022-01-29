@@ -770,6 +770,7 @@ static void handle_configure(struct libdecor_frame *frame,
   }
   if (!libdecor_configuration_get_window_state(configuration, &window_state))
     window_state = LIBDECOR_WINDOW_STATE_NONE;
+  window->state = window_state;
 
   // Weston and KDE, on purpose, don't set the window width x height when xdg_toplevel_configure runs twice
   // during window creation (see https://gitlab.freedesktop.org/wayland/wayland-protocols/-/issues/6).
@@ -799,9 +800,7 @@ static void handle_configure(struct libdecor_frame *frame,
   }
   window->configured_width = ceil(width / f);
   window->configured_height = ceil(height / f);
-  if (Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::WESTON) {
-    driver->wait_for_expose_value = 0;
-  }
+  driver->wait_for_expose_value = 0;
 //fprintf(stderr, "handle_configure fl_win=%p pos:%dx%d size:%dx%d state=%x wait_for_expose_value=%d \n", window->fl_win, window->fl_win->x(), window->fl_win->y(), width,height,window_state,driver->wait_for_expose_value);
 
 /* We would like to do FL_HIDE when window is minimized but :
@@ -838,19 +837,19 @@ static void handle_configure(struct libdecor_frame *frame,
   driver->in_handle_configure = true;
   if (!window->fl_win->as_gl_window()) {
     driver->flush();
-    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON &&
-        driver->wait_for_expose_value) { // support of Fl_Window::wait_for_expose() under Weston
-      wl_callback* cb = wl_surface_frame(window->wl_surface);
-      wl_callback_add_listener(cb, &Fl_Wayland_Window_Driver::frame_ready_listener, &driver->wait_for_expose_value);
-      Fl_Wayland_Graphics_Driver::buffer_commit(window);
-    }
   } else {
-    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::WESTON) {
-       driver->wait_for_expose_value = 0;
-    }
     driver->Fl_Window_Driver::flush(); // GL window
   }
   driver->in_handle_configure = false;
+}
+
+
+void Fl_Wayland_Window_Driver::wait_for_expose()
+{
+  Window window = fl_xid(pWindow);
+  while (window && window->kind == DECORATED && !(window->state & LIBDECOR_WINDOW_STATE_ACTIVE)) {
+    Fl::wait();
+  }
 }
 
 

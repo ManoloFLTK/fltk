@@ -69,11 +69,7 @@ struct pointer_output {
  needs access to variable Fl_Wayland_Screen_Driver::compositor, part of libfltk.a. This is achieved
  calling FLTK function fl_libdecor_using_weston() which returns whether the running compositor
  is Weston.
- * Weston calls handle_configure() only once if a framed window is created in inactive state (e.g.,
- the second clock of test/clock). Thus, under Weston, the window's wait_for_expose_value is set to 0
- by the first call to handle_configure(), whereas it's done at the 2nd handle_configure with other
- compositors.
- 
+
 - Synchronization between drawing to buffer and committing buffer to screen.
  Before committing a new graphics scene for display, Wayland requires to make sure the compositor is
  ready for commit. FLTK uses frame callbacks for that.
@@ -703,9 +699,11 @@ fprintf(stderr, "key %s: sym: %-12s(%d) code:%u fl_win=%p, ", action, buf, sym, 
   // Send event to focus-containing top window as defined by FLTK,
   // otherwise send it to Wayland-defined focus window
   Fl_Window *win = ( Fl::focus() ? Fl::focus()->top_window() : Fl_Wayland_Screen_Driver::surface_to_window(seat->keyboard_surface) );
-  set_event_xy(win);
-  Fl::e_is_click = 0;
-  Fl::handle(event, win);
+  if (win) {
+    set_event_xy(win);
+    Fl::e_is_click = 0;
+    Fl::handle(event, win);
+  }
   key_repeat_data_t *key_repeat_data = new key_repeat_data_t;
   key_repeat_data->time = time;
   key_repeat_data->window = win;
