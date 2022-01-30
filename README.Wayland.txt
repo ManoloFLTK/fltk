@@ -83,16 +83,26 @@ on the various supported Linux distributions.
 Under Debian, the Wayland platform requires version 11 (a.k.a. Bullseye) or more recent.
 Under Ubuntu, the Wayland platform is known to work with version 20.04 (focal fossa) or more recent.
 
-These packages are necessary, in addition to those for usual X11-based platforms :
+These packages are necessary to build the FLTK library, in addition to those present
+in a basic Debian/Ubuntu distribution :
+- g++
+- gdb
+- make
+- git
+- autoconf
+- libglu1-mesa-dev
+- libpango1.0-dev
 - libwayland-dev
 - wayland-protocols
 - libdbus-1-dev
 - libxkbcommon-dev
-- libegl-dev
-- libopengl-dev
-- libpango1.0-dev
-- libcairo2-dev
-- libgtk-3-dev <== with this, windows get a GTK-style titlebar
+- libgtk-3-dev   <== with this, windows get a GTK-style titlebar
+- cmake          <== if you plan to build with CMake
+- cmake-qt-gui   <== if you plan to use the GUI of CMake
+
+These further packages are necessary to run FLTK apps under the Gnome-Wayland desktop:
+- gnome
+- gnome-session-wayland
 
 4 DOCUMENT HISTORY
 ==================
