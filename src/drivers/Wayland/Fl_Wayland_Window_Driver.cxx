@@ -49,6 +49,7 @@ extern "C" {
   bool libdecor_configuration_get_window_size(struct libdecor_configuration *configuration,
                int *width, int *height);
   char *fl_get_libdecor_plugin_description();
+  int fl_libdecor_use_SSD(struct libdecor_frame *frame);
 }
 
 #define fl_max(a,b) ((a) > (b) ? (a) : (b))
@@ -826,7 +827,10 @@ static void handle_configure(struct libdecor_frame *frame,
      window->floating_height = int(ceil(height/f)*f);
      //fprintf(stderr,"set floating_width+height %dx%d\n",width,height);
    }
-  if (libdecor_frame_is_visible(frame) && Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::KDE && Fl_Wayland_Window_Driver::titlebar_height == 0 && (window_state & LIBDECOR_WINDOW_STATE_ACTIVE) ) {
+  if (libdecor_frame_is_visible(frame) && Fl_Wayland_Window_Driver::titlebar_height == 0 &&
+      (window_state & LIBDECOR_WINDOW_STATE_ACTIVE) &&
+      !(window_state & LIBDECOR_WINDOW_STATE_FULLSCREEN) &&
+      !fl_libdecor_use_SSD(frame) ) {
     int dummy;
     fl_libdecor_titlebar_buffer(frame, &dummy, &Fl_Wayland_Window_Driver::titlebar_height, &dummy);
     //printf("titlebar_height=%d\n", Fl_Wayland_Window_Driver::titlebar_height);

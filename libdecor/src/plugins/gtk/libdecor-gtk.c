@@ -1730,8 +1730,8 @@ libdecor_plugin_gtk_configuration_get_content_size(
 
 	if (!libdecor_configuration_get_window_state(configuration, &state))
 		return false;
-
-	const int title_bar_height = gtk_widget_get_allocated_height(frame_gtk->header);
+/* FLTK */
+  const int title_bar_height = frame_gtk->header ? gtk_widget_get_allocated_height(frame_gtk->header) : 0;
 
 	switch (window_state_to_decoration_type(state)) {
 	case DECORATION_TYPE_NONE:
@@ -2279,7 +2279,8 @@ pointer_button(void *data,
 	else if (button == BTN_RIGHT &&
 		 state == WL_POINTER_BUTTON_STATE_PRESSED &&
 		 seat->pointer_focus == frame_gtk->headerbar.wl_surface) {
-	const int title_height = gtk_widget_get_allocated_height(frame_gtk->header);
+/* FLTK */
+          const int title_height = frame_gtk->header ? gtk_widget_get_allocated_height(frame_gtk->header) : 0;
 			libdecor_frame_show_window_menu(&frame_gtk->frame,
 							seat->wl_seat,
 							serial,

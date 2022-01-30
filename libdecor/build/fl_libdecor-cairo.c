@@ -284,3 +284,50 @@ unsigned char *fl_libdecor_titlebar_buffer(struct libdecor_frame *frame,
 #endif
   return NULL;
 }
+
+
+#include "xdg-decoration-client-protocol.h"
+#include "../src/libdecor.h"
+#include "../src/libdecor-plugin.h"
+
+/* these definitions are copied from libdecor/src/libdecor.c */
+
+struct libdecor_limits {
+  int min_width;
+  int min_height;
+  int max_width;
+  int max_height;
+};
+
+struct libdecor_frame_private {
+  int ref_count;
+  struct libdecor *context;
+  struct wl_surface *wl_surface;
+  struct libdecor_frame_interface *iface;
+  void *user_data;
+  struct xdg_surface *xdg_surface;
+  struct xdg_toplevel *xdg_toplevel;
+  struct zxdg_toplevel_decoration_v1 *toplevel_decoration;
+  bool pending_map;
+  struct {
+    char *app_id;
+    char *title;
+    struct libdecor_limits content_limits;
+    struct xdg_toplevel *parent;
+  } state;
+  struct libdecor_configuration *pending_configuration;
+  int content_width;
+  int content_height;
+  enum libdecor_window_state window_state;
+  enum zxdg_toplevel_decoration_v1_mode decoration_mode;
+  enum libdecor_capabilities capabilities;
+  struct libdecor_limits interactive_limits;
+  bool visible;
+};
+
+/* Reports whether we are using SSD (server-side decoration) */
+int fl_libdecor_use_SSD(struct libdecor_frame *frame) {
+/*printf("fl_libdecor_use_SSD()=%d\n",
+         frame->priv->decoration_mode == ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);*/
+  return (frame->priv->decoration_mode == ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+}
