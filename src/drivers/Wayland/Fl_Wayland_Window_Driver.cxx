@@ -865,6 +865,7 @@ static void handle_close(struct libdecor_frame *frame, void *user_data)
   struct wld_window* wl_win = (struct wld_window*)user_data;
   // This may be called while in Fl::flush() when GL windows are involved.
   // Thus, have the FL_CLOSE event sent by a timeout to leave Fl::flush().
+  // This seems to be no longer necessary with Debian bookworm
   Fl::add_timeout(0.001, (Fl_Timeout_Handler)delayed_close, wl_win->fl_win);
 }
 
