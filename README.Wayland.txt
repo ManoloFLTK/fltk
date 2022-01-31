@@ -97,6 +97,7 @@ in a basic Debian/Ubuntu distribution :
 - libdbus-1-dev
 - libxkbcommon-dev
 - libgtk-3-dev   <== with this, windows get a GTK-style titlebar
+- libglew-dev    <== necessary to use OpenGL version 3 or above
 - cmake          <== if you plan to build with CMake
 - cmake-qt-gui   <== if you plan to use the GUI of CMake
 
