@@ -16,13 +16,48 @@
 
 #include <dlfcn.h>
 #include <string.h>
+#include "../src/libdecor.h"
+#include "../src/libdecor-plugin.h"
+#include "xdg-decoration-client-protocol.h"
+#include <pango/pangocairo.h>
 
 #if USE_SYSTEM_LIBDECOR
 
-#include "../src/libdecor-plugin.h"
-#include <pango/pangocairo.h>
+enum component {NONE};
+enum decoration_type {DECORATION_TYPE_NONE};
 
-/* these definitions are copied from libdecor/src/plugins/cairo/libdecor-cairo.c */
+struct buffer { // identical in libdecor-cairo.c and libdecor-gtk.c
+  struct wl_buffer *wl_buffer;
+  bool in_use;
+  bool is_detached;
+
+  void *data;
+  size_t data_size;
+  int width;
+  int height;
+  int scale;
+  int buffer_width;
+  int buffer_height;
+};
+
+#else // USE_SYSTEM_LIBDECOR
+
+#  ifdef HAVE_GTK
+#    include <gtk/gtk.h>
+#    include "../src/plugins/gtk/libdecor-gtk.c"
+#  else
+#    define libdecor_frame_set_min_content_size fl_libdecor_frame_clamp_min_content_size
+extern void fl_libdecor_frame_clamp_min_content_size(struct libdecor_frame *frame,
+                                                   int content_width, int content_height);
+#    include "../src/plugins/cairo/libdecor-cairo.c"
+#    undef libdecor_frame_set_min_content_size
+#  endif // HAVE_GTK
+
+#endif // USE_SYSTEM_LIBDECOR
+
+
+#if USE_SYSTEM_LIBDECOR || HAVE_GTK
+/* these definitions derive from libdecor/src/plugins/cairo/libdecor-cairo.c */
 
 struct libdecor_plugin_cairo {
   struct libdecor_plugin plugin;
@@ -50,25 +85,12 @@ struct libdecor_plugin_cairo {
   PangoFontDescription *font;
 };
 
-struct buffer {
-  struct wl_buffer *wl_buffer;
-  bool in_use;
-  bool is_detached;
-
-  void *data;
-  size_t data_size;
-  int width;
-  int height;
-  int scale;
-  int buffer_width;
-  int buffer_height;
+enum composite_mode {
+  COMPOSITE_SERVER,
+  COMPOSITE_CLIENT,
 };
 
-enum component {Component};
-enum composite_mode {Composite_mode};
-enum decoration_type {Decoration_type};
-
-struct border_component {
+struct border_component_cairo {
   enum component type;
 
   bool is_hidden;
@@ -84,7 +106,7 @@ struct border_component {
   } server;
   struct {
     cairo_surface_t *image;
-    struct border_component *parent_component;
+    struct border_component_cairo *parent_component;
   } client;
 
   struct wl_list child_components; /* border_component::link */
@@ -107,19 +129,19 @@ struct libdecor_frame_cairo {
 
   enum libdecor_capabilities capabilities;
 
-  struct border_component *focus;
-  struct border_component *active;
-  struct border_component *grab;
+  struct border_component_cairo *focus;
+  struct border_component_cairo *active;
+  struct border_component_cairo *grab;
 
   bool shadow_showing;
-  struct border_component shadow;
+  struct border_component_cairo shadow;
 
   struct {
     bool is_showing;
-    struct border_component title;
-    struct border_component min;
-    struct border_component max;
-    struct border_component close;
+    struct border_component_cairo title;
+    struct border_component_cairo min;
+    struct border_component_cairo max;
+    struct border_component_cairo close;
   } title_bar;
 
   /* store pre-processed shadow tile */
@@ -127,8 +149,12 @@ struct libdecor_frame_cairo {
 
   struct wl_list link;
 };
+#endif
 
-/* Definitions inspired from libdecor-gtk.c */
+
+#if USE_SYSTEM_LIBDECOR || !HAVE_GTK
+
+/* Definitions derived from libdecor-gtk.c */
 
 typedef struct _GtkWidget GtkWidget;
 enum header_element { HDR_NONE };
@@ -175,29 +201,14 @@ struct libdecor_frame_gtk {
   struct wl_list link;
 };
 
-#else // USE_SYSTEM_LIBDECOR
-
-struct libdecor_frame;
-#  ifdef HAVE_GTK
-#  include <gtk/gtk.h>
-#  include "../src/plugins/gtk/libdecor-gtk.c"
-#else
-#  define libdecor_frame_set_min_content_size fl_libdecor_frame_clamp_min_content_size
-extern void fl_libdecor_frame_clamp_min_content_size(struct libdecor_frame *frame,
-                                                   int content_width, int content_height);
-#  include "../src/plugins/cairo/libdecor-cairo.c"
-#  undef libdecor_frame_set_min_content_size
-#endif // HAVE_GTK
-
-#endif // USE_SYSTEM_LIBDECOR
+#endif // USE_SYSTEM_LIBDECOR || !HAVE_GTK
 
 
-#if USE_SYSTEM_LIBDECOR || defined(HAVE_GTK)
 static unsigned char *gtk_titlebar_buffer(struct libdecor_frame *frame,
                                                  int *width, int *height, int *stride)
 {
   struct libdecor_frame_gtk *lfg = (struct libdecor_frame_gtk *)frame;
-#if USE_SYSTEM_LIBDECOR
+#if USE_SYSTEM_LIBDECOR || !HAVE_GTK
   struct border_component_gtk *bc;
 #else
   struct border_component *bc;
@@ -209,36 +220,36 @@ static unsigned char *gtk_titlebar_buffer(struct libdecor_frame *frame,
   *stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
   return (unsigned char*)buffer->data;
 }
-#endif // USE_SYSTEM_LIBDECOR || defined(HAVE_GTK)
 
 
-#if USE_SYSTEM_LIBDECOR || !defined(HAVE_GTK)
 static unsigned char *cairo_titlebar_buffer(struct libdecor_frame *frame,
                                                  int *width, int *height, int *stride)
 {
   struct libdecor_frame_cairo *lfc = (struct libdecor_frame_cairo *)frame;
+#if USE_SYSTEM_LIBDECOR || HAVE_GTK
+  struct border_component_cairo *bc = &lfc->title_bar.title;
+#else
   struct border_component *bc = &lfc->title_bar.title;
+#endif
   struct buffer *buffer = bc->server.buffer;
   *width = buffer->buffer_width;
   *height = buffer->buffer_height;
   *stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
   return (unsigned char*)buffer->data;
 }
-#endif // USE_SYSTEM_LIBDECOR || !defined(HAVE_GTK)
+
 
 /*
  Although each plugin declares an exported global variable
  LIBDECOR_EXPORT const struct libdecor_plugin_description libdecor_plugin_description;
  these plugins are dlopen()'ed without the RTLD_GLOBAL flag. Consequently their symbols
  are not discovered by dlsym(RTLD_DEFAULT, "symbol-name").
- Too bad.
  We therefore repeat the dlopen() for the same plugin with the RTLD_GLOBAL flag,
  then dlsym() will report the address of symbol libdecor_plugin_description.
  */
  char *fl_get_libdecor_plugin_description() {
    static const struct libdecor_plugin_description *plugin_description = NULL;
    if (!plugin_description) {
-#if USE_SYSTEM_LIBDECOR
      char fname[PATH_MAX];
      const char *dir = getenv("LIBDECOR_PLUGIN_DIR");
      if (!dir) dir = LIBDECOR_PLUGIN_DIR;
@@ -249,9 +260,9 @@ static unsigned char *cairo_titlebar_buffer(struct libdecor_frame *frame,
        dl = dlopen(fname, RTLD_LAZY | RTLD_GLOBAL);
      }
      if (dl) plugin_description = (const struct libdecor_plugin_description*)dlsym(dl, "libdecor_plugin_description");
-#else
+#if !USE_SYSTEM_LIBDECOR
      extern const struct libdecor_plugin_description libdecor_plugin_description;
-     plugin_description = &libdecor_plugin_description;
+     if (!plugin_description) plugin_description = &libdecor_plugin_description;
 #endif
      //puts(plugin_description->description);
   }
@@ -272,23 +283,15 @@ unsigned char *fl_libdecor_titlebar_buffer(struct libdecor_frame *frame,
 {
   static char *my_plugin = NULL;
   if (!my_plugin) my_plugin = fl_get_libdecor_plugin_description();
-#if USE_SYSTEM_LIBDECOR || defined(HAVE_GTK)
   if (my_plugin && !strcmp(my_plugin, "GTK plugin")) {
     return gtk_titlebar_buffer(frame, width, height, stride);
   }
-#endif
-#if USE_SYSTEM_LIBDECOR || !defined(HAVE_GTK)
-  if (my_plugin && !strcmp(my_plugin, "libdecor plugin using Cairo")) {
+  else if (my_plugin && !strcmp(my_plugin, "libdecor plugin using Cairo")) {
     return cairo_titlebar_buffer(frame, width, height, stride);
   }
-#endif
   return NULL;
 }
 
-
-#include "xdg-decoration-client-protocol.h"
-#include "../src/libdecor.h"
-#include "../src/libdecor-plugin.h"
 
 /* these definitions are copied from libdecor/src/libdecor.c */
 
@@ -324,6 +327,7 @@ struct libdecor_frame_private {
   struct libdecor_limits interactive_limits;
   bool visible;
 };
+
 
 /* Reports whether we are using SSD (server-side decoration) */
 int fl_libdecor_use_SSD(struct libdecor_frame *frame) {
