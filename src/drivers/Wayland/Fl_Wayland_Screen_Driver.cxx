@@ -202,7 +202,7 @@ static Fl_Window *event_coords_from_surface(struct wl_surface *surface,
 
 
 static void pointer_enter(void *data, struct wl_pointer *wl_pointer, uint32_t serial,
-        struct wl_surface *surface, wl_fixed_t surface_x, wl_fixed_t surface_y) {
+                          struct wl_surface *surface, wl_fixed_t surface_x, wl_fixed_t surface_y) {
   Fl_Window *win = event_coords_from_surface(surface, surface_x, surface_y);
   if (!win && gtk_shell) { // check that surface is the headerbar of a GTK-decorated window
     Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
@@ -212,12 +212,13 @@ static void pointer_enter(void *data, struct wl_pointer *wl_pointer, uint32_t se
     }
   }
   if (!win) return;
-  // use custom cursor if present
-  struct wl_cursor *cursor =
+  struct Fl_Wayland_Screen_Driver::seat *seat = (struct Fl_Wayland_Screen_Driver::seat*)data;
+  if (!Fl::grab() || Fl::grab() == win) {
+    // use custom cursor if present
+    struct wl_cursor *cursor =
     fl_wl_xid(win)->custom_cursor ? fl_wl_xid(win)->custom_cursor->wl_cursor : NULL;
-  struct Fl_Wayland_Screen_Driver::seat *seat =
-    (struct Fl_Wayland_Screen_Driver::seat*)data;
-  Fl_Wayland_Screen_Driver::do_set_cursor(seat, cursor);
+    Fl_Wayland_Screen_Driver::do_set_cursor(seat, cursor);
+  }
   seat->serial = serial;
   seat->pointer_enter_serial = serial;
   set_event_xy(win);
@@ -1247,7 +1248,7 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
   } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
 //fprintf(stderr, "registry_handle_global interface=%s\n", interface);
     scr_driver->xdg_wm_base = (struct xdg_wm_base *)wl_registry_bind(wl_registry, id,
-                                                        &xdg_wm_base_interface, 1);
+                                                  &xdg_wm_base_interface, fl_min(3,version));
     xdg_wm_base_add_listener(scr_driver->xdg_wm_base, &xdg_wm_base_listener, NULL);
   } else if (strcmp(interface, "gtk_shell1") == 0) {
     Fl_Wayland_Screen_Driver::compositor = Fl_Wayland_Screen_Driver::MUTTER;
@@ -1808,13 +1809,23 @@ struct xkb_keymap *Fl_Wayland_Screen_Driver::get_xkb_keymap() {
 
 int Fl_Wayland_Screen_Driver::get_mouse(int &xx, int &yy) {
   open_display();
-  xx = Fl::e_x_root; yy = Fl::e_y_root;
-  if (!seat->pointer_focus) return 0;
-  Fl_Window *win = Fl_Wayland_Window_Driver::surface_to_window(seat->pointer_focus);
-  if (!win) return 0;
-  int snum = Fl_Window_Driver::driver(win)->screen_num();
-//printf("get_mouse(%dx%d)->%d\n", xx, yy, snum);
-  return snum;
+  Fl_Window *win = (seat->pointer_focus ?
+            Fl_Wayland_Window_Driver::surface_to_window(seat->pointer_focus) : NULL);
+  if (!win) {
+    // If mouse is not in a window, Wayland hides its position;
+    // we assume it's in the middle of Fl::first_window().
+    win = Fl::first_window();
+    if (!win) {
+      xx = yy = 0;
+      return 0;
+    }
+    xx = win->w()/2;
+    yy = win->h()/2;
+  } else {
+    xx = Fl::e_x_root; yy = Fl::e_y_root;
+  }
+//printf("get_mouse(%dx%d)->%d\n", xx, yy, win->screen_num());
+  return win->screen_num();
 }
 
 

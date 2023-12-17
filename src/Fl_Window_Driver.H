@@ -174,6 +174,7 @@ public:
   virtual void show_with_args_end(int /*argc*/, char ** /*argv*/) {}
   virtual int can_do_overlay();
   virtual void redraw_overlay();
+  virtual void hotspot(int X, int Y, int offscreen); // default implementation may suffice
 
   // --- window cursor stuff
   virtual int set_cursor(Fl_Cursor);

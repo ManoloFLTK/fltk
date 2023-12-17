@@ -201,7 +201,6 @@ Fl_Message::Fl_Message(const char *iconlabel)
   window_->end();
   window_->callback(window_cb_, this);
   window_->set_modal();
-
   // restore previous group
   Fl_Group::current(previous_group);
 }

@@ -422,7 +422,7 @@ popup mechanism which allows to position a popup window relatively to a previous
 window, itself a popup or another kind of window, with the restriction that any popup
 must overlap or at least touch that other window.
 Member function \c Fl_Wayland_Window_Driver::makeWindow calls member function
-\c Fl_Wayland_Window_Driver::process_menu_or_tooltip to create all popups.
+\c Fl_Wayland_Window_Driver::process_popup to create all popups.
 
 This function gets called after FLTK has computed using a given algorithm the desired \c (x,y)
 position of the popup window's top-left corner, using coordinates centered on the top-left
@@ -445,9 +445,9 @@ limits, and relies on Wayland's constraint mechanism described below to prevent 
 going beyond these limits, without FLTK having to know where they are.
 - Menu windows taller than the screen where they are mapped need special handling
 described in detail in a comment above the source code of function
-\c Fl_Wayland_Window_Driver::process_menu_or_tooltip.
+\c Fl_Wayland_Window_Driver::process_popup.
 
-Function \c Fl_Wayland_Window_Driver::process_menu_or_tooltip
+Function \c Fl_Wayland_Window_Driver::process_popup
 first computes \c origin_win, pointer to the \c Fl_Window relatively to which the popup is to
 be positioned. Window \c origin_win is the parent menu window when the popup is a sub-menu;
 it's the tiny windowtitle when the popup is a menu with a title; otherwise, it's the window

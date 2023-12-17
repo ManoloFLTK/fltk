@@ -126,6 +126,7 @@ public:
   void size_range() FL_OVERRIDE;
   void iconize() FL_OVERRIDE;
   void decoration_sizes(int *top, int *left,  int *right, int *bottom) FL_OVERRIDE;
+  void hotspot(int X, int Y, int offscreen) FL_OVERRIDE;
   // --- window cursor stuff
   int set_cursor(Fl_Cursor) FL_OVERRIDE;
   int set_cursor(const Fl_RGB_Image*, int, int) FL_OVERRIDE;
@@ -141,7 +142,7 @@ public:
   void reposition_menu_window(int x, int y) FL_OVERRIDE;
   void menu_window_area(int &X, int &Y, int &W, int &H, int nscreen = -1) FL_OVERRIDE;
   static bool new_popup; // to support tall menu buttons
-  bool process_menu_or_tooltip(struct wld_window *);
+  bool process_popup(struct wld_window *);
   static Fl_Window *previous_floatingtitle; // to support floating menuwindow w/ title
 };
 

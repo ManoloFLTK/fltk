@@ -488,7 +488,10 @@ int Fl_Screen_Driver::scale_handler(int event)
   }
   if (zoom != none) {
     int i, count;
-    if (Fl::grab()) return 0; // don't rescale when menu windows are on
+    if (Fl::first_window() && Fl_Window_Driver::driver(Fl::first_window())->popup_window() && 
+        Fl::first_window()->user_data() != Fl_Screen_Driver::transient_scale_display) {
+      return 0; // don't rescale when popup windows are on (except transient scale windows)
+    }
     Fl_Widget *wid = Fl::focus();
     if (!wid) return 0;
     Fl_Window *top = wid->top_window();

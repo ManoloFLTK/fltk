@@ -19,16 +19,19 @@
 #include "Fl_Wayland_Screen_Driver.H"
 #include "Fl_Wayland_Graphics_Driver.H"
 #include <FL/filename.H>
+#include <FL/Fl_Pixmap.H>
 #include <wayland-cursor.h>
 #include "../../../libdecor/build/fl_libdecor.h"
 #include "xdg-shell-client-protocol.h"
 #include <pango/pangocairo.h>
 #include <FL/Fl_Overlay_Window.H>
 #include <FL/Fl_Tooltip.H>
+#include <FL/Fl_Box.H>
 #include <FL/fl_draw.H>
 #include <FL/fl_ask.H>
 #include <FL/Fl.H>
 #include <FL/Fl_Image_Surface.H>
+#include <FL/Fl_Button.H>
 #include <string.h>
 #include <math.h> // for ceil()
 #include <sys/types.h> // for pid_t
@@ -52,6 +55,41 @@ extern "C" {
 #if !defined(FLTK_USE_X11)
 Window fl_window = 0;
 #endif
+
+// An envelope window for an FLTK- or user-created modal payload window.
+// The envelope wraps the payload and is created as a Wayland popup to control
+// its location relatively to a mapped, origin window.
+// The envelope draws a pseudo-titlebar which allows to drag
+// the payload around and, if payload is resizable, to resize it.
+class dragging_window : public Fl_Window {
+private:
+  Fl_Window *saved_grab_;
+  Fl_Box *title_;
+  Fl_Button *minus_;
+  int fromx_, fromy_;
+  bool did_event_show_; // true means event FL_SHOW was received
+  int event_after_show_; // FL_NO_EVENT or the event received after FL_SHOW
+  bool dragging_; // true while envelope is being dragged
+  static void delayed_delete_(dragging_window *win);
+  static void plus_cb_(Fl_Widget *wid, void *);
+  static void minus_cb_(Fl_Widget *wid, void *);
+  static void delayed_grab_(dragging_window *win);
+  static const char * const four_arrow_icon_xpm[];
+public:
+  class pair {
+    public:
+      Fl_Window *p, *o;
+      pair(Fl_Window *payload, Fl_Window *origin) : p(payload), o(origin) {}
+  };
+  Fl_Window *payload;
+  Fl_Window *origin;
+  static void reparent_payload(pair *);
+  static void simple_payload(Fl_Window *payload);
+  dragging_window(Fl_Window *p, Fl_Window *o = NULL); // the constructor
+  int handle(int event) FL_OVERRIDE;
+  void update_minus_button();
+  bool map_failed() { return (did_event_show_ && (event_after_show_ == FL_NO_EVENT)); }
+};
 
 
 struct wld_window *Fl_Wayland_Window_Driver::wld_window = NULL;
@@ -1130,6 +1168,7 @@ struct win_positioner {
   struct wld_window *window;
   int x, y;
   Fl_Window *child_popup;
+  Fl_Window *parent_win;
 };
 
 
@@ -1139,6 +1178,11 @@ static void popup_configure(void *data, struct xdg_popup *xdg_popup, int32_t x, 
   struct wld_window *window = win_pos->window;
 //printf("popup_configure %p asked:%dx%d got:%dx%d\n",window->fl_win, win_pos->x,win_pos->y, x,y);
   Fl_Window_Driver::driver(window->fl_win)->wait_for_expose_value = 0;
+  if (!window->fl_win->menu_window() && !window->fl_win->tooltip_window()) {
+    win_pos->x = x;
+    win_pos->y = y;
+  }
+  if (!window->fl_win->menu_window()) return;
   int HH;
   Fl_Window_Driver::menu_parent(&HH);
   if (window->fl_win->h() > HH && y != win_pos->y) { // A menu taller than the display
@@ -1156,24 +1200,52 @@ static struct xdg_popup *mem_grabbing_popup = NULL;
 static void popup_done(void *data, struct xdg_popup *xdg_popup) {
   struct win_positioner *win_pos = (struct win_positioner *)data;
   struct wld_window *window = win_pos->window;
-//fprintf(stderr, "popup_done: popup=%p data=%p xid=%p fl_win=%p\n", xdg_popup, data, window, window->fl_win);
+//printf("popup_done: popup=%p data=%p fl_win=%p\n", xdg_popup, data, window->fl_win);
   if (win_pos->child_popup) win_pos->child_popup->hide();
   xdg_popup_destroy(xdg_popup);
+  window->xdg_popup = NULL;
   delete win_pos;
+  // Detect whether this runs because creation of popup failed
+  // because its parent is entirely out of the display
+  Fl_Window *payload = NULL;
+  if (window->fl_win->user_data() == dragging_window::reparent_payload) {
+    dragging_window *drag = (dragging_window*)window->fl_win;
+    if (drag->map_failed()) {      // Yes, creation of popup failed
+      drag->remove(drag->payload); // remove payload from envelope
+      drag->payload->set_modal();  // set payload back to modal
+      payload = drag->payload;
+    }
+  }
   // The sway compositor calls popup_done directly and hides the menu
   // when the app looses focus.
   // Thus, we hide the window so FLTK and Wayland are in matching states.
-  window->xdg_popup = NULL;
   window->fl_win->hide();
+  if (payload) { // further processing when popup creation failed
+    Fl_Window *decorated = Fl::first_window(); // search a decorated wwindow
+    while (decorated && (decorated->parent() || !decorated->border())) {
+      decorated = Fl::next_window(decorated);
+    }
+    if (decorated) {
+      //printf("origin after failed map=%p\n",decorated);
+      dragging_window::pair *pair = new dragging_window::pair(payload, decorated);
+      Fl::add_check((Fl_Timeout_Handler)dragging_window::reparent_payload, pair);
+    } else { // no decorated window found, display payload as simple, bordered window
+      Fl_Window_Driver::driver(payload)->force_position(0);
+      Fl::add_check((Fl_Timeout_Handler)dragging_window::simple_payload, payload);
+    }
+  }
   if (mem_grabbing_popup == xdg_popup) {
     mem_grabbing_popup = NULL;
   }
 }
 
 
+static void popup_repositioned(void *data, struct xdg_popup *xdg_popup, uint32_t token);
+
 static const struct xdg_popup_listener popup_listener = {
   .configure = popup_configure,
   .popup_done = popup_done,
+  .repositioned = popup_repositioned,
 };
 
 
@@ -1193,6 +1265,46 @@ static const char *get_prog_name() {
     return p;
   }
   return "unknown";
+}
+
+
+// drag a popup to position X,Y relatively to its parent
+static void drag_popup_window(Fl_Window *win, int X, int Y) {
+  struct wld_window *fl_win = fl_wl_xid(win);
+  if (fl_win->frame_cb) return;
+  static uint32_t token = 0;
+  float f = Fl::screen_scale(win->screen_num());
+  // ensure overlap or contact between popup and target windows
+  X *= f; Y *= f; // work in drawing units
+  struct win_positioner *win_pos =
+    (struct win_positioner*)xdg_popup_get_user_data(fl_win->xdg_popup);
+  int oldX = 0, oldY = 0;
+  if (fl_wl_xid(win_pos->parent_win)->kind == Fl_Wayland_Window_Driver::DECORATED)
+    libdecor_frame_translate_coordinate(fl_wl_xid(win_pos->parent_win)->frame,
+                                        0, 0, &oldX, &oldY);
+  int W = win->w() * f;
+  int H = win->h() * f;
+  int PW = win_pos->parent_win->w() * f;
+  int PH = win_pos->parent_win->h() * f;
+  if (X >= PW) X = PW - 1;
+  if (X + W <= 0) X = - W + 1;
+  if (Y >= PH + oldY - 1) Y = PH - 2 + oldY;
+  if (Y-oldY + H < 0) Y = - H + oldY;
+  Fl_Wayland_Screen_Driver *scr_dr = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+  struct xdg_positioner *positioner = xdg_wm_base_create_positioner(scr_dr->xdg_wm_base);
+  xdg_positioner_set_anchor_rect(positioner, X, Y - 1, 1, 1);
+  xdg_positioner_set_size(positioner, W, H);
+  xdg_positioner_set_anchor(positioner, XDG_POSITIONER_ANCHOR_BOTTOM_LEFT);
+  xdg_positioner_set_gravity(positioner, XDG_POSITIONER_GRAVITY_BOTTOM_RIGHT);
+  xdg_positioner_set_constraint_adjustment(positioner,
+                                           XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_X |
+                                           XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_Y);
+  //xdg_positioner_set_reactive(positioner);
+  win_pos->x = X;
+  win_pos->y = Y;
+  //printf("xdg_popup_reposition\n");
+  xdg_popup_reposition(fl_win->xdg_popup, positioner, ++token);
+  xdg_positioner_destroy(positioner);
 }
 
 
@@ -1231,7 +1343,7 @@ static const char *get_prog_name() {
  placed below a previous one to be flipped above it if that prevents the popup from expanding
  beyond display limits. This is used to unfold menu bar menus below or above the menu bar.
  After each popup is created and scheduled for being mapped on display by function
- process_menu_or_tooltip(), makeWindow() calls Fl_Window::wait_for_expose() so its constrained
+ process_popup(), makeWindow() calls Fl_Window::wait_for_expose() so its constrained
  position is known before computing the position of the next popup. This ensures each
  popup is correctly placed relatively to its parent.
 
@@ -1264,7 +1376,251 @@ static const char *get_prog_name() {
  */
 
 
-bool Fl_Wayland_Window_Driver::process_menu_or_tooltip(struct wld_window *new_window) {
+dragging_window::dragging_window(Fl_Window *p, Fl_Window *o) :
+  Fl_Window(p->w(), p->h(), NULL), payload(p), minus_(NULL) {
+  //printf("dragging_window c'tor for payload=%p\n",p);
+  int H = labelsize() * 1.5;
+  size(p->w()+4, p->h() + H + 2);
+  new Fl_Box(FL_GTK_THIN_UP_FRAME, 0,0, w(), h(), NULL);
+  Fl_Group *g = new Fl_Group(0, 0, w(), H);
+  g->begin();
+  title_ = new Fl_Box(FL_GTK_THIN_UP_BOX, 0, 0, w(), H, payload->label());
+  title_->color(FL_LIGHT2);
+  title_->labelcolor(FL_BLACK);
+  Fl_Box *icon = new Fl_Box(FL_NO_BOX, 0, 0, H, H, NULL);
+  icon->bind_image(new Fl_Pixmap(four_arrow_icon_xpm));
+  icon->image()->scale(H,H);
+  if (Fl_Window_Driver::driver(payload)->is_resizable()) {
+    Fl_Button *plus = new Fl_Button(w()-H,0,H,H, "+");
+    plus->labelfont(FL_HELVETICA_BOLD);
+    plus->labelsize(H);
+    plus->callback(plus_cb_);
+    minus_ = new Fl_Button(w()-2*H,0,H,H, "-");
+    minus_->labelfont(FL_HELVETICA_BOLD);
+    minus_->labelsize(H);
+    minus_->callback(minus_cb_);
+    title_->size(w()-2*H,H);
+  }
+  g->end();
+  g->resizable(title_);
+  add(payload);
+  Fl_Window_Driver::driver(this)->x(payload->x());
+  Fl_Window_Driver::driver(this)->y(payload->y() - H);
+  payload->position(2, H);
+  payload->set_visible();
+  end();
+  resizable(payload);
+  Fl_Window_Driver *dr = Fl_Window_Driver::driver(payload);
+  size_range(dr->minw() + 4, dr->minh() + H + 2,
+             dr->maxw() ? dr->maxw() + 4 : 0, dr->maxh() ? dr->maxh() + H + 2 : 0);
+  border(0);
+  payload->clear_modal_states();
+  set_modal();
+  Fl_Window_Driver::driver(this)->set_popup_window();
+  dragging_ = false;
+  saved_grab_ = Fl::grab();
+  user_data((void*)reparent_payload);
+  origin = (o ? o : Fl::first_window());
+  if (origin->user_data() == &Fl_Screen_Driver::transient_scale_display) {
+    origin = Fl::next_window(origin);
+  }
+  did_event_show_ = false;
+  event_after_show_ = FL_NO_EVENT;
+}
+
+
+void dragging_window::delayed_delete_(dragging_window *win) {
+  Fl::remove_check((Fl_Timeout_Handler)delayed_delete_, win);
+  Fl_Window *o = win->origin;
+  delete win;
+  if (o) o->take_focus();
+}
+
+
+void dragging_window::plus_cb_(Fl_Widget *wid, void *) {
+  Fl_Window *from = wid->top_window();
+  Fl_Window_Driver *dr = Fl_Window_Driver::driver(from);
+  int W = from->w() * 1.25;
+  int H = from->h() * 1.25;
+  if (dr->maxw() && W > dr->maxw()) W = dr->maxw();
+  if (dr->maxh() && H > dr->maxh()) H = dr->maxh();
+  from->size(W, H);
+}
+
+
+void dragging_window::minus_cb_(Fl_Widget *wid, void *) {
+  Fl_Window *from = wid->top_window();
+  Fl_Window_Driver *dr = Fl_Window_Driver::driver(from);
+  int W = from->w() / 1.25;
+  int H = from->h() / 1.25;
+  if (W < dr->minw()) W = dr->minw();
+  if (H < dr->minh()) H = dr->minh();
+  from->size(W, H);
+}
+
+
+void dragging_window::delayed_grab_(dragging_window *win) {
+  Fl::remove_check((Fl_Timeout_Handler)delayed_grab_, win);
+  if (Fl::grab() == win->payload) Fl::grab(win);
+}
+
+
+//#include <FL/names.h>
+int dragging_window::handle(int event) {
+  //printf("%s (%p)\n",fl_eventnames[event],this);
+  if (did_event_show_ && event_after_show_ == FL_NO_EVENT) event_after_show_ = event;
+  if (event == FL_PUSH && Fl::event_inside(title_)) {
+    cursor(FL_CURSOR_MOVE);
+    fromx_ = Fl::event_x();
+    fromy_ = Fl::event_y();
+    dragging_ = true;
+    return 1;
+  } else if (event == FL_DRAG && dragging_) {
+    int dx = Fl::event_x() - fromx_;
+    int dy = Fl::event_y() - fromy_;
+    if (dx || dy) {
+      struct win_positioner *win_pos =
+      (struct win_positioner*)xdg_popup_get_user_data(fl_wl_xid(this)->xdg_popup);
+      float f = Fl::screen_scale(win_pos->parent_win->screen_num());
+      int winx = win_pos->x / f;
+      int winy = win_pos->y / f;
+      //printf("drag from (%3d,%3d) to (%3d,%3d)\n", winx, winy, winx + dx, winy + dy);
+      drag_popup_window(this, winx + dx, winy + dy);
+      return 1;
+    }
+  } else if (event == FL_RELEASE && dragging_) {
+    dragging_ = false;
+    cursor(FL_CURSOR_DEFAULT);
+    return 1;
+  } else if (event == FL_MOVE && minus_) {
+    update_minus_button();
+  } else if (event == FL_SHOW) {
+    //puts("FL_SHOW");
+    payload->show();
+    position(0,0);
+    Fl::add_check((Fl_Timeout_Handler)delayed_grab_, this);
+    did_event_show_ = true;
+  } else if (event == FL_HIDE) {
+    //puts("FL_HIDE");
+    if (children() == 3) payload->do_callback();
+  } else if (event == FL_SHORTCUT && Fl::event_key() == FL_Escape) {
+    payload->handle(FL_RELEASE);
+    payload->do_callback();
+  }
+  int retval = Fl_Window::handle(event);
+  if (children() < 3 || !payload->shown()) {
+    //printf("children()=%d\n",children());
+    if (children() == 3) {
+      remove(payload);
+      payload->set_modal();
+    }
+    Fl::grab(saved_grab_);
+    Fl::remove_check((Fl_Timeout_Handler)delayed_delete_, this); // prevent repetition
+    Fl::add_check((Fl_Timeout_Handler)delayed_delete_, this);
+  }
+  return retval;
+}
+  
+
+void dragging_window::reparent_payload(dragging_window::pair *pair) {
+  Fl::remove_check((Fl_Timeout_Handler)reparent_payload, pair);
+//printf("reparent_payload=%p origin=%p\n",pair->p,pair->o);
+  pair->p->hide();
+  Fl_Window *envelope = new dragging_window(pair->p, pair->o);
+  delete pair;
+  envelope->show();
+}
+  
+
+void dragging_window::simple_payload(Fl_Window *payload) {
+  Fl::remove_check((Fl_Timeout_Handler)simple_payload, payload);
+//printf("simple_payload=%p\n",payload);
+  payload->hide();
+  payload->border(1);
+  payload->show();
+}
+
+
+void dragging_window::update_minus_button() {
+  if (!minus_ || !shown()) return;
+  struct win_positioner *win_pos =
+  (struct win_positioner*)xdg_popup_get_user_data(fl_wl_xid(this)->xdg_popup);
+  float f = Fl::screen_scale(screen_num());
+  int oldX = 0, oldY = 0;
+  struct wld_window *parent_xid = fl_wl_xid(win_pos->parent_win);
+  if (parent_xid->kind == Fl_Wayland_Window_Driver::DECORATED)
+    libdecor_frame_translate_coordinate(parent_xid->frame, 0, 0, &oldX, &oldY);
+  oldY = oldY / f;
+  int X = win_pos->x / f, Y = win_pos->y / f;
+  int newW = w() / 1.25;
+  int newH = h() / 1.25;
+  if (X + newW <= 0 || Y - oldY + newH < 0) {
+    minus_->deactivate(); // can't move and resize simultaneously the envelope
+  } else {
+    minus_->activate();
+  }
+}
+
+
+const char * const dragging_window::four_arrow_icon_xpm[] = {
+"42 42 3 1",
+"   c None",
+".  c #FFFFFF", // white
+"+  c #000000", // black
+"                    ..                    ",
+"                   ....                   ",
+"                  ..++..                  ",
+"                 ..++++..                 ",
+"                ..++++++..                ",
+"               ..++++++++..               ",
+"              ..++++++++++..              ",
+"             ..++++++++++++..             ",
+"            ..++++++++++++++..            ",
+"           ..++++++++++++++++..           ",
+"          ..++++++++++++++++++..          ",
+"         ..........++++..........         ",
+"        ..+........++++........+..        ",
+"       ..++..    ..++++..    ..++..       ",
+"      ..+++..    ..++++..    ..+++..      ",
+"     ..++++..    ..++++..    ..++++..     ",
+"    ..+++++..    ..++++..    ..+++++..    ",
+"   ..++++++........++++........++++++..   ",
+"  ..+++++++........++++........+++++++..  ",
+" ..++++++++++++++++++++++++++++++++++++.. ",
+"..++++++++++++++++++++++++++++++++++++++..",
+"..++++++++++++++++++++++++++++++++++++++..",
+" ..++++++++++++++++++++++++++++++++++++.. ",
+"  ..+++++++........++++........+++++++..  ",
+"   ..++++++........++++........++++++..   ",
+"    ..+++++..    ..++++..    ..+++++..    ",
+"     ..++++..    ..++++..    ..++++..     ",
+"      ..+++..    ..++++..    ..+++..      ",
+"       ..++..    ..++++..    ..++..       ",
+"        ..+........++++........+..        ",
+"         ..........++++..........         ",
+"          ..++++++++++++++++++..          ",
+"           ..++++++++++++++++..           ",
+"            ..++++++++++++++..            ",
+"             ..++++++++++++..             ",
+"              ..++++++++++..              ",
+"               ..++++++++..               ",
+"                ..++++++..                ",
+"                 ..++++..                 ",
+"                  ..++..                  ",
+"                   ....                   ",
+"                    ..                    "
+};
+
+
+static void popup_repositioned(void *data, struct xdg_popup *xdg_popup, uint32_t token) {
+  struct win_positioner *win_pos = (struct win_positioner *)data;
+//printf("popup_repositioned win_pos at %dx%d token=%u\n",win_pos->x,win_pos->y,token);
+  win_pos->window->fl_win->redraw();
+  ((dragging_window*)win_pos->window->fl_win)->update_minus_button();
+}
+
+
+bool Fl_Wayland_Window_Driver::process_popup(struct wld_window *new_window) {
   // a menu window or tooltip
   new_window->kind = Fl_Wayland_Window_Driver::POPUP;
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
@@ -1286,6 +1642,10 @@ bool Fl_Wayland_Window_Driver::process_menu_or_tooltip(struct wld_window *new_wi
   if (pWindow->user_data() == &Fl_Screen_Driver::transient_scale_display &&
       Fl_Screen_Driver::transient_scale_parent) {
     target = Fl_Screen_Driver::transient_scale_parent;
+  }
+  bool general_popup = (pWindow->user_data() == dragging_window::reparent_payload);
+  if (general_popup) {
+    target = ((dragging_window*)pWindow)->origin;
   }
   if (!target) target = Fl_Window_Driver::menu_parent();
   if (!target) target = Fl::belowmouse();
@@ -1325,8 +1685,12 @@ bool Fl_Wayland_Window_Driver::process_menu_or_tooltip(struct wld_window *new_wi
     if (parent_xid->kind == Fl_Wayland_Window_Driver::DECORATED)
       libdecor_frame_translate_coordinate(parent_xid->frame, popup_x, popup_y,
                                           &popup_x, &popup_y);
-    xdg_positioner_set_anchor_rect(positioner, popup_x, 0, 1, 1);
-    popup_y++;
+    if (general_popup) {
+      xdg_positioner_set_anchor_rect(positioner, popup_x, popup_y - 1, 1, 1);
+    } else {
+      xdg_positioner_set_anchor_rect(positioner, popup_x, 0, 1, 1);
+      popup_y++;
+    }
   }
   xdg_positioner_set_size(positioner, pWindow->w() * f , pWindow->h() * f );
   xdg_positioner_set_anchor(positioner, XDG_POSITIONER_ANCHOR_BOTTOM_LEFT);
@@ -1338,8 +1702,8 @@ bool Fl_Wayland_Window_Driver::process_menu_or_tooltip(struct wld_window *new_wi
     constraint |= XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_Y;
   }
   xdg_positioner_set_constraint_adjustment(positioner, constraint);
-  if (!(Fl_Window_Driver::menu_title(pWindow) && Fl_Window_Driver::menu_bartitle(pWindow))) {
-    xdg_positioner_set_offset(positioner, 0, popup_y);
+  if (!general_popup && !(Fl_Window_Driver::menu_title(pWindow) && Fl_Window_Driver::menu_bartitle(pWindow))) {
+      xdg_positioner_set_offset(positioner, 0, popup_y);
   }
   new_window->xdg_popup = xdg_surface_get_popup(new_window->xdg_surface,
                                                 parent_xdg, positioner);
@@ -1348,6 +1712,7 @@ bool Fl_Wayland_Window_Driver::process_menu_or_tooltip(struct wld_window *new_wi
   win_pos->x = popup_x;
   win_pos->y = popup_y;
   win_pos->child_popup = NULL;
+  win_pos->parent_win = parent_win;
 //printf("create xdg_popup=%p data=%p xid=%p fl_win=%p\n",new_window->xdg_popup,win_pos,new_window,new_window->fl_win);
   xdg_positioner_destroy(positioner);
   xdg_popup_add_listener(new_window->xdg_popup, &popup_listener, win_pos);
@@ -1369,17 +1734,26 @@ void Fl_Wayland_Window_Driver::makeWindow()
   struct wld_window *new_window;
   bool is_floatingtitle = false;
   wait_for_expose_value = 1;
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
 
   if (pWindow->parent() && !pWindow->window()) return;
   if (pWindow->parent() && !pWindow->window()->shown()) return;
-
+// prepare handling of modal windows as popups
+  if (pWindow->user_data() != dragging_window::reparent_payload &&
+      !pWindow->parent() && pWindow->modal() && Fl::first_window() && force_position() &&
+      !popup_window() && xdg_wm_base_get_version(scr_driver->xdg_wm_base) >= 3) {
+    Fl_Window *dragging = new dragging_window(pWindow);
+    driver(dragging)->makeWindow();
+    return;
+  }
   if (!pWindow->parent() && !popup_window()) {
     x(0); y(0); // toplevel, non-popup windows must have origin at 0,0
   }
+//printf("makeWindow win=%p parent=%p @%dx%d  %dx%d\n",pWindow, parent(), x(),y(),w(),h());
+
   new_window = (struct wld_window *)calloc(1, sizeof *new_window);
   new_window->fl_win = pWindow;
   wl_list_init(&new_window->outputs);
-  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
 
   new_window->wl_surface = wl_compositor_create_surface(scr_driver->wl_compositor);
   //Fl::warning("makeWindow:%p wayland-scale=%d user-scale=%.2f\n", pWindow, new_window->scale, Fl::screen_scale(0));
@@ -1403,9 +1777,9 @@ void Fl_Wayland_Window_Driver::makeWindow()
               (Fl_Screen_Driver::transient_scale_parent->h() - pWindow->h())/2);
   }
 
-  if (popup_window()) { // a menu window or tooltip
-    is_floatingtitle = process_menu_or_tooltip(new_window);
-
+  if (popup_window()) {
+    // a menu window or tooltip or general popup
+    is_floatingtitle = process_popup(new_window);
   } else if (pWindow->border() && !pWindow->parent() ) { // a decorated window
     new_window->kind = DECORATED;
     if (!scr_driver->libdecor_context)
@@ -1827,7 +2201,7 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
         fl_win->configured_width = W;
         fl_win->configured_height = H;
         W *= f; H *= f;
-        if (!pWindow->fullscreen_active()) {
+        if (!pWindow->fullscreen_active() && fl_win->kind != POPUP) {
           xdg_toplevel_set_min_size(fl_win->xdg_toplevel, W, H);
           xdg_toplevel_set_max_size(fl_win->xdg_toplevel, W, H);
         }
@@ -1838,8 +2212,8 @@ void Fl_Wayland_Window_Driver::resize(int X, int Y, int W, int H) {
       if (!in_handle_configure && xdg_toplevel()) {
         // Wayland doesn't seem to provide a reliable way for the app to set the
         // window position on screen. This is functional when the move is mouse-driven.
-        Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
         if (Fl::e_state == FL_BUTTON1) {
+          Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
           xdg_toplevel_move(xdg_toplevel(), scr_driver->seat->wl_seat, scr_driver->seat->serial);
         }
       } else if (fl_win->kind == SUBWINDOW && fl_win->subsurface) {
@@ -2095,4 +2469,13 @@ void Fl_Wayland_Window_Driver::maximize() {
 void Fl_Wayland_Window_Driver::un_maximize() {
   struct wld_window *xid = (struct wld_window *)Fl_X::flx(pWindow)->xid;
   if (xid->kind == DECORATED) libdecor_frame_unset_maximized(xid->frame);
+}
+
+
+void Fl_Wayland_Window_Driver::hotspot(int X, int Y, int offscreen) {
+  int mx,my;
+  // Update the screen position based on the mouse position.
+  Fl::get_mouse(mx,my);
+  X = mx-X; Y = my-Y;
+  pWindow->position(X,Y);
 }
