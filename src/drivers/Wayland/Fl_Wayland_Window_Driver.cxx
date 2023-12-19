@@ -1727,6 +1727,7 @@ bool Fl_Wayland_Window_Driver::process_popup(struct wld_window *new_window) {
   return false;
 }
 
+bool new_behavior = true;
 
 void Fl_Wayland_Window_Driver::makeWindow()
 {
@@ -1741,7 +1742,7 @@ void Fl_Wayland_Window_Driver::makeWindow()
 // prepare handling of modal windows as popups
   if (pWindow->user_data() != dragging_window::reparent_payload &&
       !pWindow->parent() && pWindow->modal() && Fl::first_window() && force_position() &&
-      !popup_window() && xdg_wm_base_get_version(scr_driver->xdg_wm_base) >= 3) {
+      !popup_window() && xdg_wm_base_get_version(scr_driver->xdg_wm_base) >= 3 &&new_behavior) {
     Fl_Window *dragging = new dragging_window(pWindow);
     driver(dragging)->makeWindow();
     return;
