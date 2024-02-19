@@ -82,6 +82,7 @@ public:
   Fl_Sys_Menu_Bar_Driver *sys_menu_bar_driver() FL_OVERRIDE;
   double wait(double time_to_wait) FL_OVERRIDE;
   int ready() FL_OVERRIDE;
+  int lock() FL_OVERRIDE;
 };
 
 #endif // FL_DARWIN_SYSTEM_DRIVER_H

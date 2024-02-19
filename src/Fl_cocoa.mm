@@ -1,7 +1,7 @@
 //
 // macOS-Cocoa specific code for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 1998-2023 by Bill Spitzak and others.
+// Copyright 1998-2024 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -220,6 +220,8 @@ static unsigned int mods_to_e_state( NSUInteger mods )
 static void nothing() {}
 void (*fl_lock_function)() = nothing;
 void (*fl_unlock_function)() = nothing;
+
+#if 0
 
 //
 // Select interface -- how it's implemented:
@@ -467,24 +469,94 @@ void DataReady::CancelThread(const char *reason)
   DataUnlock();
 }
 
+#endif // 0
+
+struct cf_fd_data {
+  void *data;
+  Fl_FD_Handler cb_f;
+  bool lock_fd; // true when this fd is for the Fl::lock() mechanism
+};
+static CFFileDescriptorRef cf_fd_array[20];
+static int cf_fd_events[20];
+static int cf_fd_array_avail = 0;
+
+
+static void cf_fd_cb(CFFileDescriptorRef f, CFOptionFlags callBackTypes, void *info) {
+  struct cf_fd_data *p_triple = (struct cf_fd_data *)info;
+  int fd = CFFileDescriptorGetNativeDescriptor(f);
+  (p_triple->cb_f)(fd, p_triple->data);
+  // The callback may have closed the fd. If so, don't re-enable it.
+  // But, always re-enable the lock-related fd.
+  if (p_triple->lock_fd || CFFileDescriptorIsValid(f)) {
+    CFFileDescriptorEnableCallBacks(f, callBackTypes);
+  }
+  Fl_Cocoa_Screen_Driver::breakMacEventLoop();
+}
+
+static void cf_fd_release(void *info) {
+  delete (struct cf_fd_data*)info;
+}
+
+static bool performing_first_lock = false;
+
+int Fl_Darwin_System_Driver::lock() {
+  static bool first = true;
+  performing_first_lock = first;
+  int retval = Fl_Posix_System_Driver::lock();
+  if (first) {first = performing_first_lock = false;}
+  return retval;
+}
+
 void Fl_Darwin_System_Driver::add_fd( int n, int events, void (*cb)(int, void*), void *v )
 {
-  dataready.AddFD(n, events, cb, v);
+  Fl_Darwin_System_Driver::remove_fd(n, events);
+  CFFileDescriptorContext context;
+  memset(&context, 0, sizeof(context));
+  struct cf_fd_data *triple = new struct cf_fd_data;
+  triple->data = v;
+  triple->cb_f = cb;
+  triple->lock_fd = performing_first_lock;
+  context.info = triple;
+  context.release = cf_fd_release;
+  // requires macOS ≥ 10.5
+  CFFileDescriptorRef fdref = CFFileDescriptorCreate(kCFAllocatorDefault, n, true,
+                                                     cf_fd_cb, &context);
+  cf_fd_events[cf_fd_array_avail] = events;
+  cf_fd_array[cf_fd_array_avail++] = fdref;
+  if (events & FL_READ) CFFileDescriptorEnableCallBacks(fdref, kCFFileDescriptorReadCallBack);
+  if (events & FL_WRITE) CFFileDescriptorEnableCallBacks(fdref, kCFFileDescriptorWriteCallBack);
+  CFRunLoopSourceRef source = CFFileDescriptorCreateRunLoopSource(kCFAllocatorDefault, fdref, 0);
+  CFRunLoopAddSource(CFRunLoopGetMain(), source, kCFRunLoopDefaultMode);
+  CFRelease(source);
 }
 
 void Fl_Darwin_System_Driver::add_fd(int fd, void (*cb)(int, void*), void* v)
 {
-  dataready.AddFD(fd, POLLIN, cb, v);
+  Fl_Darwin_System_Driver::add_fd(fd, FL_READ, cb, v);
 }
 
 void Fl_Darwin_System_Driver::remove_fd(int n, int events)
 {
-  dataready.RemoveFD(n, events);
+  //dataready.RemoveFD(n, events);
+  for (int i = 0; i < cf_fd_array_avail; i++) {
+    if (CFFileDescriptorGetNativeDescriptor(cf_fd_array[i]) == n &&
+        (cf_fd_events[i] == events || events == -1) ) {
+      CFFileDescriptorInvalidate(cf_fd_array[i]);
+      CFRelease(cf_fd_array[i]);
+      if (cf_fd_array_avail >= 2 && i < cf_fd_array_avail-1) {
+        cf_fd_array[i] = cf_fd_array[cf_fd_array_avail-1];
+        cf_fd_events[i] = cf_fd_events[cf_fd_array_avail-1];
+      }
+      --cf_fd_array_avail;
+      return;
+    }
+  }
 }
 
 void Fl_Darwin_System_Driver::remove_fd(int n)
 {
-  dataready.RemoveFD(n, -1);
+  //dataready.RemoveFD(n, -1);
+  Fl_Darwin_System_Driver::remove_fd(n, -1);
 }
 
 /*
@@ -501,7 +573,7 @@ int Fl_Darwin_System_Driver::ready()
 }
 
 
-static void processFLTKEvent(void) {
+/*static void processFLTKEvent(void) {
   fl_lock_function();
   dataready.CancelThread(DEBUGTEXT("DATA READY EVENT\n"));
 
@@ -520,7 +592,7 @@ static void processFLTKEvent(void) {
   }
   fl_unlock_function();
   return;
-}
+}*/
 
 
 /*
@@ -810,7 +882,7 @@ static int do_queued_events( double time = 0.0 )
   static int got_events; // not sure the static is necessary here
   got_events = 0;
 
-  // Check for re-entrant condition
+/*  // Check for re-entrant condition
   if ( dataready.IsThreadRunning() ) {
     dataready.CancelThread(DEBUGTEXT("AVOID REENTRY\n"));
   }
@@ -818,8 +890,7 @@ static int do_queued_events( double time = 0.0 )
   // Start thread to watch for data ready
   if ( dataready.GetNfds() ) {
     dataready.StartThread();
-  }
-
+  }*/
   // Elapse timeouts and calculate waiting time
   Fl_Timeout::elapse_timeouts();
   time = Fl_Timeout::time_to_wait(time);
@@ -1817,11 +1888,11 @@ void Fl_Darwin_System_Driver::open_callback(void (*cb)(const char *)) {
       }
     }
     fl_unlock_function();
-  } else if (type == NSEventTypeApplicationDefined) {
+/*  } else if (type == NSEventTypeApplicationDefined) {
     if ([theEvent subtype] == FLTKDataReadyEvent) {
       processFLTKEvent();
     }
-    return;
+    return;*/
   } else if (type == NSEventTypeKeyUp) {
     // The default sendEvent turns key downs into performKeyEquivalent when
     // modifiers are down, but swallows the key up if the modifiers include
