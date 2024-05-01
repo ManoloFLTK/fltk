@@ -56,6 +56,7 @@ struct libdecor_plugin_priority {
 
 enum libdecor_plugin_capabilities {
 	LIBDECOR_PLUGIN_CAPABILITY_BASE = 1 << 0,
+	LIBDECOR_PLUGIN_CAPABILITY_GESTURES = 1 << 1,
 };
 
 struct libdecor_plugin_description {
@@ -179,5 +180,8 @@ libdecor_plugin_init(struct libdecor_plugin *plugin,
 
 void
 libdecor_plugin_release(struct libdecor_plugin *plugin);
+
+int
+libdecor_get_plugin_capabilities(struct libdecor *context);
 
 #endif /* LIBDECOR_PLUGIN_H */

@@ -67,6 +67,7 @@ struct libdecor {
 	bool has_error;
 
 	struct wl_list frames;
+	int plugin_capabilities;
 };
 
 struct libdecor_state {
@@ -1667,6 +1668,7 @@ retry_next:
 
 	wl_list_remove(&plugin_loader->link);
 	free(plugin_loader->name);
+	context->plugin_capabilities = plugin_loader->description->capabilities;
 	free(plugin_loader);
 
 	wl_list_for_each_safe(plugin_loader, tmp, &plugin_loaders, link) {
@@ -1805,4 +1807,8 @@ libdecor_new_with_user_data(struct wl_display *wl_display,
 	wl_display_flush(wl_display);
 
 	return context;
+}
+
+LIBDECOR_EXPORT int libdecor_get_plugin_capabilities(struct libdecor *context) {
+	return context->plugin_capabilities;
 }

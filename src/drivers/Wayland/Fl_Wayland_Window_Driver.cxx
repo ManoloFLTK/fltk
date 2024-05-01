@@ -646,17 +646,6 @@ int Fl_Wayland_Window_Driver::scroll(int src_x, int src_y, int src_w, int src_h,
 }
 
 
-static void handle_error(struct libdecor *libdecor_context, enum libdecor_error error, const char *message)
-{
-  Fl::fatal("Caught error (%d): %s\n", error, message);
-}
-
-
-static struct libdecor_interface libdecor_iface = {
-  .error = handle_error,
-};
-
-
 void change_scale(Fl_Wayland_Screen_Driver::output *output, struct wld_window *window,
                   float pre_scale) {
   Fl_Wayland_Window_Driver *win_driver = Fl_Wayland_Window_Driver::driver(window->fl_win);
@@ -1437,9 +1426,6 @@ void Fl_Wayland_Window_Driver::makeWindow()
 
   } else if (pWindow->border() && !pWindow->parent() ) { // a decorated window
     new_window->kind = DECORATED;
-    if (!scr_driver->libdecor_context)
-      scr_driver->libdecor_context = libdecor_new(Fl_Wayland_Screen_Driver::wl_display,
-                                                  &libdecor_iface);
     new_window->frame = libdecor_decorate(scr_driver->libdecor_context, new_window->wl_surface,
                                           &libdecor_frame_iface, new_window);
     // appears in the Gnome desktop menu bar
@@ -1518,13 +1504,14 @@ void Fl_Wayland_Window_Driver::makeWindow()
       if (top_dr->xdg_toplevel()) xdg_toplevel_set_parent(new_window->xdg_toplevel,
                                                           top_dr->xdg_toplevel());
     }
-    if (scr_driver->seat->gtk_shell && pWindow->modal() && 
+    if (scr_driver->seat->gtk_shell && pWindow->modal() &&
         (new_window->kind == DECORATED || new_window->kind == UNFRAMED)) {
       // Useful to position modal windows above their parent with "gnome-shell --version" ≤ 45.2,
       // useless but harmless with "gnome-shell --version" ≥ 46.0.
       struct gtk_surface1 *gtk_surface = gtk_shell1_get_gtk_surface(scr_driver->seat->gtk_shell,
                                                                     new_window->wl_surface);
       gtk_surface1_set_modal(gtk_surface);
+      gtk_surface1_release(gtk_surface); // very necessary
     }
   }
 

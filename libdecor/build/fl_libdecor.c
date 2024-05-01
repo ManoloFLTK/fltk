@@ -125,8 +125,10 @@ struct libdecor *fl_libdecor_new(struct wl_display *wl_display, const struct lib
   if (init_plugins(context) != 0) { // attempt to load plugin by dlopen()
     // no plug-in was found by dlopen(), use built-in plugin instead
     // defined in the source code of the built-in plugin:  libdecor-cairo.c or libdecor-gtk.c
-    extern const struct libdecor_plugin_description libdecor_plugin_description;
+    extern struct libdecor_plugin_description libdecor_plugin_description;
+    //printf("fl_libdecor_new: description=%p context=%p\n",&libdecor_plugin_description,context);
     context->plugin = libdecor_plugin_description.constructor(context);
+    context->plugin_capabilities = libdecor_plugin_description.capabilities;
   }
 
   wl_display_flush(wl_display);

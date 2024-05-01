@@ -84,6 +84,7 @@
 #define libdecor_state_get_window_state fl_libdecor_state_get_window_state
 #define libdecor_plugin_init fl_libdecor_plugin_init
 #define libdecor_plugin_release fl_libdecor_plugin_release
+#define libdecor_get_plugin_capabilities fl_libdecor_get_plugin_capabilities
 
 #endif // ! USE_SYSTEM_LIBDECOR
 

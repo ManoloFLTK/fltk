@@ -47,6 +47,7 @@
 #include <poll.h>
 
 #include <gtk/gtk.h>
+#include "gtk-shell-client-protocol.h"
 
 static const size_t SHADOW_MARGIN = 24;	/* grabbable part of the border */
 
@@ -342,6 +343,7 @@ struct libdecor_plugin_gtk {
 
 	int double_click_time_ms;
 	int drag_threshold;
+	struct gtk_shell1 *gtk_shell;
 };
 
 static const char *libdecor_gtk_proxy_tag = "libdecor-gtk";
@@ -2077,6 +2079,15 @@ send_cursor(struct seat *seat)
 }
 
 static void
+process_gtk_gesture(struct gtk_shell1 *shell, struct wl_surface *surface,
+		    uint32_t serial, struct wl_seat *wl_seat, uint32_t gesture)
+{
+	struct gtk_surface1 *gtk_surface = gtk_shell1_get_gtk_surface(shell, surface);
+	gtk_surface1_titlebar_gesture(gtk_surface, serial, wl_seat, gesture);
+	gtk_surface1_release(gtk_surface);
+}
+
+static void
 pointer_enter(void *data,
 	      struct wl_pointer *wl_pointer,
 	      uint32_t serial,
@@ -2244,21 +2255,39 @@ handle_titlebar_gesture(struct libdecor_frame_gtk *frame_gtk,
 {
 	switch (gesture) {
 	case TITLEBAR_GESTURE_DOUBLE_CLICK:
-		toggle_maximized(&frame_gtk->frame);
-		break;
-	case TITLEBAR_GESTURE_MIDDLE_CLICK:
-		break;
-	case TITLEBAR_GESTURE_RIGHT_CLICK:
-		{
-		const int title_height = gtk_widget_get_allocated_height(frame_gtk->header);
-		libdecor_frame_show_window_menu(&frame_gtk->frame,
-						seat->wl_seat,
-						serial,
-						seat->pointer_x,
-						seat->pointer_y
-						-title_height);
-		}
-		break;
+            if (frame_gtk->plugin_gtk->gtk_shell) {
+              process_gtk_gesture(frame_gtk->plugin_gtk->gtk_shell,
+                      frame_gtk->headerbar.wl_surface, serial,
+                          seat->wl_seat,
+                          GTK_SURFACE1_GESTURE_DOUBLE_CLICK);
+            } else {
+              toggle_maximized(&frame_gtk->frame);
+            }
+            break;
+          case TITLEBAR_GESTURE_MIDDLE_CLICK:
+		if (frame_gtk->plugin_gtk->gtk_shell)
+			process_gtk_gesture(frame_gtk->plugin_gtk->gtk_shell,
+					    frame_gtk->headerbar.wl_surface, serial, seat->wl_seat,
+					    GTK_SURFACE1_GESTURE_MIDDLE_CLICK);
+            break;
+          case TITLEBAR_GESTURE_RIGHT_CLICK:
+            if (frame_gtk->plugin_gtk->gtk_shell) {
+              process_gtk_gesture(frame_gtk->plugin_gtk->gtk_shell,
+                frame_gtk->headerbar.wl_surface, serial, seat->wl_seat,
+                GTK_SURFACE1_GESTURE_RIGHT_CLICK);
+              break;
+            }
+	    {
+            const int title_height = gtk_widget_get_allocated_height(frame_gtk->header);
+            
+            libdecor_frame_show_window_menu(&frame_gtk->frame,
+                                            seat->wl_seat,
+                                            serial,
+                                            seat->pointer_x,
+                                            seat->pointer_y
+                                            -title_height);
+	    }
+	    break;
 	}
 }
 
@@ -2277,11 +2306,16 @@ handle_button_on_header(struct libdecor_frame_gtk *frame_gtk,
 
 		if (button == BTN_RIGHT) {
 			handle_titlebar_gesture(frame_gtk,
+							seat,
+							serial,
+							TITLEBAR_GESTURE_RIGHT_CLICK);
+			frame_gtk->titlebar_gesture.state = TITLEBAR_GESTURE_STATE_CONSUMED;
+		} else if (button == BTN_MIDDLE) {
+			handle_titlebar_gesture(frame_gtk,
 						seat,
 						serial,
-						TITLEBAR_GESTURE_RIGHT_CLICK);
-			frame_gtk->titlebar_gesture.state =
-				TITLEBAR_GESTURE_STATE_CONSUMED;
+						TITLEBAR_GESTURE_MIDDLE_CLICK);
+			frame_gtk->titlebar_gesture.state = TITLEBAR_GESTURE_STATE_CONSUMED;
 		} else {
 			if (button == BTN_LEFT &&
 			    frame_gtk->titlebar_gesture.first_pressed_button == BTN_LEFT &&
@@ -2510,7 +2544,13 @@ touch_down(void *data,
 		default:
 			if (time - seat->touch_down_time_stamp <
 				(uint32_t)frame_gtk->plugin_gtk->double_click_time_ms) {
-				toggle_maximized(&frame_gtk->frame);
+				if (frame_gtk->plugin_gtk->gtk_shell) {
+					process_gtk_gesture(frame_gtk->plugin_gtk->gtk_shell,
+							    surface, serial, seat->wl_seat,
+							    GTK_SURFACE1_GESTURE_DOUBLE_CLICK);
+				} else {
+					toggle_maximized(&frame_gtk->frame);
+				}
 			}
 			else if (moveable(frame_gtk)) {
 				seat->touch_down_time_stamp = time;
@@ -2801,6 +2841,10 @@ init_wl_output(struct libdecor_plugin_gtk *plugin_gtk,
 	wl_output_add_listener(output->wl_output, &output_listener, output);
 }
 
+static struct libdecor_plugin_priority priorities[] = {
+	{ NULL, LIBDECOR_PLUGIN_PRIORITY_HIGH }
+};
+
 static void
 registry_handle_global(void *user_data,
 		       struct wl_registry *wl_registry,
@@ -2820,6 +2864,9 @@ registry_handle_global(void *user_data,
 		init_wl_seat(plugin_gtk, id, version);
 	else if (strcmp(interface, "wl_output") == 0)
 		init_wl_output(plugin_gtk, id, version);
+	else if (strcmp(interface, "gtk_shell1") == 0 && version >= 5)
+		plugin_gtk->gtk_shell = (struct gtk_shell1*)wl_registry_bind(wl_registry, id,
+                                                                       &gtk_shell1_interface, 5);
 }
 
 static void
@@ -2970,14 +3017,13 @@ libdecor_plugin_new(struct libdecor *context)
 	return &plugin_gtk->plugin;
 }
 
-static struct libdecor_plugin_priority priorities[] = {
-	{ NULL, LIBDECOR_PLUGIN_PRIORITY_HIGH }
-};
+static struct libdecor_plugin *
+libdecor_plugin_new(struct libdecor *context);
 
-LIBDECOR_EXPORT const struct libdecor_plugin_description
+LIBDECOR_EXPORT struct libdecor_plugin_description
 libdecor_plugin_description = {
 	.api_version = LIBDECOR_PLUGIN_API_VERSION,
-	.capabilities = LIBDECOR_PLUGIN_CAPABILITY_BASE,
+	.capabilities = LIBDECOR_PLUGIN_CAPABILITY_BASE | LIBDECOR_PLUGIN_CAPABILITY_GESTURES,
 	.description = "GTK3 plugin",
 	.priorities = priorities,
 	.constructor = libdecor_plugin_new,

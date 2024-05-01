@@ -19,6 +19,9 @@
 #include "Fl_Wayland_Graphics_Driver.H"
 #include <wayland-cursor.h>
 #include "../../../libdecor/build/fl_libdecor.h"
+extern "C" {
+#  include "../../../libdecor/src/libdecor-plugin.h"
+}
 #include "xdg-shell-client-protocol.h"
 #include "../Posix/Fl_Posix_System_Driver.H"
 #include <FL/Fl.H>
@@ -205,15 +208,28 @@ static void pointer_enter(void *data, struct wl_pointer *wl_pointer, uint32_t se
         struct wl_surface *surface, wl_fixed_t surface_x, wl_fixed_t surface_y) {
   struct Fl_Wayland_Screen_Driver::seat *seat = (struct Fl_Wayland_Screen_Driver::seat*)data;
   Fl_Window *win = event_coords_from_surface(surface, surface_x, surface_y);
-  static bool using_GTK = seat->gtk_shell &&
-    (gtk_shell1_get_version(seat->gtk_shell) >= GTK_SURFACE1_TITLEBAR_GESTURE_SINCE_VERSION);
-  if (!win && using_GTK) {
+  static bool init_done = false;
+  static bool FLTK_processes_middle = false;
+  if (!init_done) {
+    Fl_Wayland_Screen_Driver *scr_dr = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+    if (scr_dr->libdecor_context) {
+      init_done = true;
+      typedef int (*gpcft)(void*);
+      gpcft get_plugin_capabilities = (gpcft)dlsym(RTLD_DEFAULT, "libdecor_get_plugin_capabilities");
+      if (!get_plugin_capabilities) get_plugin_capabilities = (gpcft)dlsym(RTLD_DEFAULT, "fl_libdecor_get_plugin_capabilities");
+      FLTK_processes_middle = seat->gtk_shell &&
+        (gtk_shell1_get_version(seat->gtk_shell) >= GTK_SURFACE1_TITLEBAR_GESTURE_SINCE_VERSION) &&
+        (!get_plugin_capabilities ||
+        !(get_plugin_capabilities(scr_dr->libdecor_context) & LIBDECOR_PLUGIN_CAPABILITY_GESTURES));
+    }
+  }
+  if (!win && FLTK_processes_middle) {
     // check whether surface is the headerbar of a GTK-decorated window
     Fl_X *xp = Fl_X::first;
-    while (xp && using_GTK) { // all mapped windows
+    while (xp && FLTK_processes_middle) { // all mapped windows
       struct wld_window *xid = (struct wld_window*)xp->xid;
       if (xid->kind == Fl_Wayland_Window_Driver::DECORATED &&
-          fl_is_surface_from_GTK_titlebar(surface, xid->frame, &using_GTK)) {
+          fl_is_surface_from_GTK_titlebar(surface, xid->frame, &FLTK_processes_middle)) {
         gtk_shell_surface = surface;
         break;
       }
@@ -283,12 +299,11 @@ static void pointer_button(void *data,
 {
   struct Fl_Wayland_Screen_Driver::seat *seat =
     (struct Fl_Wayland_Screen_Driver::seat*)data;
-  if (gtk_shell_surface && state == WL_POINTER_BUTTON_STATE_PRESSED &&
-      button == BTN_MIDDLE) {
-    struct gtk_surface1 *gtk_surface = gtk_shell1_get_gtk_surface(seat->gtk_shell,
-                                                                  gtk_shell_surface);
+  if (gtk_shell_surface && state == WL_POINTER_BUTTON_STATE_PRESSED && button == BTN_MIDDLE) {
+    struct gtk_surface1 *gtk_surface = gtk_shell1_get_gtk_surface(seat->gtk_shell,gtk_shell_surface);
     gtk_surface1_titlebar_gesture(gtk_surface, serial, seat->wl_seat,
                                   GTK_SURFACE1_GESTURE_MIDDLE_CLICK);
+    gtk_surface1_release(gtk_surface); // very necessary
     return;
   }
   seat->serial = serial;
@@ -1376,6 +1391,17 @@ static void do_atexit() {
 }
 
 
+static void handle_error(struct libdecor *libdecor_context, enum libdecor_error error, const char *message)
+{
+  Fl::fatal("Caught error (%d): %s\n", error, message);
+}
+
+
+static struct libdecor_interface libdecor_iface = {
+  .error = handle_error,
+};
+
+
 void Fl_Wayland_Screen_Driver::open_display_platform() {
   static bool beenHereDoneThat = false;
   if (beenHereDoneThat)
@@ -1391,6 +1417,8 @@ void Fl_Wayland_Screen_Driver::open_display_platform() {
   }
   //puts("Using Wayland backend");
   wl_list_init(&outputs);
+  
+  if (!libdecor_context) libdecor_context = libdecor_new(wl_display, &libdecor_iface);
 
   wl_registry = wl_display_get_registry(wl_display);
   wl_registry_add_listener(wl_registry, &registry_listener, NULL);
