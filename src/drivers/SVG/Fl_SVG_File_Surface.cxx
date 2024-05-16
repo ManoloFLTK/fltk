@@ -29,6 +29,7 @@
 #include <FL/Fl_Pixmap.H>
 #include <FL/Fl_Bitmap.H>
 #include <FL/fl_string_functions.h>
+#include "../../flstring.h" // snprintf
 #include <stdlib.h>
 
 extern "C" {

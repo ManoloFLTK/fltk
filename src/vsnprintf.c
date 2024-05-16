@@ -59,7 +59,7 @@ extern "C" {
   - String/char: c, s, n
 */
 int fl_vsnprintf(char* buffer, size_t bufsize, const char* format, va_list ap) {
-#if defined(HAVE_VSNPRINTF) && defined(__linux__)
+#if !(defined(_MSC_VER) && _MSC_VER < 1900) && defined(HAVE_SNPRINTF)
   return vsnprintf(buffer, bufsize, format, ap);
 #else
   char          *bufptr,                /* Pointer to position in buffer */

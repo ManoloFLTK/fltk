@@ -17,6 +17,7 @@
 #include <FL/Fl.H>
 #include <FL/Fl_Color_Chooser.H>
 #include <FL/fl_draw.H>
+#include "flstring.h" // snprintf
 #include <FL/math.h>
 #include <stdio.h>
 

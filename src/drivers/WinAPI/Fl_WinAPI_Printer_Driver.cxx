@@ -24,6 +24,7 @@
 #include <FL/fl_draw.H>
 #include <FL/platform.H> // for fl_win32_xid()
 #include <FL/fl_string_functions.h>  // fl_strdup()
+#include "../../flstring.h" // snprintf
 #include <commdlg.h>
 #include <winspool.h> // DocumentProperties(), OpenPrinter(), ClosePrinter()
 

@@ -17,6 +17,7 @@
 /* \file
    Fl_Spinner widget . */
 
+#include "flstring.h" // snprintf
 #include <stdio.h>
 #include <stdlib.h>
 

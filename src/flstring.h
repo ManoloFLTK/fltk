@@ -63,14 +63,14 @@ extern "C" {
 #  endif /* __cplusplus */
 
 FL_EXPORT extern int fl_snprintf(char *, size_t, const char *, ...);
-#  ifndef HAVE_SNPRINTF
+#if (defined(_MSC_VER) && _MSC_VER < 1900) || !defined(HAVE_SNPRINTF)
 #    define snprintf fl_snprintf
-#  endif /* !HAVE_SNPRINTF */
+#  endif /* _MSC_VER < 1900 || !HAVE_SNPRINTF */
 
 FL_EXPORT extern int fl_vsnprintf(char *, size_t, const char *, va_list ap);
-#  ifndef HAVE_VSNPRINTF
+#if (defined(_MSC_VER) && _MSC_VER < 1900) || !defined(HAVE_VSNPRINTF)
 #    define vsnprintf fl_vsnprintf
-#  endif /* !HAVE_VSNPRINTF */
+#  endif /* _MSC_VER < 1900 || !HAVE_VSNPRINTF */
 
 /*
  * strlcpy() and strlcat() are some really useful BSD string functions

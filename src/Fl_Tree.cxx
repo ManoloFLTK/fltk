@@ -7,6 +7,7 @@
 #include <FL/Fl_Tree.H>
 #include <FL/Fl_Preferences.H>
 #include <FL/fl_string_functions.h>
+#include "flstring.h" // snprintf
 
 //////////////////////
 // Fl_Tree.cxx

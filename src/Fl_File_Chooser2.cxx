@@ -348,6 +348,7 @@
 #include <FL/Fl_Shared_Image.H>
 #include <FL/fl_draw.H>
 #include <FL/fl_string_functions.h>
+#include "flstring.h" // snprintf
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -36,6 +36,7 @@
 #include <FL/fl_draw.H>
 #include <FL/fl_string_functions.h>
 #include "Fl_String.H"
+#include "flstring.h" // vsnprintf
 
 /////////////////////////////////
 ////// Static Class Data ////////
@@ -4137,7 +4138,7 @@ void Fl_Terminal::printf(const char *fmt, ...) {
 */
 void Fl_Terminal::vprintf(const char *fmt, va_list ap) {
   char buffer[1024];    // XXX: should be user configurable..
-  ::vsnprintf(buffer, 1024, fmt, ap);
+  vsnprintf(buffer, 1024, fmt, ap);
   buffer[1024-1] = 0;   // XXX: MICROSOFT
   append(buffer);
 }

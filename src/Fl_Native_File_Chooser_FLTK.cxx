@@ -24,6 +24,7 @@
 #include <FL/Fl_Native_File_Chooser.H>
 #include <FL/Fl_File_Chooser.H>
 #include <FL/Fl_File_Icon.H>
+#include "flstring.h" // snprintf
 #include <string.h>
 #include <sys/stat.h>
 

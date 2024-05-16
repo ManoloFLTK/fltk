@@ -21,6 +21,7 @@
 #include <FL/Fl.H>
 #include <FL/Fl_Timer.H>
 #include <FL/fl_draw.H>
+#include "flstring.h" // snprintf
 #include <FL/forms.H>
 #include "Fl_System_Driver.H"
 #include <stdio.h>

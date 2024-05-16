@@ -31,6 +31,7 @@
 #include <FL/Fl_Image_Surface.H>
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Tooltip.H>
+#include "flstring.h" // snprintf
 #include <string.h> // for memchr
 
 // these are set by Fl::args() and override any system colors: from Fl_get_system_colors.cxx

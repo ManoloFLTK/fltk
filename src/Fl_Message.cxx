@@ -48,6 +48,7 @@
 #include <FL/fl_ask.H>
 #include "Fl_Message.h"     // intentionally "hidden" in src/...
 #include "FL/fl_string_functions.h"   // fl_strdup()
+#include "flstring.h" // vsnprintf
 
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Box.H>
@@ -325,7 +326,7 @@ int Fl_Message::innards(const char *fmt, va_list ap, const char *b0, const char 
   if (!strcmp(fmt, "%s")) {
     message_->label(va_arg(ap, const char *));
   } else {
-    ::vsnprintf(buffer, sizeof(buffer) - 1, fmt, ap);
+    vsnprintf(buffer, sizeof(buffer) - 1, fmt, ap);
     message_->label(buffer);
   }
 

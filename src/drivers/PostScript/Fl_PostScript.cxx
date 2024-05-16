@@ -31,6 +31,7 @@
 #include <FL/Fl_Check_Button.H>
 #include <FL/Fl_Return_Button.H>
 #include <FL/fl_string_functions.h>
+#include "../../flstring.h" // snprintf
 #include <FL/fl_callback_macros.H>
 #include <FL/platform.H>
 #include <stdarg.h>

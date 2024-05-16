@@ -20,6 +20,7 @@
 #include <FL/fl_ask.H>  // fl_alert()
 #include <FL/fl_utf8.h> // fl_utf8fromwc()
 #include <FL/fl_string_functions.h> // fl_strdup()
+#include "../src/flstring.h" // snprintf
 
 #include "ExternalCodeEditor_WIN32.h"
 #include "fluid.h"
@@ -69,7 +70,7 @@ static const char *get_ms_errmsg() {
   // Get error message from Windows
   msize = FormatMessageW(flags, 0, lastErr, langid, (LPWSTR)&mbuf, 0, NULL);
   if ( msize == 0 ) {
-    _snprintf(emsg, sizeof(emsg), "Error #%ld", (unsigned long)lastErr);
+    snprintf(emsg, sizeof(emsg), "Error #%ld", (unsigned long)lastErr);
   } else {
     // Convert message to UTF-8
     fl_utf8fromwc(emsg, sizeof(emsg), mbuf, msize);
@@ -345,7 +346,7 @@ const char* ExternalCodeEditor::tmpdir_name() {
     strcpy(tempdir, wchar_to_utf8(tempdirW, abuf));
   }
   static char dirname[100];
-  _snprintf(dirname, sizeof(dirname), "%s.fluid-%ld",
+  snprintf(dirname, sizeof(dirname), "%s.fluid-%ld",
     tempdir, (long)GetCurrentProcessId());
   if ( G_debug ) printf("tmpdir_name(): '%s'\n", dirname);
   return dirname;
@@ -390,7 +391,7 @@ const char* ExternalCodeEditor::tmp_filename() {
   const char *tmpdir = create_tmpdir();
   if ( !tmpdir ) return 0;
   const char *ext  = g_project.code_file_name.c_str();    // e.g. ".cxx"
-  _snprintf(path, sizeof(path), "%s\\%p%s", tmpdir, (void*)this, ext);
+  snprintf(path, sizeof(path), "%s\\%p%s", tmpdir, (void*)this, ext);
   path[sizeof(path)-1] = 0;
   return path;
 }
@@ -470,7 +471,7 @@ int ExternalCodeEditor::start_editor(const char *editor_cmd,
   memset(&pinfo_, 0, sizeof(pinfo_));
   // Command
   char cmd[1024];
-  _snprintf(cmd, sizeof(cmd), "%s %s", editor_cmd, filename);
+  snprintf(cmd, sizeof(cmd), "%s %s", editor_cmd, filename);
   utf8_to_wchar(cmd, wbuf);
   // Start editor process
   if (CreateProcessW(NULL,              // app name
