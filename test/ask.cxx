@@ -25,6 +25,7 @@
 #include <FL/Fl_Box.H>
 
 #include <FL/fl_ask.H>
+#include <FL/fl_string_functions.h> // for fl_snprintf
 
 #include <stdio.h>
 #include <string.h>
@@ -125,7 +126,7 @@ void timer_cb(void *) {
   // test message title assignment with a local buffer
   {                                 // local scope for buf
     char buf[40];                   // test: use local variable
-    snprintf(buf, 40, "Message #%d", n); // fill message title
+    fl_snprintf(buf, 40, "Message #%d", n); // fill message title
     fl_message_title(buf);          // set message title
     strcpy(buf, "** void **");      // overwrite buffer to be sure
   }                                 // buf goes out of scope here

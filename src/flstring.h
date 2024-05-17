@@ -2,7 +2,7 @@
  * Common string header file for the Fast Light Tool Kit (FLTK).
  * Internal use only (see "important note" below).
  *
- * Copyright 1998-2020 by Bill Spitzak and others.
+ * Copyright 1998-2024 by Bill Spitzak and others.
  *
  * This library is free software. Distribution and use rights are outlined in
  * the file "COPYING" which should have been included with this file.  If this
@@ -62,12 +62,10 @@
 extern "C" {
 #  endif /* __cplusplus */
 
-FL_EXPORT extern int fl_snprintf(char *, size_t, const char *, ...);
 #if (defined(_MSC_VER) && _MSC_VER < 1900) || !defined(HAVE_SNPRINTF)
 #    define snprintf fl_snprintf
 #  endif /* _MSC_VER < 1900 || !HAVE_SNPRINTF */
 
-FL_EXPORT extern int fl_vsnprintf(char *, size_t, const char *, va_list ap);
 #if (defined(_MSC_VER) && _MSC_VER < 1900) || !defined(HAVE_VSNPRINTF)
 #    define vsnprintf fl_vsnprintf
 #  endif /* _MSC_VER < 1900 || !HAVE_VSNPRINTF */

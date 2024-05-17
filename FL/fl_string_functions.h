@@ -1,7 +1,7 @@
 /*
  * Platform agnostic string portability functions for the Fast Light Tool Kit (FLTK).
  *
- * Copyright 2020-2022 by Bill Spitzak and others.
+ * Copyright 2020-2024 by Bill Spitzak and others.
  *
  * This library is free software. Distribution and use rights are outlined in
  * the file "COPYING" which should have been included with this file.  If this
@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>  // size_t
+#include <stdarg.h>  // va_list
 
 /** \defgroup fl_string  String handling functions
  String handling functions declared in <FL/fl_string_functions.h>
@@ -38,6 +39,10 @@ extern "C" {
 FL_EXPORT char* fl_strdup(const char *s);
 
 FL_EXPORT size_t fl_strlcpy(char *, const char *, size_t);
+
+FL_EXPORT int fl_snprintf(char *, size_t, const char *, ...);
+
+FL_EXPORT int fl_vsnprintf(char *, size_t, const char *, va_list ap);
 
 /** @} */
 

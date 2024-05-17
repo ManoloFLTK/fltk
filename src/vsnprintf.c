@@ -1,7 +1,7 @@
 /*
  * snprintf() and vsnprintf() functions for the Fast Light Tool Kit (FLTK).
  *
- * Copyright 1998-2010 by Bill Spitzak and others.
+ * Copyright 1998-2024 by Bill Spitzak and others.
  *
  * This library is free software. Distribution and use rights are outlined in
  * the file "COPYING" which should have been included with this file.  If this
@@ -288,6 +288,14 @@ int fl_vsnprintf(char* buffer, size_t bufsize, const char* format, va_list ap) {
 #endif /* HAVE_VSNPRINTF */
 }
 
+  /**   FLTK's platform independent wrapper for the snprintf() C library function.
+   This function guarantees:
+   - access to snprintf(), even on systems that don't have it
+   - NUL termination. Even if string expands larger than the buffer,
+     a terminating NUL is included, unlike some implementations of snprintf(),
+     notably Microsoft Visual Studio (pre-2015), which can leave the string
+     unterminated when truncated.
+   */
 int fl_snprintf(char* str, size_t size, const char* fmt, ...) {
   int ret;
   va_list ap;
