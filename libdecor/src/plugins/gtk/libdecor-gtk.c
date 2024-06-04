@@ -2839,10 +2839,6 @@ init_wl_output(struct libdecor_plugin_gtk *plugin_gtk,
 	wl_output_add_listener(output->wl_output, &output_listener, output);
 }
 
-static struct libdecor_plugin_priority priorities[] = {
-	{ NULL, LIBDECOR_PLUGIN_PRIORITY_HIGH }
-};
-
 static void
 registry_handle_global(void *user_data,
 		       struct wl_registry *wl_registry,
@@ -3015,8 +3011,9 @@ libdecor_plugin_new(struct libdecor *context)
 	return &plugin_gtk->plugin;
 }
 
-static struct libdecor_plugin *
-libdecor_plugin_new(struct libdecor *context);
+static struct libdecor_plugin_priority priorities[] = {
+	{ NULL, LIBDECOR_PLUGIN_PRIORITY_HIGH }
+};
 
 LIBDECOR_EXPORT const struct libdecor_plugin_description
 libdecor_plugin_description = {
