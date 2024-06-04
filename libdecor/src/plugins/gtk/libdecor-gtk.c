@@ -2255,39 +2255,37 @@ handle_titlebar_gesture(struct libdecor_frame_gtk *frame_gtk,
 {
 	switch (gesture) {
 	case TITLEBAR_GESTURE_DOUBLE_CLICK:
-            if (frame_gtk->plugin_gtk->gtk_shell) {
-              process_gtk_gesture(frame_gtk->plugin_gtk->gtk_shell,
-                      frame_gtk->headerbar.wl_surface, serial,
-                          seat->wl_seat,
-                          GTK_SURFACE1_GESTURE_DOUBLE_CLICK);
-            } else {
-              toggle_maximized(&frame_gtk->frame);
-            }
-            break;
-          case TITLEBAR_GESTURE_MIDDLE_CLICK:
-		if (frame_gtk->plugin_gtk->gtk_shell)
+		if (frame_gtk->plugin_gtk->gtk_shell) {
 			process_gtk_gesture(frame_gtk->plugin_gtk->gtk_shell,
-					    frame_gtk->headerbar.wl_surface, serial, seat->wl_seat,
-					    GTK_SURFACE1_GESTURE_MIDDLE_CLICK);
-            break;
-          case TITLEBAR_GESTURE_RIGHT_CLICK:
-            if (frame_gtk->plugin_gtk->gtk_shell) {
-              process_gtk_gesture(frame_gtk->plugin_gtk->gtk_shell,
-                frame_gtk->headerbar.wl_surface, serial, seat->wl_seat,
-                GTK_SURFACE1_GESTURE_RIGHT_CLICK);
-              break;
-            }
-	    {
-            const int title_height = gtk_widget_get_allocated_height(frame_gtk->header);
-            
-            libdecor_frame_show_window_menu(&frame_gtk->frame,
-                                            seat->wl_seat,
-                                            serial,
-                                            seat->pointer_x,
-                                            seat->pointer_y
-                                            -title_height);
-	    }
-	    break;
+					    frame_gtk->headerbar.wl_surface, serial,
+					    seat->wl_seat,
+					    GTK_SURFACE1_GESTURE_DOUBLE_CLICK);
+		} else {
+			toggle_maximized(&frame_gtk->frame);
+		}
+		break;
+	case TITLEBAR_GESTURE_MIDDLE_CLICK:
+		if (frame_gtk->plugin_gtk->gtk_shell) {
+			process_gtk_gesture(frame_gtk->plugin_gtk->gtk_shell,
+				    frame_gtk->headerbar.wl_surface, serial, seat->wl_seat,
+				    GTK_SURFACE1_GESTURE_MIDDLE_CLICK);
+		}
+		break;
+	case TITLEBAR_GESTURE_RIGHT_CLICK:
+		if (frame_gtk->plugin_gtk->gtk_shell) {
+			process_gtk_gesture(frame_gtk->plugin_gtk->gtk_shell,
+				frame_gtk->headerbar.wl_surface, serial, seat->wl_seat,
+				GTK_SURFACE1_GESTURE_RIGHT_CLICK);
+		} else {
+			const int title_height = gtk_widget_get_allocated_height(frame_gtk->header);
+			libdecor_frame_show_window_menu(&frame_gtk->frame,
+						seat->wl_seat,
+						serial,
+						seat->pointer_x,
+						seat->pointer_y
+						-title_height);
+		}
+		break;
 	}
 }
 
