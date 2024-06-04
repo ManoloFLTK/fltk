@@ -3020,7 +3020,7 @@ libdecor_plugin_new(struct libdecor *context)
 static struct libdecor_plugin *
 libdecor_plugin_new(struct libdecor *context);
 
-LIBDECOR_EXPORT struct libdecor_plugin_description
+LIBDECOR_EXPORT const struct libdecor_plugin_description
 libdecor_plugin_description = {
 	.api_version = LIBDECOR_PLUGIN_API_VERSION,
 	.capabilities = LIBDECOR_PLUGIN_CAPABILITY_BASE | LIBDECOR_PLUGIN_CAPABILITY_GESTURES,

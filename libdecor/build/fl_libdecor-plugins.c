@@ -253,7 +253,7 @@ static const char *get_libdecor_plugin_description() {
      if (dl) plugin_description = (const struct libdecor_plugin_description*)dlsym(dl, "libdecor_plugin_description");
 #else
      plugin_description = fl_libdecor_plugin_description;
-     extern struct libdecor_plugin_description libdecor_plugin_description;
+     extern const struct libdecor_plugin_description libdecor_plugin_description;
      if (!plugin_description) plugin_description = &libdecor_plugin_description;
 #endif
      //if (plugin_description) puts(plugin_description->description);
