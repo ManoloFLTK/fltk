@@ -34,6 +34,7 @@ protected:
   RECT screens[MAX_SCREENS];
   RECT work_area[MAX_SCREENS];
   float scale_of_screen[MAX_SCREENS];
+  char *screen_names[MAX_SCREENS];
 
   static BOOL CALLBACK screen_cb(HMONITOR mon, HDC, LPRECT r, LPARAM);
   BOOL screen_cb(HMONITOR mon, HDC, LPRECT r);
@@ -57,6 +58,7 @@ public:
   void screen_dpi(float &h, float &v, int n=0) FL_OVERRIDE;
   int screen_num_unscaled(int x, int y);
   void screen_work_area(int &X, int &Y, int &W, int &H, int n) FL_OVERRIDE;
+  const char *screen_name(int n) FL_OVERRIDE;
   // --- audible output
   void beep(int type) FL_OVERRIDE;
   // --- global events

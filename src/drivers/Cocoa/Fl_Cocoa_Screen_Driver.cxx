@@ -108,6 +108,9 @@ Fl_Cocoa_Screen_Driver::Fl_Cocoa_Screen_Driver() {
 
 void Fl_Cocoa_Screen_Driver::init()
 {
+  for (int i = 0; i < num_screens; i++) {
+    if (screen_names[i]) free(screen_names[i]);
+  }
   open_display();
   CGDirectDisplayID displays[MAX_SCREENS];
   CGDisplayCount count, i;
@@ -119,6 +122,7 @@ void Fl_Cocoa_Screen_Driver::init()
     screens[i].y      = int(r.origin.y);
     screens[i].width  = int(r.size.width);
     screens[i].height = int(r.size.height);
+    screen_names[i]   = NULL;
     //fprintf(stderr,"screen %d %dx%dx%dx%d\n",i,screens[i].x,screens[i].y,screens[i].width,screens[i].height);
     if (&CGDisplayScreenSize != NULL) {
       CGSize s = CGDisplayScreenSize(displays[i]); // from 10.3

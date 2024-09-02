@@ -1122,6 +1122,7 @@ public:
   static void screen_work_area(int &X, int &Y, int &W, int &H); // via screen driver
   static float screen_scale(int n); // via screen driver
   static void screen_scale(int n, float factor); // via screen driver
+  static const char *screen_name(int n); // via screen driver
   static int screen_scaling_supported();
   static void keyboard_screen_scaling(int value);
 

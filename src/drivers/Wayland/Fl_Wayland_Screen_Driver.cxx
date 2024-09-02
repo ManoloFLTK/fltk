@@ -1088,6 +1088,8 @@ static void output_geometry(void *data,
   output->x = int(x);
   output->y = int(y);
   output->dpi = 96; // to elaborate
+  output->name = new char[strlen(model) + strlen(make) + 4];
+  snprintf(output->name, 1000, "%s - %s", model, make);
 }
 
 
@@ -1636,6 +1638,21 @@ void Fl_Wayland_Screen_Driver::screen_dpi(float &h, float &v, int n)
       }
     }
   }
+}
+
+
+const char *Fl_Wayland_Screen_Driver::screen_name(int n) {
+  if (num_screens < 0) init();
+  if (n >= 0 && n < num_screens) {
+    Fl_Wayland_Screen_Driver::output *output;
+    int i = 0;
+    wl_list_for_each(output, &outputs, link) {
+      if (i++ == n) { // n'th screen of the system
+        return output->name;
+      }
+    }
+  }
+  return NULL;
 }
 
 

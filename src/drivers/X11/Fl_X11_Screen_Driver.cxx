@@ -349,6 +349,7 @@ void Fl_X11_Screen_Driver::init() {
       screens[i].y_org = 0;
       screens[i].width = DisplayWidth(fl_display, i);
       screens[i].height = DisplayHeight(fl_display, i);
+      screens[i].name = NULL;
 #if USE_XFT
       screens[i].scale = 1;
 #endif
@@ -364,6 +365,31 @@ void Fl_X11_Screen_Driver::init() {
     }
   }
   init_workarea();
+  FILE *pipe = popen("hwinfo --monitor | grep Model:", "r");
+  // Content of received text:  'Model: "XXXXXXXX"'
+  if (pipe) {
+    char line[100], *p;
+    for (int i = 0; i < num_screens; i++) {
+      p = fgets(line, sizeof(line), pipe);
+      if (!p) break;
+      p = strstr(p, "Model:");
+      if (p) {
+        screens[i].name = strdup(p + 8);
+        p = strchr(screens[i].name, '"');
+        if (p) *p = 0;
+      }
+    }
+    pclose(pipe);
+  }
+}
+
+
+const char *Fl_X11_Screen_Driver::screen_name(int n) {
+  if (num_screens < 0) init();
+  if (n >= 0 && n < num_screens) {
+        return screens[n].name;
+  }
+  return NULL;
 }
 
 

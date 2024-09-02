@@ -2350,6 +2350,11 @@ void Fl::screen_scale(int n, float factor) {
   } else Fl::screen_driver()->rescale_all_windows_from_screen(n, factor, factor);
 }
 
+
+const char *Fl::screen_name(int n) {
+  return Fl::screen_driver()->screen_name(n);
+}
+
 /**
   See if scaling factors are supported by this platform.
  \return 0 if scaling factors are not supported by this platform,

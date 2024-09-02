@@ -268,6 +268,8 @@ void update_screeninfo(Fl_Widget *b, void *p) {
         Fl::screen_dpi(dpih, dpiv, n);
         snprintf(line, sizeof(line), "Screen %d: %dx%d@%d,%d DPI:%.1fx%.1f scale:%.2f", n, w, h, x, y, dpih, dpiv, Fl::screen_scale(n));
         browser->add(line);
+        snprintf(line, sizeof(line), "Name: %s", Fl::screen_name(n));
+        browser->add(line);
         Fl::screen_work_area(x, y, w, h, n);
         snprintf(line, sizeof(line), "Work area %d: %dx%d@%d,%d", n, w, h, x, y);
         browser->add(line);

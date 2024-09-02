@@ -52,6 +52,7 @@ protected:
   XRectangle screens[MAX_SCREENS];
   float dpi_h[MAX_SCREENS];
   float dpi_v[MAX_SCREENS];
+  char *screen_names[MAX_SCREENS];
   static int insertion_point_x;
   static int insertion_point_y;
   static int insertion_point_height;
@@ -72,6 +73,7 @@ public:
   void screen_dpi(float &h, float &v, int n=0) FL_OVERRIDE;
   // implemented in Fl_cocoa.mm because uses Objective-c
   void screen_work_area(int &X, int &Y, int &W, int &H, int n) FL_OVERRIDE;
+  const char *screen_name(int n) FL_OVERRIDE;
   // --- audible output
   void beep(int type) FL_OVERRIDE;
   // --- global events

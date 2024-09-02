@@ -40,6 +40,7 @@ protected:
     short y_org;
     short width;
     short height;
+    char *name;
 #if USE_XFT
     float scale;
 #endif
@@ -84,6 +85,7 @@ public:
   void screen_xywh(int &X, int &Y, int &W, int &H, int n) FL_OVERRIDE;
   void screen_dpi(float &h, float &v, int n=0) FL_OVERRIDE;
   void screen_work_area(int &X, int &Y, int &W, int &H, int n) FL_OVERRIDE;
+  const char *screen_name(int n) FL_OVERRIDE;
   // --- audible output
   void beep(int type) FL_OVERRIDE;
   // --- global events

@@ -4731,6 +4731,32 @@ void Fl_Cocoa_Window_Driver::draw_titlebar_to_context(CGContextRef gc, int w, in
 }
 
 
+const char *Fl_Cocoa_Screen_Driver::screen_name(int n) {
+  if (screen_names[n]) return screen_names[n];
+  CGDirectDisplayID displays[Fl_Screen_Driver::MAX_SCREENS];
+  CGDisplayCount count;
+  CGGetActiveDisplayList(Fl_Screen_Driver::MAX_SCREENS, displays, &count);
+  if (fl_mac_os_version >= 101500) {
+    NSArray *screens = [NSScreen screens];
+    for (NSScreen *screen in screens) {
+      NSNumber *ns = (NSNumber*)[[screen deviceDescription] objectForKey:@"NSScreenNumber"];
+      if ([ns unsignedIntValue] == displays[n]) {
+        NSString *name = [screen performSelector:@selector(localizedName)];  // macOS 10.15
+        screen_names[n] = strdup([name UTF8String]);
+        return screen_names[n];
+      }
+    }
+  } else {
+    uint32_t model = CGDisplayModelNumber(displays[n]);
+    uint32_t vendor = CGDisplayVendorNumber(displays[n]);
+    screen_names[n] = (char*)malloc(40);
+    snprintf(screen_names[n], 40, "Model:%u - Vendor:%u", model, vendor);
+    return screen_names[n];
+  }
+  return NULL;
+}
+
+
 /* Returns the version of the running Mac OS as an int such as 100802 for 10.8.2,
  and also assigns that value to global fl_mac_os_version.
  N.B.: macOS "Big Sur" 11.0 can produce 2 different values for fl_mac_os_version:

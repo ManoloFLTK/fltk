@@ -135,6 +135,7 @@ public:
   virtual void screen_work_area(int &X, int &Y, int &W, int &H, int n) {
     screen_xywh(X, Y, W, H, n);
   }
+  virtual const char *screen_name(int n) { return NULL;}
   // --- audible output
   virtual void beep(int) {}
   // --- global events

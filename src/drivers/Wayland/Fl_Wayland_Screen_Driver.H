@@ -70,6 +70,7 @@ public:
     int x, y; // logical position of screen
     int width; // in pixels
     int height; // in pixels
+    char *name;
     float dpi;
     struct wl_output *wl_output;
     int wld_scale; // Wayland scale factor
@@ -122,6 +123,7 @@ public:
   void screen_xywh(int &X, int &Y, int &W, int &H, int n) FL_OVERRIDE;
   void screen_dpi(float &h, float &v, int n=0) FL_OVERRIDE;
   void screen_work_area(int &X, int &Y, int &W, int &H, int n) FL_OVERRIDE;
+  const char *screen_name(int n) FL_OVERRIDE;
   // --- audible output
   void beep(int type) FL_OVERRIDE;
   // --- global events

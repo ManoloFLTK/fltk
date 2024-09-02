@@ -47,7 +47,10 @@ static Fl_Text_Editor::Key_Binding extra_bindings[] =  {
 
 Fl_WinAPI_Screen_Driver::Fl_WinAPI_Screen_Driver() : Fl_Screen_Driver() {
   text_editor_extra_key_bindings =  extra_bindings;
-  for (int i = 0; i < MAX_SCREENS; i++) scale_of_screen[i] = 1;
+  for (int i = 0; i < MAX_SCREENS; i++) {
+    scale_of_screen[i] = 1;
+    screen_names[i] = NULL;
+  }
   scaling_capability = SYSTEMWIDE_APP_SCALING;
 }
 
@@ -107,6 +110,9 @@ BOOL Fl_WinAPI_Screen_Driver::screen_cb(HMONITOR mon, HDC, LPRECT r)
 
 void Fl_WinAPI_Screen_Driver::init()
 {
+  for (int i = 0; i < num_screens; i++) {
+    if (screen_names[i]) free(screen_names[i]);
+  }
   open_display();
   // Since not all versions of Windows include multiple monitor support,
   // we do a run-time check for the required functions...
@@ -192,6 +198,74 @@ void Fl_WinAPI_Screen_Driver::screen_dpi(float &h, float &v, int n)
     h = float(dpi[n][0]);
     v = float(dpi[n][1]);
   }
+}
+
+
+const char *Fl_WinAPI_Screen_Driver::screen_name(int n) {
+  if (screen_names[n]) return screen_names[n];
+  UINT32 flags = QDC_ONLY_ACTIVE_PATHS;
+  LONG isError;
+
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN7)
+  HMODULE hMod = GetModuleHandle("USER32.DLL");
+  typedef LONG(WINAPI* GetDisplayConfigBufferSizes_type)(UINT32, UINT32 *, UINT32 *);
+  GetDisplayConfigBufferSizes_type GetDisplayConfigBufferSizes_f = (GetDisplayConfigBufferSizes_type)GetProcAddress(hMod, "GetDisplayConfigBufferSizes");
+  
+  typedef LONG(WINAPI* QueryDisplayConfig_type)(UINT32, UINT32*, DISPLAYCONFIG_PATH_INFO*,
+                                                UINT32*, DISPLAYCONFIG_MODE_INFO*,
+                                                DISPLAYCONFIG_TOPOLOGY_ID*);
+  QueryDisplayConfig_type QueryDisplayConfig_f = (QueryDisplayConfig_type)GetProcAddress(hMod, "QueryDisplayConfig");
+  
+  typedef LONG(WINAPI* DisplayConfigGetDeviceInfo_type)(DISPLAYCONFIG_DEVICE_INFO_HEADER *);
+  DisplayConfigGetDeviceInfo_type DisplayConfigGetDeviceInfo_f = (DisplayConfigGetDeviceInfo_type)GetProcAddress(hMod, "DisplayConfigGetDeviceInfo");
+
+  if (GetDisplayConfigBufferSizes_f && QueryDisplayConfig_f && DisplayConfigGetDeviceInfo_f) {
+    UINT32 pathCount, modeCount;
+    isError = GetDisplayConfigBufferSizes_f(flags, &pathCount, &modeCount);  // ≥ Windows vista
+    if (isError != ERROR_SUCCESS) return NULL;
+    // Allocate the path and mode arrays
+    DISPLAYCONFIG_PATH_INFO *paths = new DISPLAYCONFIG_PATH_INFO[pathCount];
+    DISPLAYCONFIG_MODE_INFO *modes = new DISPLAYCONFIG_MODE_INFO[modeCount];
+    
+    // Get all active paths and their modes
+    isError = QueryDisplayConfig_f(flags, &pathCount, paths, &modeCount, modes, NULL); // ≥ Windows 7
+    delete[] modes;
+    if (isError != ERROR_SUCCESS)
+    {
+      delete[] paths;
+      return NULL;
+    }
+    // Find the target (monitor) friendly name
+    DISPLAYCONFIG_TARGET_DEVICE_NAME targetName = {};
+    targetName.header.adapterId = paths[n].targetInfo.adapterId;
+    targetName.header.id = paths[n].targetInfo.id;
+    targetName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
+    targetName.header.size = sizeof(targetName);
+    isError = DisplayConfigGetDeviceInfo_f(&targetName.header); // ≥ Windows vista
+    delete[] paths;
+    if (isError != ERROR_SUCCESS) return NULL;
+    
+    if (targetName.flags.friendlyNameFromEdid)
+    {
+      char out[200];
+      //fprintf(stderr,"using friendlyNameFromEdid\n");
+      fl_utf8fromwc(out, sizeof(out), targetName.monitorFriendlyDeviceName,
+                    wcslen(targetName.monitorFriendlyDeviceName));
+      screen_names[n] = strdup(out);
+      return screen_names[n];
+    }
+  }
+#endif // (_WIN32_WINNT >= _WIN32_WINNT_WIN7)
+
+  DISPLAY_DEVICE displayDevice;
+  displayDevice.cb = sizeof(DISPLAY_DEVICE);
+  if (EnumDisplayDevices(NULL, n, &displayDevice, 0)) // ≥ Windows 2000
+  {
+    //fprintf(stderr,"using EnumDisplayDevices\n");
+    screen_names[n] = strdup(displayDevice.DeviceString);
+  }
+  
+  return screen_names[n];
 }
 
 
