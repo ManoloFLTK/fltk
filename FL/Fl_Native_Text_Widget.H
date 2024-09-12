@@ -16,6 +16,7 @@ private:
   Fl_Fontsize font_size_;
   Fl_Color text_color_;
   bool is_readonly_;
+  bool is_selectable_;
   bool word_wrap_;
   Fl_Text_Widget_Driver *driver_;
 public:
@@ -42,6 +43,8 @@ public:
   void insert_position(int pos, int m);
   void readonly(bool on_off);
   bool readonly();
+  void selectable(bool on_off);
+  bool selectable();
   int replace(int from, int to, const char *text, int ilen = 0);
   void wrap(bool b);
   bool wrap();

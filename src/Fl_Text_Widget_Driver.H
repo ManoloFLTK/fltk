@@ -25,6 +25,7 @@ public:
   void insert_position(int pos) { insert_position(pos, pos); }
   virtual void insert_position(int pos, int mark) {}
   virtual void readonly(bool on_off) {}
+  virtual void selectable(bool on_off) {}
   virtual void replace(int from, int to, const char *text, int len) {}
   void append(const char *t, int length) { replace(INT_MAX, INT_MAX, t, (length == -1 ? strlen(t) : length)); }
   virtual int mark() { return 0; }

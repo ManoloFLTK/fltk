@@ -12,6 +12,7 @@ Fl_Native_Text_Widget::Fl_Native_Text_Widget(int x, int y, int w, int h, const c
   font_ = labelfont();
   text_color_ = labelcolor();
   is_readonly_ = false;
+  is_selectable_ = true;
   word_wrap_ = true;
 }
 
@@ -102,6 +103,17 @@ void Fl_Native_Text_Widget::readonly(bool on_off) {
 
 bool Fl_Native_Text_Widget::readonly() {
   return is_readonly_;
+}
+
+
+void Fl_Native_Text_Widget::selectable(bool on_off) {
+  is_selectable_ = on_off;
+  driver_->selectable(on_off);
+}
+
+
+bool Fl_Native_Text_Widget::selectable() {
+  return is_selectable_;
 }
 
 
