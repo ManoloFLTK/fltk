@@ -864,6 +864,7 @@ endif(USE_PANGOXFT)
 #######################################################################
 if((X11_Xft_FOUND OR NOT USE_PANGOXFT) AND FLTK_USE_PANGO)
   pkg_check_modules(CAIRO IMPORTED_TARGET cairo)
+  pkg_check_modules(GTK3 IMPORTED_TARGET gtk+-3.0)
   if(USE_PANGOXFT)
     pkg_check_modules(PANGOXFT IMPORTED_TARGET pangoxft)
   endif(USE_PANGOXFT)

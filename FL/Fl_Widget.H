@@ -28,6 +28,7 @@ class Fl_Widget;
 class Fl_Window;
 class Fl_Group;
 class Fl_Image;
+class Fl_Native_Widget;
 
 /** Default callback type definition for all fltk widgets (by far the most used) */
 typedef void (Fl_Callback )(Fl_Widget*, void*);
@@ -1246,7 +1247,9 @@ public:
   /** Returns non zero if MAC_USE_ACCENTS_MENU flag is set, 0 otherwise.
    */
   int use_accents_menu() { return flags() & MAC_USE_ACCENTS_MENU; }
-
+  
+  virtual Fl_Native_Widget *as_native_widget() { return NULL; } // [NATIVE]
+  
   /** For back compatibility only.
       \deprecated Use selection_color() instead.
   */
@@ -1279,6 +1282,7 @@ public:
    \see void shortcut_label(int value) */
   int shortcut_label() const { return flags_ & SHORTCUT_LABEL; }
 };
+
 
 /**
     Reserved type numbers (necessary for my cheapo RTTI) start here.

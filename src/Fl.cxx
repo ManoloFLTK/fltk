@@ -1052,15 +1052,21 @@ void Fl::focus(Fl_Widget *o)
 
   if (o && !o->visible_focus()) return;
   Fl_Widget *p = focus_;
+printf("Fl::focus(%s)\n",o?o->label():"nil");
   if (o != p) {
     Fl::compose_reset();
     focus_ = o;
     // make sure that fl_xfocus is set to the top level window
     // of this widget, or fl_fix_focus will clear our focus again
     if (o) {
-      Fl_Window *win = 0, *w1 = o->as_window();
+      /*Fl_Window *win = 0, *w1 = o->as_window();
       if (!w1) w1 = o->window();
-      while (w1) { win=w1; w1=win->window(); }
+      while (w1) { win=w1; w1=win->window(); }*/ // same as win = o->top_window();
+      Fl_Window *win;
+      if (o->as_native_widget()) { // [NATIVE]
+        o->as_native_widget()->got_focus();
+        win = o->window();
+      } else win = o->top_window();
       if (win) {
         if (fl_xfocus != win) {
           Fl_Window_Driver::driver(win)->take_focus();
@@ -1068,6 +1074,7 @@ void Fl::focus(Fl_Widget *o)
         }
       }
     }
+    if (p && p->as_native_widget()) p->as_native_widget()->lost_focus(); // [NATIVE]
     // take focus from the old focused window
     fl_oldfocus = 0;
     int old_event = e_number;
@@ -1147,13 +1154,15 @@ void fl_fix_focus() {
   // set focus based on Fl::modal() and fl_xfocus
   Fl_Widget* w = fl_xfocus;
   if (w) {
+    //printf("fl_fix_focus: w=%p %s Fl::focus()=%p\n",w,w->label(),Fl::focus());
     int saved = Fl::e_keysym;
     if (Fl::e_keysym < (FL_Button + FL_LEFT_MOUSE) ||
         Fl::e_keysym > (FL_Button + FL_RIGHT_MOUSE))
       Fl::e_keysym = 0; // make sure widgets don't think a keystroke moved focus
-    while (w->parent()) w = w->parent();
+    Fl_Widget *f = Fl::focus();
+    if (f && !f->as_native_widget()) w = w->top_window(); // [NATIVE]
     if (Fl::modal()) w = Fl::modal();
-    if (!w->contains(Fl::focus()))
+    if (!w->contains(f))
       if (!w->take_focus()) Fl::focus(w);
     Fl::e_keysym = saved;
   } else

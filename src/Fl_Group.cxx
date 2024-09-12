@@ -153,7 +153,8 @@ int Fl_Group::handle(int event) {
   case FL_FOCUS:
     switch (navkey()) {
     default:
-      if (savedfocus_ && savedfocus_->take_focus()) return 1;
+      if (savedfocus_ && (!as_window() || !as_window()->contains_native()) &&
+          savedfocus_->take_focus()) return 1; // [NATIVE]
     case FL_Right:
     case FL_Down:
       for (i = children(); i--;) if ((*a++)->take_focus()) return 1;
@@ -1035,4 +1036,13 @@ void Fl_Group::draw_outside_label(const Fl_Widget& widget) const {
     W = wx+this->w()-X;
   }
   widget.draw_label(X,Y,W,H,(Fl_Align)a);
+}
+
+
+#include <FL/Fl_Window.H>
+int Fl_Native_Widget::handle(int event) {
+  if (event == FL_SHOW) {
+    if (window()) window()->contains_native_ = true;
+  }
+  return Fl_Group::handle(event);
 }

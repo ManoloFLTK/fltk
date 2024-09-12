@@ -286,4 +286,17 @@ public:
   Fl_End() {Fl_Group::current()->end();}
 };
 
+
+class /*FL_EXPORT?*/ Fl_Native_Widget : public Fl_Group { // [NATIVE]
+protected:
+  Fl_Native_Widget(int x, int y, int w, int h, const char *l) : Fl_Group(x,y,w,h,l) {
+    end();
+  }
+public:
+  Fl_Native_Widget *as_native_widget() FL_OVERRIDE { return this; }
+  int handle(int) FL_OVERRIDE;
+  virtual void got_focus() {}
+  virtual void lost_focus() {}
+};
+
 #endif

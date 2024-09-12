@@ -693,7 +693,7 @@ void Fl_Cocoa_Screen_Driver::breakMacEventLoop()
   if (Fl::modal_ && (Fl::modal_ != w))
     return NO;  // prevent the caption to be redrawn as active on click
                 //  when another modal window is currently the key win
-  return !(!w || w->output() || w->tooltip_window() || w->menu_window() || w->parent());
+  return !(!w || w->output() || w->tooltip_window() || w->menu_window() || (w->parent() && !w->contains_native()));//[NATIVE]
 }
 
 - (BOOL)canBecomeMainWindow
@@ -1060,6 +1060,11 @@ static void cocoaMouseHandler(NSEvent *theEvent)
   float s = Fl::screen_driver()->scale(0);
   pos.x /= s; pos.y /= s;
   pos.y = window->h() - pos.y;
+  while (window->parent()) { // [NATIVE] subwindows receive mouse events, transform coords to toplevel
+    pos.x += window->x();
+    pos.y += window->y();
+    window = window->window();
+  }
   NSInteger btn = [theEvent buttonNumber] + 1;
   NSUInteger mods = [theEvent modifierFlags];
   int sendEvent = 0;
@@ -1117,7 +1122,7 @@ static void cocoaMouseHandler(NSEvent *theEvent)
           Fl::e_is_click = 0;
       }
       mods_to_e_state( mods );
-      update_e_xy_and_e_xy_root([theEvent window]);
+      update_e_xy_and_e_xy_root(fl_xid(window)/*[theEvent window]*/); // [NATIVE]
       if (fl_mac_os_version < 100500) {
         // before 10.5, mouse moved events aren't sent to borderless windows such as tooltips
         Fl_Window *tooltip = Fl_Tooltip::current_window();
@@ -2503,6 +2508,10 @@ static FLTextInputContext* fltextinputcontext_instance = nil;
   //NSLog(@"performKeyEquivalent:");
   fl_lock_function();
   cocoaKeyboardHandler(theEvent);
+  if ([[self window] firstResponder] != self) { // [NATIVE]
+    fl_unlock_function();
+    return NO;
+  }
   BOOL handled;
   NSUInteger mods = [theEvent modifierFlags];
   Fl_Window *w = [(FLWindow*)[theEvent window] getFl_Window];
@@ -2617,7 +2626,7 @@ static FLTextInputContext* fltextinputcontext_instance = nil;
   cocoaKeyboardHandler(theEvent);
   in_key_event = YES;
   Fl_Widget *f = Fl::focus();
-  if (f && f->as_gl_window()) { // ignore text input methods for GL windows
+if (f && f->as_gl_window()) { // ignore text input methods for GL windows
     need_handle = YES;
     [FLView prepareEtext:[theEvent characters]];
   } else {

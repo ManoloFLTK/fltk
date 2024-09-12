@@ -639,6 +639,10 @@ public:
 
   void allow_expand_outside_parent();
 
+  bool contains_native() { return contains_native_; } // [NATIVE]
+private:
+  friend class Fl_Native_Widget;
+  bool contains_native_;
 };
 
 #endif

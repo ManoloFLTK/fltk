@@ -65,6 +65,7 @@ CPPFILES = \
 	Fl_Message.cxx \
 	Fl_Multi_Label.cxx \
 	Fl_Native_File_Chooser.cxx \
+        Fl_Native_Text_Widget.cxx \
 	Fl_Overlay_Window.cxx \
 	Fl_Pack.cxx \
 	Fl_Paged_Device.cxx \
