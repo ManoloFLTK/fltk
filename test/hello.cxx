@@ -1,31 +1,32 @@
-//
-// Hello, World! program for the Fast Light Tool Kit (FLTK).
-//
-// Copyright 1998-2021 by Bill Spitzak and others.
-//
-// This library is free software. Distribution and use rights are outlined in
-// the file "COPYING" which should have been included with this file.  If this
-// file is missing or damaged, see the license at:
-//
-//     https://www.fltk.org/COPYING.php
-//
-// Please see the following page on how to report bugs and issues:
-//
-//     https://www.fltk.org/bugs.php
-//
-
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
-#include <FL/Fl_Box.H>
+#include <FL/Fl_Native_Text_Widget.H>
 
 int main(int argc, char **argv) {
-  Fl_Window *window = new Fl_Window(340, 180);
-  Fl_Box *box = new Fl_Box(20, 40, 300, 100, "Hello, World!");
-  box->box(FL_UP_BOX);
-  box->labelfont(FL_BOLD + FL_ITALIC);
-  box->labelsize(36);
-  box->labeltype(FL_SHADOW_LABEL);
+  Fl_Window *window = new Fl_Window(440, 280);
+  bool readonly = false;
+  bool selectable = true;
+  const char *label;
+  if (readonly && !selectable) label = "Read only text box";
+  else if (readonly && selectable) label = "Selectable text box";
+  else label = "Editable text box";
+  Fl_Native_Text_Widget *box = new Fl_Native_Text_Widget(20, 40, 400, 200, label);
+  box->align(FL_ALIGN_TOP);
+  box->textfont(FL_COURIER_BOLD);
+  box->textsize(20);
+  box->textcolor(FL_DARK3);
+  box->cursor_color(FL_RED);
+  box->color(FL_LIGHT2);
+  box->box(FL_DOWN_FRAME);
+  box->right_to_left(true);
+  box->value(
+    "بداية القرن التاسع عشر أول مشروع لرسم خرائط الموقع، تبعه العديد من مواطنيه لا سيما«أوستن هنري لايارد» في عام 1850 و«هنري روليِنسون»"
+             );
+  //box->wrap(0);
   window->end();
-  window->show(argc, argv);
+  window->resizable(box);
+  box->readonly(readonly);
+  box->selectable(selectable);
+  window->show();
   return Fl::run();
 }
