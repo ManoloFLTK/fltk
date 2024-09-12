@@ -75,6 +75,7 @@ set(CPPFILES
   Fl_Message.cxx
   Fl_Multi_Label.cxx
   Fl_Native_File_Chooser.cxx
+  Fl_Native_Text_Widget.cxx
   Fl_Overlay_Window.cxx
   Fl_Pack.cxx
   Fl_Paged_Device.cxx
@@ -604,6 +605,7 @@ if(APPLE AND NOT FLTK_BACKEND_X11)
   set(MMFILES
     Fl_cocoa.mm
     drivers/Cocoa/Fl_Cocoa_Printer_Driver.mm
+    drivers/Cocoa/Fl_Cocoa_Text_Widget_Driver.mm
     Fl_Native_File_Chooser_MAC.mm
     Fl_MacOS_Sys_Menu_Bar.mm
   )
