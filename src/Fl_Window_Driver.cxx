@@ -303,6 +303,8 @@ void Fl_Window_Driver::un_maximize() {
   *no_fullscreen_h() = 0;
 }
 
+Fl_Widget *Fl_Window_Driver::last_focus_widget_ = NULL; // [NATIVE]
+
 /**
  \}
  \endcond

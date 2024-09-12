@@ -75,6 +75,7 @@ set(CPPFILES
   Fl_Message.cxx
   Fl_Multi_Label.cxx
   Fl_Native_File_Chooser.cxx
+  Fl_Native_Text_Widget.cxx
   Fl_Overlay_Window.cxx
   Fl_Pack.cxx
   Fl_Paged_Device.cxx
@@ -311,6 +312,7 @@ elseif(FLTK_BACKEND_WAYLAND)
   )
 
     list(APPEND DRIVER_FILES
+      drivers/Cairo/Fl_Cairo_Text_Widget_Driver.cxx
       Fl_Native_File_Chooser_Kdialog.cxx
       Fl_Native_File_Chooser_Zenity.cxx)
 
@@ -382,6 +384,7 @@ else()
     drivers/WinAPI/Fl_WinAPI_Screen_Driver.cxx
     drivers/WinAPI/Fl_WinAPI_Window_Driver.cxx
     drivers/WinAPI/Fl_WinAPI_Printer_Driver.cxx
+    drivers/WinAPI/Fl_WinAPI_Text_Widget_Driver.cxx
     drivers/GDI/Fl_GDI_Graphics_Driver.cxx
     drivers/GDI/Fl_GDI_Graphics_Driver_arci.cxx
     drivers/GDI/Fl_GDI_Graphics_Driver_color.cxx
@@ -604,6 +607,7 @@ if(APPLE AND NOT FLTK_BACKEND_X11)
   set(MMFILES
     Fl_cocoa.mm
     drivers/Cocoa/Fl_Cocoa_Printer_Driver.mm
+    drivers/Cocoa/Fl_Cocoa_Text_Widget_Driver.mm
     Fl_Native_File_Chooser_MAC.mm
     Fl_MacOS_Sys_Menu_Bar.mm
   )
@@ -707,6 +711,7 @@ endif(HAVE_XRENDER)
 if(USE_PANGO)
   list(APPEND OPTIONAL_LIBS ${HAVE_LIB_PANGO})
   append_optional_libs(PkgConfig::PANGOCAIRO)
+  append_optional_libs(PkgConfig::GTK3)
   list(APPEND OPTIONAL_LIBS ${HAVE_LIB_GOBJECT})
   if(USE_PANGOXFT)
     append_optional_libs(PkgConfig::PANGOXFT)
