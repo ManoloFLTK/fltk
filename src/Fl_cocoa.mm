@@ -2514,6 +2514,9 @@ static FLTextInputContext* fltextinputcontext_instance = nil;
 - (BOOL)performKeyEquivalent:(NSEvent*)theEvent
 {
   //NSLog(@"performKeyEquivalent:");
+  if ([[self window] firstResponder] != self) {
+    return NO;
+  }
   fl_lock_function();
   cocoaKeyboardHandler(theEvent);
   BOOL handled;
