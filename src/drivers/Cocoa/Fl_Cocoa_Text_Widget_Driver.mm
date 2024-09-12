@@ -186,8 +186,10 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     [scroll_view setHasHorizontalScroller:YES];
     [scroll_view setScrollerStyle:NSScrollerStyleOverlay];
     [view addSubview:scroll_view];
-    if (!widget->readonly()) [[view window] makeFirstResponder:scroll_view];
-    [text_view setAllowsUndo:YES];// TODO undo
+    if (!widget->readonly()) {
+      [[view window] makeFirstResponder:scroll_view];
+      [text_view setAllowsUndo:YES];
+    }
     if (text_before_show) {
       [text_view setString:text_before_show];
       [text_before_show release];
@@ -223,6 +225,7 @@ const char *Fl_Cocoa_Text_Widget_Driver::value() {
 
 void Fl_Cocoa_Text_Widget_Driver::value(const char *t, int len) {
   if (!t) t = "";
+  [text_before_show release];
   text_before_show = [[NSString alloc] initWithBytes:t length:len encoding:NSUTF8StringEncoding];
   if (text_view) {
     [text_view setString:text_before_show];
