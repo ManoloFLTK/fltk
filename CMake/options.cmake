@@ -452,6 +452,7 @@ option(FLTK_BUILD_SHARED_LIBS
 
 option(FLTK_OPTION_PRINT_SUPPORT      "allow print support"        ON)
 option(FLTK_OPTION_FILESYSTEM_SUPPORT "allow file system support"  ON)
+option(FLTK_OPTION_NATIVE_INPUT       "allow class Fl_Native_Input" ON)
 
 option(FLTK_BUILD_FORMS        "Build forms compatibility library" OFF)
 option(FLTK_BUILD_FLUID        "Build FLUID"                       ON)

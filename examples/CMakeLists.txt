@@ -141,6 +141,13 @@ foreach(src ${CAIRO_SOURCES})
 endforeach(src)
 
 ############################################################
+# optionally create the native-input example program
+############################################################
+if(FLTK_OPTION_NATIVE_INPUT)
+  fl_create_example(native-input native-input.cxx "fltk::images")
+endif(FLTK_OPTION_NATIVE_INPUT)
+
+############################################################
 # create example programs with OpenGL3 + GLEW
 ############################################################
 #
