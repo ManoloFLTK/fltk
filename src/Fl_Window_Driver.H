@@ -38,6 +38,7 @@ class Fl_X;
 class Fl_Image;
 class Fl_RGB_Image;
 class Fl_Image_Surface;
+class Fl_Widget;
 
 /**
  \brief A base class for platform specific window handling code.
@@ -52,8 +53,10 @@ class Fl_Image_Surface;
 class Fl_Window_Driver
 {
   friend class Fl_Window;
+  friend void Fl::focus(Fl_Widget *);
 private:
   static bool is_a_rescale_; // true when a top-level window is being rescaled
+  static Fl_Widget* last_focus_widget_; // last widget given focus [NATIVE]
 
 protected:
   Fl_Window *pWindow;
@@ -64,6 +67,7 @@ public:
   static Fl_Window_Driver *newWindowDriver(Fl_Window *);
   static fl_uintptr_t xid(const Fl_Window *win);
   static Fl_Window *find(fl_uintptr_t xid);
+  static Fl_Widget* last_focus_widget() { return last_focus_widget_;} // [NATIVE]
   int wait_for_expose_value;
   Fl_Image_Surface *other_xid; // offscreen bitmap (overlay and double-buffered windows)
   int screen_num();

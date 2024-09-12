@@ -613,6 +613,27 @@ endif()
 
 
 #######################################################################
+# prepare things for the fltk_native library
+#######################################################################
+
+set(NATIVECPPFILES Fl_Native_Text_Widget.cxx)
+if(FLTK_USE_CAIRO)
+  pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
+  list(APPEND NATIVECPPFILES drivers/Cairo/Fl_Cairo_Text_Widget_Driver.cxx)
+elseif(WIN32)
+  list(APPEND NATIVECPPFILES drivers/WinAPI/Fl_WinAPI_Text_Widget_Driver.cxx)
+elseif(APPLE)
+  list(APPEND NATIVECPPFILES drivers/Cocoa/Fl_Cocoa_Text_Widget_Driver.mm)
+endif()
+
+fl_add_library(fltk_native STATIC "${NATIVECPPFILES}")
+target_link_libraries(fltk_native PUBLIC fltk::fltk)
+if(FLTK_USE_CAIRO)
+  target_link_libraries(fltk_native PRIVATE PkgConfig::GTK3)
+  target_include_directories(fltk_native PRIVATE ${GTK3_INCLUDE_DIRS})
+endif()
+
+#######################################################################
 
 # prepare source files for shared and static FLTK libraries
 
@@ -707,6 +728,7 @@ endif(HAVE_XRENDER)
 if(USE_PANGO)
   list(APPEND OPTIONAL_LIBS ${HAVE_LIB_PANGO})
   append_optional_libs(PkgConfig::PANGOCAIRO)
+  append_optional_libs(PkgConfig::GTK3)
   list(APPEND OPTIONAL_LIBS ${HAVE_LIB_GOBJECT})
   if(USE_PANGOXFT)
     append_optional_libs(PkgConfig::PANGOXFT)

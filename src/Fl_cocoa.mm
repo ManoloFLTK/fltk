@@ -693,7 +693,9 @@ void Fl_Cocoa_Screen_Driver::breakMacEventLoop()
   if (Fl::modal_ && (Fl::modal_ != w))
     return NO;  // prevent the caption to be redrawn as active on click
                 //  when another modal window is currently the key win
-  return !(!w || w->output() || w->tooltip_window() || w->menu_window() || w->parent());
+  if (!w || w->output() || w->tooltip_window() || w->menu_window()) return NO; // [NATIVE]
+  Fl_Widget *focus = Fl::focus();
+  return (!w->parent() || (focus && focus->as_group() && focus->as_group()->as_native_group() && focus->window() == w));
 }
 
 - (BOOL)canBecomeMainWindow
@@ -1060,6 +1062,11 @@ static void cocoaMouseHandler(NSEvent *theEvent)
   float s = Fl::screen_driver()->scale(0);
   pos.x /= s; pos.y /= s;
   pos.y = window->h() - pos.y;
+  while (window->parent()) { // [NATIVE] subwindows receive mouse events, transform coords to toplevel
+    pos.x += window->x();
+    pos.y += window->y();
+    window = window->window();
+  }
   NSInteger btn = [theEvent buttonNumber] + 1;
   NSUInteger mods = [theEvent modifierFlags];
   int sendEvent = 0;
@@ -1117,7 +1124,7 @@ static void cocoaMouseHandler(NSEvent *theEvent)
           Fl::e_is_click = 0;
       }
       mods_to_e_state( mods );
-      update_e_xy_and_e_xy_root([theEvent window]);
+      update_e_xy_and_e_xy_root(fl_xid(window)/*[theEvent window]*/); // [NATIVE]
       if (fl_mac_os_version < 100500) {
         // before 10.5, mouse moved events aren't sent to borderless windows such as tooltips
         Fl_Window *tooltip = Fl_Tooltip::current_window();
@@ -1442,6 +1449,12 @@ static FLWindowDelegate *flwindowdelegate_instance = nil;
     [nsw setLevel:NSStatusWindowLevel];
     fixup_window_levels();
   }
+  if (!w->parent() && Fl_Window_Driver::last_focus_widget() &&
+      Fl_Window_Driver::last_focus_widget()->as_group() &&
+      Fl_Window_Driver::last_focus_widget()->as_group()->as_native_group() &&
+      Fl_Window_Driver::last_focus_widget()->window()->parent()) { // [NATIVE]
+      w->handle(FL_PUSH);
+  } else
   Fl::handle( FL_FOCUS, w);
   fl_unlock_function();
 }
@@ -2503,6 +2516,10 @@ static FLTextInputContext* fltextinputcontext_instance = nil;
   //NSLog(@"performKeyEquivalent:");
   fl_lock_function();
   cocoaKeyboardHandler(theEvent);
+  if ([[self window] firstResponder] != self) { // [NATIVE]
+    fl_unlock_function();
+    return NO;
+  }
   BOOL handled;
   NSUInteger mods = [theEvent modifierFlags];
   Fl_Window *w = [(FLWindow*)[theEvent window] getFl_Window];
