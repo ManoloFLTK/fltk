@@ -33,6 +33,9 @@
   Characters can be input using the keyboard or the character palette/map.
   Character composition is done using dead keys and/or a compose
   key as defined by the operating system.
+ 
+ \see Fl_Native_Input
+  to input Right-To-Left text.
   <P>
   <!-- DON'T use the class name in the caption, or doxygen 1.8.x will fail. -->
   <TABLE WIDTH="90%" BORDER="1" SUMMARY="Fl_Input keyboard and mouse bindings.">

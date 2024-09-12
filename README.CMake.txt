@@ -292,6 +292,12 @@ FLTK_OPTION_SVG - default ON
 FLTK_USE_DBUS - default ON (Wayland only).
     Meaningful only under Wayland. Allows FLTK to detect the current cursor theme.
 
+FLTK_OPTION_NATIVE_INPUT - default ON
+    When ON, the FLTK library contains classes Fl_Native_Input and
+    Fl_Native_Multiline_Input that support input of RtL text on most
+    platforms. When OFF, classes Fl_Native_Input and Fl_Native_Multiline_Input
+    cannot be used.
+
 FLTK_USE_LIBDECOR_GTK - default ON (Wayland only).
     Meaningful only under Wayland and if FLTK_USE_SYSTEM_LIBDECOR is 'OFF'.
     Allows to use libdecor's GTK plugin to draw window titlebars. Otherwise
