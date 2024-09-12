@@ -26,6 +26,7 @@ public:
   int insert_position() FL_OVERRIDE;
   void insert_position(int pos, int mark) FL_OVERRIDE;
   void readonly(bool on_off) FL_OVERRIDE;
+  void selectable(bool on_off) FL_OVERRIDE;
   void replace(int from, int to, const char *text, int len) FL_OVERRIDE;
   int mark() FL_OVERRIDE;
   unsigned index(int i) const FL_OVERRIDE;
@@ -50,6 +51,12 @@ public:
   if ([s isEqualTo:@"c"]) { // cmd-C to copy selection
     [self writeSelectionToPasteboard:[NSPasteboard generalPasteboard]
                                 types:[self writablePasteboardTypes]];
+    return;
+  }
+  if ([s isEqualTo:@"x"] && !driver->widget->readonly()) { // cmd-X to cut selection
+    [self writeSelectionToPasteboard:[NSPasteboard generalPasteboard]
+                                types:[self writablePasteboardTypes]];
+    driver->widget->cut();
     return;
   }
   if ([s isEqualTo:@"v"]) { // cmd-V to paste
@@ -173,7 +180,8 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     widget->textsize(widget->textsize());
     widget->textfont(widget->textfont());
     [text_view setRichText:NO];
-    if (widget->readonly()) [text_view setSelectable:NO];
+    if (!widget->selectable()) [text_view setSelectable:NO];
+    if (widget->readonly()) [text_view setEditable:NO];
     [scroll_view setHasVerticalScroller:YES];
     [scroll_view setHasHorizontalScroller:YES];
     [scroll_view setScrollerStyle:NSScrollerStyleOverlay];
@@ -260,7 +268,12 @@ void Fl_Cocoa_Text_Widget_Driver::insert_position(int pos, int mark) {
 
 
 void Fl_Cocoa_Text_Widget_Driver::readonly(bool on_off) {
-  [text_view setSelectable:!on_off];
+  [text_view setEditable:!on_off];
+}
+
+
+void Fl_Cocoa_Text_Widget_Driver::selectable(bool on_off) {
+  [text_view setSelectable:on_off];
 }
 
 
