@@ -613,6 +613,25 @@ else()
   set(MMFILES)
 endif()
 
+#######################################################################
+# optional inclusion of class Fl_Native_Input
+#######################################################################
+if(FLTK_OPTION_NATIVE_INPUT)
+  list(APPEND CPPFILES Fl_Native_Input.cxx)
+  if(FLTK_USE_CAIRO)
+    pkg_check_modules(GTK3 IMPORTED_TARGET gtk+-3.0)
+    if(NOT(GTK3_FOUND))
+      message(FATAL_ERROR "Module 'gtk+-3.0' required for FLTK_OPTION_NATIVE_INPUT is absent")
+    endif(NOT(GTK3_FOUND))
+    list(APPEND CPPFILES drivers/Cairo/Fl_Cairo_Native_Input_Driver.cxx)
+    set_source_files_properties(drivers/Cairo/Fl_Cairo_Native_Input_Driver.cxx
+      PROPERTIES INCLUDE_DIRECTORIES "${GTK3_INCLUDE_DIRS}")
+  elseif(WIN32)
+    list(APPEND CPPFILES drivers/WinAPI/Fl_WinAPI_Native_Input_Driver.cxx)
+  elseif(APPLE)
+    list(APPEND MMFILES drivers/Cocoa/Fl_Cocoa_Native_Input_Driver.mm)
+  endif()
+endif(FLTK_OPTION_NATIVE_INPUT)
 
 #######################################################################
 
@@ -815,6 +834,10 @@ if(UNIX AND FLTK_BACKEND_WAYLAND)
   endif()
 
 endif(UNIX AND FLTK_BACKEND_WAYLAND)
+
+if(FLTK_OPTION_NATIVE_INPUT AND FLTK_USE_CAIRO)
+  list(APPEND OPTIONAL_LIBS PkgConfig::GTK3)
+endif(FLTK_OPTION_NATIVE_INPUT AND FLTK_USE_CAIRO)
 
 list(REMOVE_DUPLICATES OPTIONAL_LIBS)
 list(REMOVE_DUPLICATES OPTIONAL_INCLUDES)
