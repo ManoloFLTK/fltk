@@ -91,12 +91,14 @@ public:
     if (u == 0x1c || u == 0x1d) {
       NSParagraphStyle *style = [[self typingAttributes] valueForKey:@"NSParagraphStyle"];
       NSWritingDirection direction = [style baseWritingDirection];
+      NSString *s = [self string];
+      if (r.location >= [s length]) r.location--;
+      NSRange composed = [s rangeOfComposedCharacterSequenceAtIndex:r.location];
       if (u == 0x1c) { // move char before
-        NSString *s = [self string];
-        NSRange composed = [s rangeOfComposedCharacterSequenceAtIndex:r.location];
         r.location += (direction == NSWritingDirectionRightToLeft? +composed.length : -1);
       } else { // move char after
-        r.location += (direction == NSWritingDirectionRightToLeft ? -1 : +1);
+        r.location += (direction == NSWritingDirectionRightToLeft? -1 : +composed.length);
+
       }
     } else if (u == 0x1) { // Home
       r.location = 0;
@@ -166,8 +168,10 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     fr = CGRectMake(fr.origin.x * s, fr.origin.y * s, fr.size.width * s, fr.size.height * s);
     [scroll_view setFrame:fr];
     text_view = [scroll_view documentView];
+      // do that for single-line widget
+      //fr.size.width *= 1.5;
+      //[text_view setFrame:fr];
     text_view->driver = this;
-    [scroll_view setAutoresizingMask:NSViewWidthSizable|NSViewHeightSizable];
     if (rtl) [text_view makeBaseWritingDirectionRightToLeft:nil];
     [text_view setAllowsDocumentBackgroundColorChange:YES];
     uchar r, g, b;
@@ -196,7 +200,7 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
       text_before_show = nil;
     }
     if (!rtl && !widget->wrap()) {
-      NSMutableParagraphStyle *style = [[NSMutableParagraphStyle alloc] init];
+      NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
       NSParagraphStyle *start = [NSParagraphStyle defaultParagraphStyle];
       [style setParagraphStyle:start];
       [style setLineBreakMode:NSLineBreakByClipping];
