@@ -17,12 +17,18 @@ private:
   Fl_Color text_color_;
   bool is_readonly_;
   bool is_selectable_;
-  bool word_wrap_;
   Fl_Text_Widget_Driver *driver_;
 public:
+  enum kind {SINGLE_LINE, MULTIPLE_LINES};
+private:
+  enum kind kind_;
+public:
   Fl_Native_Text_Widget(int x, int y, int w, int h, const char *l = 0);
+  void kind(enum kind);
+  enum kind kind() { return kind_; }
   void append(const char *t, int length = -1);
   void right_to_left(bool);
+  bool right_to_left();
   int handle(int event) FL_OVERRIDE;
   void draw() FL_OVERRIDE;
   void resize(int x, int y, int w, int h) FL_OVERRIDE;
@@ -46,8 +52,6 @@ public:
   void selectable(bool on_off);
   bool selectable();
   int replace(int from, int to, const char *text, int ilen = 0);
-  void wrap(bool b);
-  bool wrap();
   int cut(int a, int b);
   int cut();
   int mark() const;

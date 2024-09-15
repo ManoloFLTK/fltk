@@ -19,6 +19,7 @@ public:
   Fl_Cocoa_Text_Widget_Driver();
   ~Fl_Cocoa_Text_Widget_Driver();
   void show_widget() FL_OVERRIDE;
+  void hide_widget() FL_OVERRIDE;
   void resize(int x, int y, int w, int h) FL_OVERRIDE;
   void textfont(Fl_Font f) FL_OVERRIDE;
   const char *value() FL_OVERRIDE;
@@ -90,15 +91,13 @@ public:
     r.length = 0;
     if (u == 0x1c || u == 0x1d) {
       NSParagraphStyle *style = [[self typingAttributes] valueForKey:@"NSParagraphStyle"];
-      NSWritingDirection direction = [style baseWritingDirection];
       NSString *s = [self string];
       if (r.location >= [s length]) r.location--;
       NSRange composed = [s rangeOfComposedCharacterSequenceAtIndex:r.location];
       if (u == 0x1c) { // move char before
-        r.location += (direction == NSWritingDirectionRightToLeft? +composed.length : -1);
+        r.location += (driver->rtl ? +composed.length : -1);
       } else { // move char after
-        r.location += (direction == NSWritingDirectionRightToLeft? -1 : +composed.length);
-
+        r.location += (driver->rtl? (r.location>0?-1:0) : +composed.length);
       }
     } else if (u == 0x1) { // Home
       r.location = 0;
@@ -127,6 +126,36 @@ way_out:
   [super insertText:aString replacementRange:r];
 }
 
+@end
+
+@interface FLTextDelegate : NSObject <NSTextDelegate> {
+  NSScrollView *scroll_view;
+}
+- (FLTextDelegate*)initWithScroll:(NSScrollView*)s;
+- (void)textDidChange:(NSNotification *)notification;
+@end
+
+
+@implementation FLTextDelegate
+- (FLTextDelegate*)initWithScroll:(NSScrollView*)s {
+  self = [super init];
+  if (self) {
+    scroll_view = s;
+  }
+  return self;
+}
+
+- (void)textDidChange:(NSNotification *)notification {
+  FLTextView2 *text_view = (FLTextView2*)[notification object];
+  NSRange r = NSMakeRange(0, 1);
+  NSLayoutManager *lom = [text_view layoutManager];
+  NSUInteger gi = [lom glyphIndexForCharacterAtIndex:r.location];
+  NSPoint pt = [lom locationForGlyphAtIndex:gi];
+  CGRect fr = [scroll_view frame];
+  fr.size.width = pt.x + 20;
+  if (fr.size.width > [text_view frame].size.width)
+    [text_view setFrame:fr];
+}
 @end
 
 
@@ -162,17 +191,18 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
   if (view && !text_view) {
     CGRect fr = CGRectMake(widget->x(), widget->window()->h()-(widget->y()+widget->h()), widget->w(), widget->h());
     fr = NSInsetRect(fr, BORDER_WIDTH, BORDER_WIDTH);
-    scroll_view = [FLTextView2 scrollableTextView];
+    scroll_view = [FLTextView2 scrollableTextView]; // 10.14
     int ns = widget->top_window()->screen_num();
     float s = Fl::screen_scale(ns);
     fr = CGRectMake(fr.origin.x * s, fr.origin.y * s, fr.size.width * s, fr.size.height * s);
     [scroll_view setFrame:fr];
     text_view = [scroll_view documentView];
-      // do that for single-line widget
-      //fr.size.width *= 1.5;
-      //[text_view setFrame:fr];
+    if (widget->kind() == Fl_Native_Text_Widget::SINGLE_LINE) {
+      [(NSText*)text_view setDelegate:[[FLTextDelegate alloc] initWithScroll:scroll_view]];
+    }
     text_view->driver = this;
-    if (rtl) [text_view makeBaseWritingDirectionRightToLeft:nil];
+    if (widget->kind() != Fl_Native_Text_Widget::SINGLE_LINE && rtl)
+      [text_view makeBaseWritingDirectionRightToLeft:nil];
     [text_view setAllowsDocumentBackgroundColorChange:YES];
     uchar r, g, b;
     Fl::get_color(widget->color(), r, g, b);
@@ -186,7 +216,7 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     [text_view setRichText:NO];
     if (!widget->selectable()) [text_view setSelectable:NO];
     if (widget->readonly()) [text_view setEditable:NO];
-    [scroll_view setHasVerticalScroller:YES];
+    if (widget->kind() == Fl_Native_Text_Widget::MULTIPLE_LINES) [scroll_view setHasVerticalScroller:YES];
     [scroll_view setHasHorizontalScroller:YES];
     [scroll_view setScrollerStyle:NSScrollerStyleOverlay];
     [view addSubview:scroll_view];
@@ -194,18 +224,28 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
       [[view window] makeFirstResponder:scroll_view];
       [text_view setAllowsUndo:YES];
     }
-    if (text_before_show) {
-      [text_view setString:text_before_show];
-      [text_before_show release];
-      text_before_show = nil;
-    }
-    if (!rtl && !widget->wrap()) {
+    if (widget->kind() == Fl_Native_Text_Widget::SINGLE_LINE || !rtl) {
       NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
       NSParagraphStyle *start = [NSParagraphStyle defaultParagraphStyle];
       [style setParagraphStyle:start];
       [style setLineBreakMode:NSLineBreakByClipping];
       [text_view setDefaultParagraphStyle:style];
     }
+    if (text_before_show) {
+      [text_view setString:text_before_show];
+      [text_view didChangeText];
+      [text_view scrollRangeToVisible:NSMakeRange([text_before_show length], 0)];
+      [text_before_show release];
+      text_before_show = nil;
+    }
+  }
+}
+
+
+void Fl_Cocoa_Text_Widget_Driver::hide_widget() {
+  if (text_view) {
+    [[text_view delegate] release];
+    [text_view setDelegate:nil];
   }
 }
 
@@ -223,7 +263,7 @@ void Fl_Cocoa_Text_Widget_Driver::textfont(Fl_Font f) {
 
 
 const char *Fl_Cocoa_Text_Widget_Driver::value() {
-  return [[text_view string] UTF8String];
+  return text_view ? [[text_view string] UTF8String] : [text_before_show UTF8String];
 }
 
 
@@ -233,6 +273,8 @@ void Fl_Cocoa_Text_Widget_Driver::value(const char *t, int len) {
   text_before_show = [[NSString alloc] initWithBytes:t length:len encoding:NSUTF8StringEncoding];
   if (text_view) {
     [text_view setString:text_before_show];
+    [text_view didChangeText];
+    [text_view scrollRangeToVisible:NSMakeRange([text_before_show length], 0)];
     [text_before_show release];
     text_before_show = nil;
   }

@@ -19,7 +19,12 @@ Fl_Native_Text_Widget::Fl_Native_Text_Widget(int x, int y, int w, int h, const c
   text_color_ = labelcolor();
   is_readonly_ = false;
   is_selectable_ = true;
-  word_wrap_ = true;
+  kind_ = MULTIPLE_LINES;
+}
+
+
+void Fl_Native_Text_Widget::kind(enum kind k) {
+  kind_ = k;
 }
 
 
@@ -31,6 +36,10 @@ void Fl_Native_Text_Widget::append(const char *t, int length) {
 int Fl_Native_Text_Widget::handle(int event) {
   if (event == FL_SHOW) {
     driver_->show_widget();
+    return 1;
+  }
+  if (event == FL_HIDE) {
+    driver_->hide_widget();
     return 1;
   }
   if (event == FL_PUSH || event == FL_FOCUS) return active();
@@ -51,6 +60,11 @@ void Fl_Native_Text_Widget::resize(int x, int y, int w, int h) {
 
 void Fl_Native_Text_Widget::right_to_left(bool v) {
   driver_->rtl = v;
+}
+
+
+bool Fl_Native_Text_Widget::right_to_left() {
+  return driver_->rtl;
 }
 
 
@@ -134,16 +148,6 @@ int Fl_Native_Text_Widget::replace(int from, int to, const char *text, int len) 
   if (from == to && len == 0 && *text == 0) return 0;
   driver_->replace(from, to, text, len);
   return 1;
-}
-
-
-bool Fl_Native_Text_Widget::wrap() {
-  return word_wrap_;
-}
-
-
-void Fl_Native_Text_Widget::wrap(bool b) {
-  word_wrap_ = b;
 }
 
 
