@@ -24,6 +24,7 @@ private:
   enum kind kind_;
 public:
   Fl_Native_Text_Widget(int x, int y, int w, int h, const char *l = 0);
+  ~Fl_Native_Text_Widget();
   void kind(enum kind);
   enum kind kind() { return kind_; }
   void append(const char *t, int length = -1);
