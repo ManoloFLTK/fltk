@@ -2,6 +2,10 @@
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Native_Text_Widget.H>
 
+void delete_win(Fl_Widget *w) {
+  delete w;
+}
+
 int main(int argc, char **argv) {
   Fl_Window *window = new Fl_Window(440, 280);
   bool readonly = false;
@@ -39,7 +43,7 @@ int main(int argc, char **argv) {
   window->resizable(box);
   box->readonly(readonly);
   box->selectable(selectable);
+  window->callback(delete_win);
   window->show();
-  Fl::run();
-  return 0;
+  return Fl::run();
 }
