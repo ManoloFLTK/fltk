@@ -9,7 +9,7 @@
 #include <FL/Fl_Window.H>
 class Fl_Text_Widget_Driver;
 
-class Fl_Native_Text_Widget : public Fl_Widget {
+class FL_EXPORT Fl_Native_Text_Widget : public Fl_Widget {
 private:
   Fl_Color cursor_color_;
   Fl_Font font_;
