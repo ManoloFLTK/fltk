@@ -5,7 +5,7 @@
 #include <FL/Fl_Native_Text_Widget.H>
 #include "../src/Fl_Text_Widget_Driver.H"
 
-#if !(defined(__APPLE__) && (!defined(FLTK_USE_X11) || !FLTK_USE_X11))
+#if defined(_WIN32) || !(defined(__APPLE__) && (!defined(FLTK_USE_X11) || !FLTK_USE_X11))
 Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver() {
   return new Fl_Text_Widget_Driver();
 }
