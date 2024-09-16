@@ -34,6 +34,7 @@ public:
   int redo() FL_OVERRIDE;
   bool can_undo() const FL_OVERRIDE;
   bool can_redo() const FL_OVERRIDE;
+  void focus() FL_OVERRIDE;
 };
 
 
@@ -78,6 +79,17 @@ public:
   if (aSelector == @selector(cancelOperation:)) { // escape
     Fl::e_keysym = FL_Escape;
     Fl::handle(FL_SHORTCUT, driver->widget->window());
+    return;
+  }
+  if (aSelector == @selector(insertTab:)) { // tab
+    Fl::e_keysym = FL_Tab;
+    Fl::handle(FL_KEYBOARD, driver->widget->window());
+    return;
+  }
+  if (aSelector == @selector(insertBacktab:)) { // shift+tab
+    Fl::e_keysym = FL_Tab;
+    Fl::e_state = FL_SHIFT;
+    Fl::handle(FL_KEYBOARD, driver->widget->window());
     return;
   }
   [super doCommandBySelector:aSelector];
@@ -134,11 +146,12 @@ way_out:
 
 @end
 
-@interface FLTextDelegate : NSObject <NSTextDelegate> {
+@interface FLTextDelegate : NSObject <NSTextDelegate, NSTextViewDelegate> {
   NSScrollView *scroll_view;
 }
 - (FLTextDelegate*)initWithScroll:(NSScrollView*)s;
 - (void)textDidChange:(NSNotification *)notification;
+- (void)textViewDidChangeSelection:(NSNotification *)notification;
 @end
 
 
@@ -155,6 +168,7 @@ way_out:
   static BOOL busy = NO;
   if (busy) return;
   FLTextView2 *text_view = (FLTextView2*)[notification object];
+  if (text_view->driver->widget->kind() != Fl_Native_Text_Widget::SINGLE_LINE) return;
   NSLayoutManager *lom = [text_view layoutManager];
   NSUInteger gi = [lom glyphIndexForCharacterAtIndex:0];
   NSPoint pt = [lom locationForGlyphAtIndex:gi];
@@ -168,6 +182,11 @@ way_out:
     [text_view makeBaseWritingDirectionRightToLeft:nil];
     busy = NO;
   }
+}
+
+- (void)textViewDidChangeSelection:(NSNotification *)notification {
+  FLTextView2 *text_view = (FLTextView2*)[notification object];
+  text_view->driver->widget->take_focus();
 }
 @end
 
@@ -223,9 +242,7 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     text_view = [[FLTextView2 alloc] initWithFrame:fr];
     [scroll_view setDocumentView:text_view];
     [text_view release];
-    if (widget->kind() == Fl_Native_Text_Widget::SINGLE_LINE) {
-      [(NSText*)text_view setDelegate:[[FLTextDelegate alloc] initWithScroll:scroll_view]];
-    }
+    [(NSText*)text_view setDelegate:[[FLTextDelegate alloc] initWithScroll:scroll_view]];
     text_view->driver = this;
     if (widget->kind() != Fl_Native_Text_Widget::SINGLE_LINE && rtl)
       [text_view makeBaseWritingDirectionRightToLeft:nil];
@@ -391,4 +408,14 @@ bool Fl_Cocoa_Text_Widget_Driver::can_undo() const {
 
 bool Fl_Cocoa_Text_Widget_Driver::can_redo() const {
   return [[text_view undoManager] canRedo];
+}
+
+
+void Fl_Cocoa_Text_Widget_Driver::focus() {
+  if (!widget->readonly()) {
+    if ([[text_view window] firstResponder] != scroll_view) {
+      [[text_view window] makeFirstResponder:scroll_view];
+      [text_view setAllowsUndo:YES];
+    }
+  }
 }
