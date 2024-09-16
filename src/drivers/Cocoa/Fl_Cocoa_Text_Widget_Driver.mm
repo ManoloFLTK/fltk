@@ -86,25 +86,25 @@ public:
 - (void)insertText:(id)aString replacementRange:(NSRange)r {
   if ([aString length] && [aString isKindOfClass:[NSString class]]) {
     unichar u = [aString characterAtIndex:0];
-    NSRange r = [self selectedRange];
-    r.length = 0;
+    NSRange s_r = [self selectedRange];
+    s_r.length = 0;
     if (u == 0x1c || u == 0x1d) {
       NSParagraphStyle *style = [[self typingAttributes] valueForKey:@"NSParagraphStyle"];
       NSString *s = [self string];
-      if (r.location >= [s length]) r.location--;
-      NSRange composed = [s rangeOfComposedCharacterSequenceAtIndex:r.location];
+      if (s_r.location >= [s length]) s_r.location--;
+      NSRange composed = [s rangeOfComposedCharacterSequenceAtIndex:s_r.location];
       if (u == 0x1c) { // move char before
-        r.location += (driver->rtl ? +composed.length : -1);
+        s_r.location += (driver->rtl ? +composed.length : -1);
       } else { // move char after
-        r.location += (driver->rtl? (r.location>0?-1:0) : +composed.length);
+        s_r.location += (driver->rtl? (s_r.location>0?-1:0) : +composed.length);
       }
     } else if (u == 0x1) { // Home
-      r.location = 0;
+      s_r.location = 0;
     } else if (u == 0x4) { // End
-      r.location = [[self string] length];
+      s_r.location = [[self string] length];
     } else if (u == 0x1f || u == 0x1e) { // down or up arrow
       NSLayoutManager *lom = [self layoutManager];
-      NSUInteger gi = [lom glyphIndexForCharacterAtIndex:r.location];
+      NSUInteger gi = [lom glyphIndexForCharacterAtIndex:s_r.location];
       NSPoint pt = [lom locationForGlyphAtIndex:gi];
       float s = Fl::screen_scale( driver->widget->window()->screen_num() );
       pt.y += driver->widget->textsize() * (u == 0x1f /* down */ ? s : -s);
@@ -114,11 +114,18 @@ public:
       if (pt.y <= 0) return; // stop at 1st line
       gi = [lom glyphIndexForPoint:pt inTextContainer:[self textContainer]
             fractionOfDistanceThroughGlyph:NULL];
-      r = [lom characterRangeForGlyphRange:NSMakeRange(gi, 1) actualGlyphRange:NULL];
-      r.length = 0;
+      s_r = [lom characterRangeForGlyphRange:NSMakeRange(gi, 1) actualGlyphRange:NULL];
+      s_r.length = 0;
+    } else if (u == 0x7f) { // delete forward
+      NSString *s = [self string];
+      if (s_r.location < [s length]) {
+        NSRange composed = [s rangeOfComposedCharacterSequenceAtIndex:s_r.location];
+        [super insertText:@"" replacementRange:composed];
+      }
+      return;
     } else goto way_out;
-    [self setSelectedRange:r];
-    [self scrollRangeToVisible:r];
+    [self setSelectedRange:s_r];
+    [self scrollRangeToVisible:s_r];
     return;
   }
 way_out:
