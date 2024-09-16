@@ -43,7 +43,11 @@ int Fl_Native_Text_Widget::handle(int event) {
     driver_->show_widget();
     return 1;
   }
-  if (event == FL_PUSH || event == FL_FOCUS) return active();
+  if (event == FL_PUSH) return active();
+  if (event == FL_FOCUS && active()) {
+    driver_->focus();
+    return 1;
+  }
   return 0;
 }
 
