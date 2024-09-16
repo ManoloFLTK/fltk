@@ -33,7 +33,8 @@ int main(int argc, char **argv) {
   box2->color(box->color());
   box2->box(box->box());
   box2->right_to_left(box->right_to_left());
-  box2->value("بداالتاسع عشر أول من مواطنيه");
+  //box2->value("بداالتاسع عشر أول من مواطنيه");
+  box2->value(box->value());
   window->end();
   window->resizable(box);
   box->readonly(readonly);

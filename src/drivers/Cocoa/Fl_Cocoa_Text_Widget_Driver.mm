@@ -146,15 +146,22 @@ way_out:
 }
 
 - (void)textDidChange:(NSNotification *)notification {
+  static BOOL busy = NO;
+  if (busy) return;
   FLTextView2 *text_view = (FLTextView2*)[notification object];
-  NSRange r = NSMakeRange(0, 1);
   NSLayoutManager *lom = [text_view layoutManager];
-  NSUInteger gi = [lom glyphIndexForCharacterAtIndex:r.location];
+  NSUInteger gi = [lom glyphIndexForCharacterAtIndex:0];
   NSPoint pt = [lom locationForGlyphAtIndex:gi];
-  CGRect fr = [scroll_view frame];
-  fr.size.width = pt.x + 20;
-  if (fr.size.width > [text_view frame].size.width)
+//NSLog(@"scroll_view width=%.0f text_view width=%.0f new=%.0f", [scroll_view frame].size.width , [text_view frame].size.width, pt.x + 20);
+  if (pt.x + 20 > [text_view frame].size.width) { // long text
+    CGRect fr = [scroll_view frame];
+    fr.size.width = pt.x + 20;
     [text_view setFrame:fr];
+  } else if (text_view->driver->rtl) { // short text
+    busy = YES;
+    [text_view makeBaseWritingDirectionRightToLeft:nil];
+    busy = NO;
+  }
 }
 @end
 
