@@ -19,7 +19,6 @@ public:
   Fl_Cocoa_Text_Widget_Driver();
   ~Fl_Cocoa_Text_Widget_Driver();
   void show_widget() FL_OVERRIDE;
-  //void hide_widget() FL_OVERRIDE;
   void resize(int x, int y, int w, int h) FL_OVERRIDE;
   void textfont(Fl_Font f) FL_OVERRIDE;
   const char *value() FL_OVERRIDE;
@@ -200,7 +199,6 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     CGRect fr = CGRectMake(widget->x(), widget->window()->h()-(widget->y()+widget->h()), widget->w(), widget->h());
     fr = NSInsetRect(fr, BORDER_WIDTH, BORDER_WIDTH);
     scroll_view = [[[NSScrollView alloc] initWithFrame:fr] autorelease];
-    //scroll_view = [[NSScrollView alloc] initWithFrame:fr];
     int ns = widget->top_window()->screen_num();
     float s = Fl::screen_scale(ns);
     fr = CGRectMake(fr.origin.x * s, fr.origin.y * s, fr.size.width * s, fr.size.height * s);
