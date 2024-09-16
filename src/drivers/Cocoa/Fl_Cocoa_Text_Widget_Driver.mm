@@ -178,6 +178,15 @@ Fl_Cocoa_Text_Widget_Driver::Fl_Cocoa_Text_Widget_Driver() : Fl_Text_Widget_Driv
 
 Fl_Cocoa_Text_Widget_Driver::~Fl_Cocoa_Text_Widget_Driver() {
   [text_before_show release];
+  if (text_view) {
+    FLTextDelegate *delegate = [text_view delegate];
+    if (delegate) {
+      [text_view setDelegate:nil];
+      [delegate release];
+    }
+    [scroll_view setDocumentView:nil];
+    [scroll_view removeFromSuperview];
+  }
 }
 
 
@@ -198,12 +207,15 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     CGRect fr = CGRectMake(widget->x(), widget->window()->h()-(widget->y()+widget->h()), widget->w(), widget->h());
     fr = NSInsetRect(fr, BORDER_WIDTH, BORDER_WIDTH);
-    scroll_view = [[[NSScrollView alloc] initWithFrame:fr] autorelease];
     int ns = widget->top_window()->screen_num();
     float s = Fl::screen_scale(ns);
     fr = CGRectMake(fr.origin.x * s, fr.origin.y * s, fr.size.width * s, fr.size.height * s);
-    text_view = [[[FLTextView2 alloc] initWithFrame:[scroll_view frame]] autorelease];
+    scroll_view = [[NSScrollView alloc] initWithFrame:fr];
+    [view addSubview:scroll_view];
+    [scroll_view release];
+    text_view = [[FLTextView2 alloc] initWithFrame:fr];
     [scroll_view setDocumentView:text_view];
+    [text_view release];
     if (widget->kind() == Fl_Native_Text_Widget::SINGLE_LINE) {
       [(NSText*)text_view setDelegate:[[FLTextDelegate alloc] initWithScroll:scroll_view]];
     }
@@ -226,7 +238,6 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     if (widget->kind() == Fl_Native_Text_Widget::MULTIPLE_LINES) [scroll_view setHasVerticalScroller:YES];
     [scroll_view setHasHorizontalScroller:YES];
     [scroll_view setScrollerStyle:NSScrollerStyleOverlay];
-    [view addSubview:scroll_view];
     if (!widget->readonly()) {
       [[view window] makeFirstResponder:scroll_view];
       [text_view setAllowsUndo:YES];
