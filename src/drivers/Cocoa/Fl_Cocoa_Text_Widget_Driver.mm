@@ -196,14 +196,15 @@ void Fl_Cocoa_Text_Widget_Driver::resize(int x, int y, int w, int h) {
 void Fl_Cocoa_Text_Widget_Driver::show_widget() {
   NSView *view = [fl_mac_xid(widget->window()) contentView];
   if (view && !text_view) {
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     CGRect fr = CGRectMake(widget->x(), widget->window()->h()-(widget->y()+widget->h()), widget->w(), widget->h());
     fr = NSInsetRect(fr, BORDER_WIDTH, BORDER_WIDTH);
-    scroll_view = [FLTextView2 scrollableTextView]; // 10.14
+    scroll_view = [[[NSScrollView alloc] initWithFrame:fr] autorelease];
     int ns = widget->top_window()->screen_num();
     float s = Fl::screen_scale(ns);
     fr = CGRectMake(fr.origin.x * s, fr.origin.y * s, fr.size.width * s, fr.size.height * s);
-    [scroll_view setFrame:fr];
-    text_view = [scroll_view documentView];
+    text_view = [[[FLTextView2 alloc] initWithFrame:[scroll_view frame]] autorelease];
+    [scroll_view setDocumentView:text_view];
     if (widget->kind() == Fl_Native_Text_Widget::SINGLE_LINE) {
       [(NSText*)text_view setDelegate:[[FLTextDelegate alloc] initWithScroll:scroll_view]];
     }
@@ -245,14 +246,17 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
       [text_before_show release];
       text_before_show = nil;
     }
+    [pool release];
   }
 }
 
 
 void Fl_Cocoa_Text_Widget_Driver::hide_widget() {
   if (text_view) {
-    [[text_view delegate] release];
+    [scroll_view removeFromSuperview];
+    FLTextDelegate *delegate = [text_view delegate];
     [text_view setDelegate:nil];
+    [delegate release];
   }
 }
 

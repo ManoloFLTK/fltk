@@ -41,6 +41,5 @@ int main(int argc, char **argv) {
   box->selectable(selectable);
   window->show();
   Fl::run();
-  delete window;
   return 0;
 }
