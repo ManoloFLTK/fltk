@@ -36,6 +36,8 @@ public:
   bool can_redo() const FL_OVERRIDE;
   void focus() FL_OVERRIDE;
   void unfocus() FL_OVERRIDE;
+  void copy() FL_OVERRIDE;
+  void paste() FL_OVERRIDE;
 };
 
 
@@ -51,18 +53,16 @@ public:
 - (void)doCommandBySelector:(SEL)aSelector {
   NSString *s = [[NSApp currentEvent] characters];
   if ([s isEqualTo:@"c"]) { // cmd-C to copy selection
-    [self writeSelectionToPasteboard:[NSPasteboard generalPasteboard]
-                                types:[self writablePasteboardTypes]];
+    driver->copy();
     return;
   }
   if ([s isEqualTo:@"x"] && !driver->widget->readonly()) { // cmd-X to cut selection
-    [self writeSelectionToPasteboard:[NSPasteboard generalPasteboard]
-                                types:[self writablePasteboardTypes]];
+    driver->copy();
     driver->widget->cut();
     return;
   }
   if ([s isEqualTo:@"v"]) { // cmd-V to paste
-    [self pasteAsPlainText:self];
+    driver->paste();
     return;
   }
   if ([s isEqualTo:@"a"]) { // cmd-A to select all
@@ -433,4 +433,15 @@ void Fl_Cocoa_Text_Widget_Driver::unfocus() {
   if ([[text_view window] firstResponder] == text_view) {
     [[text_view window] makeFirstResponder:nil];
   }
+}
+
+
+void Fl_Cocoa_Text_Widget_Driver::copy() {
+  [text_view writeSelectionToPasteboard:[NSPasteboard generalPasteboard]
+                              types:[text_view writablePasteboardTypes]];
+}
+
+
+void Fl_Cocoa_Text_Widget_Driver::paste() {
+  [text_view pasteAsPlainText:nil];
 }
