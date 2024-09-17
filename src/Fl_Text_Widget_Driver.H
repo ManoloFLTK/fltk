@@ -36,6 +36,7 @@ public:
   virtual bool can_undo() const { return false; }
   virtual bool can_redo() const { return false; }
   virtual void focus() {}
+  virtual void unfocus() {}
 };
 
 #endif /* Fl_Text_Widget_Driver_h */

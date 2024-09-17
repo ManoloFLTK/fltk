@@ -35,6 +35,7 @@ public:
   bool can_undo() const FL_OVERRIDE;
   bool can_redo() const FL_OVERRIDE;
   void focus() FL_OVERRIDE;
+  void unfocus() FL_OVERRIDE;
 };
 
 
@@ -263,7 +264,7 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     [scroll_view setHasHorizontalScroller:YES];
     [scroll_view setScrollerStyle:NSScrollerStyleOverlay];
     if (!widget->readonly()) {
-      [[view window] makeFirstResponder:scroll_view];
+      [[view window] makeFirstResponder:text_view];
       [text_view setAllowsUndo:YES];
     }
     if (widget->kind() == Fl_Native_Text_Widget::SINGLE_LINE || !rtl) {
@@ -413,9 +414,16 @@ bool Fl_Cocoa_Text_Widget_Driver::can_redo() const {
 
 void Fl_Cocoa_Text_Widget_Driver::focus() {
   if (!widget->readonly()) {
-    if ([[text_view window] firstResponder] != scroll_view) {
-      [[text_view window] makeFirstResponder:scroll_view];
+    if ([[text_view window] firstResponder] != text_view) {
+      [[text_view window] makeFirstResponder:text_view];
       [text_view setAllowsUndo:YES];
     }
+  }
+}
+
+
+void Fl_Cocoa_Text_Widget_Driver::unfocus() {
+  if ([[text_view window] firstResponder] == text_view) {
+    [[text_view window] makeFirstResponder:nil];
   }
 }

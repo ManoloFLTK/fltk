@@ -47,6 +47,9 @@ int Fl_Native_Text_Widget::handle(int event) {
   if (event == FL_FOCUS && active()) {
     driver_->focus();
     return 1;
+  } else if (event == FL_UNFOCUS) {
+    driver_->unfocus();
+    return 1;
   }
   return 0;
 }
