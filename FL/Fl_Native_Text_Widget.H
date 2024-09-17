@@ -10,6 +10,7 @@
 class Fl_Text_Widget_Driver;
 
 class FL_EXPORT Fl_Native_Text_Widget : public Fl_Widget {
+  friend class Fl_Native_Multiline_Text_Widget;
 private:
   Fl_Color cursor_color_;
   Fl_Font font_;
@@ -17,19 +18,14 @@ private:
   Fl_Color text_color_;
   bool is_readonly_;
   bool is_selectable_;
+  bool rtl_;
   Fl_Text_Widget_Driver *driver_;
-public:
-  enum kind {SINGLE_LINE, MULTIPLE_LINES};
-private:
-  enum kind kind_;
 public:
   Fl_Native_Text_Widget(int x, int y, int w, int h, const char *l = 0);
   ~Fl_Native_Text_Widget();
-  void kind(enum kind);
-  enum kind kind() { return kind_; }
   void append(const char *t, int length = -1);
-  void right_to_left(bool);
-  bool right_to_left();
+  void right_to_left(bool rtl) { rtl_ = rtl; }
+  bool right_to_left() { return rtl_; }
   int handle(int event) FL_OVERRIDE;
   void draw() FL_OVERRIDE;
   void resize(int x, int y, int w, int h) FL_OVERRIDE;
@@ -62,6 +58,12 @@ public:
   int redo();
   bool can_undo() const;
   bool can_redo() const;
+};
+
+
+class FL_EXPORT Fl_Native_Multiline_Text_Widget : public Fl_Native_Text_Widget {
+public:
+  Fl_Native_Multiline_Text_Widget(int x, int y, int w, int h, const char *l = 0);
 };
 
 #endif /* FL_NATIVE_TEXT_WIDGET_H */

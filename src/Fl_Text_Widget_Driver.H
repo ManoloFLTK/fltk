@@ -12,10 +12,9 @@
 
 class Fl_Text_Widget_Driver {
 public:
-  static Fl_Text_Widget_Driver *newTextWidgetDriver();
+  enum kind_enum {SINGLE_LINE, MULTIPLE_LINES} kind;
+  static Fl_Text_Widget_Driver *newTextWidgetDriver(Fl_Native_Text_Widget*);
   Fl_Native_Text_Widget *widget;
-  bool rtl;
-  Fl_Text_Widget_Driver() { widget = NULL; rtl = false; }
   virtual ~Fl_Text_Widget_Driver() {}
   virtual void show_widget() {}
   virtual void resize(int x, int y, int w, int h) {}
