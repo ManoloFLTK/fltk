@@ -1,6 +1,7 @@
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Native_Text_Widget.H>
+#include <FL/Fl_Input.H>
 
 void delete_win(Fl_Widget *w) {
   delete w;
@@ -11,12 +12,12 @@ int main(int argc, char **argv) {
   bool readonly = false;
   bool selectable = true;
   const char *label;
-  if (readonly && !selectable) label = "Read only text boxes";
-  else if (readonly && selectable) label = "Selectable text boxes";
-  else label = "Editable text boxes";
+  if (readonly && !selectable) label = "Read only native text boxes";
+  else if (readonly && selectable) label = "Selectable native text boxes";
+  else label = "Editable native text boxes";
   Fl_Native_Text_Widget *box = new Fl_Native_Text_Widget(20, 40, 450, 100, label);
   box->align(FL_ALIGN_TOP);
-  box->textfont(FL_COURIER_BOLD);
+  box->textfont(FL_COURIER);
   box->textsize(20);
   box->textcolor(FL_DARK3);
   box->cursor_color(FL_RED);
@@ -38,6 +39,10 @@ int main(int argc, char **argv) {
   box2->right_to_left(box->right_to_left());
   box2->value("كان لإسهاماته تأثير كبير في اللغة.");
   //box2->value(box->value());
+  Fl_Input *input =new Fl_Input(box2->x(),box2->y()+box2->h()+10, box2->w(),30, NULL);
+  input->value("Fl_Input");
+  input->textfont(box->textfont());
+  input->textsize(box->textsize());
   window->end();
   window->resizable(box);
   box->readonly(readonly);
