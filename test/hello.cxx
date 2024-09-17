@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
   if (readonly && !selectable) label = "Read only native text boxes";
   else if (readonly && selectable) label = "Selectable native text boxes";
   else label = "Editable native text boxes";
-  Fl_Native_Text_Widget *box = new Fl_Native_Text_Widget(20, 40, 450, 100, label);
+  Fl_Native_Multiline_Text_Widget *box = new Fl_Native_Multiline_Text_Widget(20, 40, 450, 100, label);
   box->align(FL_ALIGN_TOP);
   box->textfont(FL_COURIER);
   box->textsize(20);
@@ -29,7 +29,6 @@ int main(int argc, char **argv) {
     //"Request a notification when it is a good time to start drawing a new frame, by creating a frame callback."
             );
   Fl_Native_Text_Widget *box2 = new Fl_Native_Text_Widget(20, box->y()+box->h()+10, 450, 50, label);
-  box2->kind(Fl_Native_Text_Widget::SINGLE_LINE);
   box2->textfont(box->textfont());
   box2->textsize(box->textsize());
   box2->textcolor(box->textcolor());

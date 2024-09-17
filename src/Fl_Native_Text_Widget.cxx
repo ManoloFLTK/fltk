@@ -6,31 +6,27 @@
 #include "../src/Fl_Text_Widget_Driver.H"
 
 #if !(defined(__APPLE__) && (!defined(FLTK_USE_X11) || !FLTK_USE_X11))
-Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver() {
-  return new Fl_Text_Widget_Driver();
+Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text_Widget *n) {
+  Fl_Text_Widget_Driver *retval = new Fl_Text_Widget_Driver();
+  retval->widget = n;
+  return retval;
 }
 #endif
 
 Fl_Native_Text_Widget::Fl_Native_Text_Widget(int x, int y, int w, int h, const char *l) : Fl_Widget(x,y,w,h,l) {
-  driver_ = Fl_Text_Widget_Driver::newTextWidgetDriver();
-  driver_->widget = this;
+  driver_ = Fl_Text_Widget_Driver::newTextWidgetDriver(this);
   font_size_ = labelsize();
   font_ = labelfont();
   text_color_ = labelcolor();
   is_readonly_ = false;
   is_selectable_ = true;
-  kind_ = MULTIPLE_LINES;
+  driver_->kind = Fl_Text_Widget_Driver::SINGLE_LINE;
 }
 
 
 Fl_Native_Text_Widget::~Fl_Native_Text_Widget() {
   delete driver_;
 };
-
-
-void Fl_Native_Text_Widget::kind(enum kind k) {
-  kind_ = k;
-}
 
 
 void Fl_Native_Text_Widget::append(const char *t, int length) {
@@ -63,16 +59,6 @@ void Fl_Native_Text_Widget::draw() {
 void Fl_Native_Text_Widget::resize(int x, int y, int w, int h) {
   Fl_Widget::resize(x, y, w, h);
   driver_->resize(x, y, w, h);
-}
-
-
-void Fl_Native_Text_Widget::right_to_left(bool v) {
-  driver_->rtl = v;
-}
-
-
-bool Fl_Native_Text_Widget::right_to_left() {
-  return driver_->rtl;
 }
 
 
@@ -201,4 +187,9 @@ bool Fl_Native_Text_Widget::can_undo() const {
 
 bool Fl_Native_Text_Widget::can_redo() const {
   return driver_->can_redo();
+}
+
+
+Fl_Native_Multiline_Text_Widget::Fl_Native_Multiline_Text_Widget(int x, int y, int w, int h, const char *l) : Fl_Native_Text_Widget(x,y,w,h,l) {
+  driver_->kind = Fl_Text_Widget_Driver::MULTIPLE_LINES;
 }

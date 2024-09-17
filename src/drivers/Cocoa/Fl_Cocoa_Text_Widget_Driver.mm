@@ -107,9 +107,9 @@ public:
       if (s_r.location >= [s length]) s_r.location--;
       NSRange composed = [s rangeOfComposedCharacterSequenceAtIndex:s_r.location];
       if (u == 0x1c) { // move char before
-        s_r.location += (driver->rtl ? +composed.length : -1);
+        s_r.location += (driver->widget->right_to_left() ? +composed.length : -1);
       } else { // move char after
-        s_r.location += (driver->rtl? (s_r.location>0?-1:0) : +composed.length);
+        s_r.location += (driver->widget->right_to_left()? (s_r.location>0?-1:0) : +composed.length);
       }
     } else if (u == 0x1) { // Home
       s_r.location = 0;
@@ -169,7 +169,7 @@ way_out:
   static BOOL busy = NO;
   if (busy) return;
   FLTextView2 *text_view = (FLTextView2*)[notification object];
-  if (text_view->driver->widget->kind() != Fl_Native_Text_Widget::SINGLE_LINE) return;
+  if (text_view->driver->kind != Fl_Text_Widget_Driver::SINGLE_LINE) return;
   NSLayoutManager *lom = [text_view layoutManager];
   NSUInteger gi = [lom glyphIndexForCharacterAtIndex:0];
   NSPoint pt = [lom locationForGlyphAtIndex:gi];
@@ -178,7 +178,7 @@ way_out:
     CGRect fr = [scroll_view frame];
     fr.size.width = pt.x + 20;
     [text_view setFrame:fr];
-  } else if (text_view->driver->rtl) { // short text
+  } else if (text_view->driver->widget->right_to_left()) { // short text
     busy = YES;
     [text_view makeBaseWritingDirectionRightToLeft:nil];
     busy = NO;
@@ -192,8 +192,10 @@ way_out:
 @end
 
 
-Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver() {
-  return (Fl_Text_Widget_Driver*)new Fl_Cocoa_Text_Widget_Driver();
+Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text_Widget *n) {
+  Fl_Text_Widget_Driver *retval = (Fl_Text_Widget_Driver*)new Fl_Cocoa_Text_Widget_Driver();
+  retval->widget = n;
+  return retval;
 }
 
 
@@ -245,7 +247,7 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     [text_view release];
     [(NSText*)text_view setDelegate:[[FLTextDelegate alloc] initWithScroll:scroll_view]];
     text_view->driver = this;
-    if (widget->kind() != Fl_Native_Text_Widget::SINGLE_LINE && rtl)
+    if (kind != Fl_Text_Widget_Driver::SINGLE_LINE && widget->right_to_left())
       [text_view makeBaseWritingDirectionRightToLeft:nil];
     [text_view setAllowsDocumentBackgroundColorChange:YES];
     uchar r, g, b;
@@ -260,14 +262,14 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     [text_view setRichText:NO];
     if (!widget->selectable()) [text_view setSelectable:NO];
     if (widget->readonly()) [text_view setEditable:NO];
-    if (widget->kind() == Fl_Native_Text_Widget::MULTIPLE_LINES) [scroll_view setHasVerticalScroller:YES];
+    if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) [scroll_view setHasVerticalScroller:YES];
     [scroll_view setHasHorizontalScroller:YES];
     [scroll_view setScrollerStyle:NSScrollerStyleOverlay];
     if (!widget->readonly()) {
       [[view window] makeFirstResponder:text_view];
       [text_view setAllowsUndo:YES];
     }
-    if (widget->kind() == Fl_Native_Text_Widget::SINGLE_LINE || !rtl) {
+    if (kind == Fl_Text_Widget_Driver::SINGLE_LINE || !widget->right_to_left()) {
       NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
       NSParagraphStyle *start = [NSParagraphStyle defaultParagraphStyle];
       [style setParagraphStyle:start];
