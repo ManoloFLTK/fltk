@@ -174,7 +174,7 @@ way_out:
   NSUInteger gi = [lom glyphIndexForCharacterAtIndex:0];
   NSPoint pt = [lom locationForGlyphAtIndex:gi];
 //NSLog(@"scroll_view width=%.0f text_view width=%.0f new=%.0f", [scroll_view frame].size.width , [text_view frame].size.width, pt.x + 20);
-  if (pt.x + 20 > [text_view frame].size.width) { // long text
+  if (pt.x + 20 > [scroll_view frame].size.width) { // long text
     CGRect fr = [scroll_view frame];
     fr.size.width = pt.x + 20;
     [text_view setFrame:fr];
@@ -227,6 +227,12 @@ void Fl_Cocoa_Text_Widget_Driver::resize(int x, int y, int w, int h) {
   fr = CGRectMake(fr.origin.x * s, fr.origin.y * s, fr.size.width * s, fr.size.height * s);
   [scroll_view setFrame:fr];
   textfont(widget->textfont());
+  if (kind == SINGLE_LINE) {
+    [text_view didChangeText];
+  } else {
+    [text_view setFrame:fr];
+    [text_view scrollRangeToVisible:[text_view selectedRange]];
+  }
 }
 
 
