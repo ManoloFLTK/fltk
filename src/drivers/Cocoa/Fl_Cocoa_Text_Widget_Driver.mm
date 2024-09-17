@@ -173,16 +173,15 @@ way_out:
   NSLayoutManager *lom = [text_view layoutManager];
   NSUInteger gi = [lom glyphIndexForCharacterAtIndex:0];
   NSPoint pt = [lom locationForGlyphAtIndex:gi];
-//NSLog(@"scroll_view width=%.0f text_view width=%.0f new=%.0f", [scroll_view frame].size.width , [text_view frame].size.width, pt.x + 20);
-  if (pt.x + 20 > [scroll_view frame].size.width) { // long text
-    CGRect fr = [scroll_view frame];
+  CGRect fr = [scroll_view frame];
+  if (pt.x + 20 > fr.size.width) { // long text
     fr.size.width = pt.x + 20;
-    [text_view setFrame:fr];
   } else if (text_view->driver->widget->right_to_left()) { // short text
     busy = YES;
     [text_view makeBaseWritingDirectionRightToLeft:nil];
     busy = NO;
-  }
+  } else return;
+  [text_view setFrame:fr];
 }
 
 - (void)textViewDidChangeSelection:(NSNotification *)notification {
