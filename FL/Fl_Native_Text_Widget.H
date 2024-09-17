@@ -49,6 +49,8 @@ public:
   void selectable(bool on_off);
   bool selectable();
   int replace(int from, int to, const char *text, int ilen = 0);
+  void copy();
+  void paste();
   int cut(int a, int b);
   int cut();
   int mark() const;

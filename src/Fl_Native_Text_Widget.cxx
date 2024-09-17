@@ -190,6 +190,16 @@ bool Fl_Native_Text_Widget::can_redo() const {
 }
 
 
+void Fl_Native_Text_Widget::copy() {
+  driver_->copy();
+}
+
+
+void Fl_Native_Text_Widget::paste() {
+  driver_->paste();
+}
+
+
 Fl_Native_Multiline_Text_Widget::Fl_Native_Multiline_Text_Widget(int x, int y, int w, int h, const char *l) : Fl_Native_Text_Widget(x,y,w,h,l) {
   driver_->kind = Fl_Text_Widget_Driver::MULTIPLE_LINES;
 }
