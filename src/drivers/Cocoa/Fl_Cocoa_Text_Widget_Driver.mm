@@ -19,6 +19,7 @@ public:
   Fl_Cocoa_Text_Widget_Driver();
   ~Fl_Cocoa_Text_Widget_Driver();
   void show_widget() FL_OVERRIDE;
+  void hide_widget() FL_OVERRIDE;
   void resize(int x, int y, int w, int h) FL_OVERRIDE;
   void textfont(Fl_Font f) FL_OVERRIDE;
   const char *value() FL_OVERRIDE;
@@ -199,7 +200,8 @@ Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text
 
 
 Fl_Cocoa_Text_Widget_Driver::Fl_Cocoa_Text_Widget_Driver() : Fl_Text_Widget_Driver() {
-  text_view = NULL;
+  scroll_view = nil;
+  text_view = nil;
   text_before_show = nil;
 }
 
@@ -236,8 +238,9 @@ void Fl_Cocoa_Text_Widget_Driver::resize(int x, int y, int w, int h) {
 
 
 void Fl_Cocoa_Text_Widget_Driver::show_widget() {
-  NSView *view = [fl_mac_xid(widget->window()) contentView];
-  if (view && !text_view) {
+  NSWindow *flwin = (NSWindow*)fl_mac_xid(widget->window());
+  if (!flwin) return;
+  if (!scroll_view) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     CGRect fr = CGRectMake(widget->x(), widget->window()->h()-(widget->y()+widget->h()), widget->w(), widget->h());
     fr = NSInsetRect(fr, BORDER_WIDTH, BORDER_WIDTH);
@@ -245,7 +248,7 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     float s = Fl::screen_scale(ns);
     fr = CGRectMake(fr.origin.x * s, fr.origin.y * s, fr.size.width * s, fr.size.height * s);
     scroll_view = [[NSScrollView alloc] initWithFrame:fr];
-    [view addSubview:scroll_view];
+    [[flwin contentView] addSubview:scroll_view];
     [scroll_view release];
     text_view = [[FLTextView2 alloc] initWithFrame:fr];
     [scroll_view setDocumentView:text_view];
@@ -271,7 +274,7 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     [scroll_view setHasHorizontalScroller:YES];
     [scroll_view setScrollerStyle:NSScrollerStyleOverlay];
     if (!widget->readonly()) {
-      [[view window] makeFirstResponder:text_view];
+      [flwin makeFirstResponder:text_view];
       [text_view setAllowsUndo:YES];
     }
     NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
@@ -289,7 +292,14 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
       text_before_show = nil;
     }
     [pool release];
+  } else if ([scroll_view isHidden]) {
+    [scroll_view setHidden:NO];
   }
+}
+
+
+void Fl_Cocoa_Text_Widget_Driver::hide_widget() {
+  [scroll_view setHidden:YES];
 }
 
 

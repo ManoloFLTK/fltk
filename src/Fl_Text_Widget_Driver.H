@@ -17,6 +17,7 @@ public:
   Fl_Native_Text_Widget *widget;
   virtual ~Fl_Text_Widget_Driver() {}
   virtual void show_widget() {}
+  virtual void hide_widget() {}
   virtual void resize(int x, int y, int w, int h) {}
   virtual void textfont(Fl_Font) {}
   virtual const char *value() { return NULL; }
