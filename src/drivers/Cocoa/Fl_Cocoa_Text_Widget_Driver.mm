@@ -9,11 +9,11 @@
 #include <FL/Fl_Graphics_Driver.H>
 #import <Cocoa/Cocoa.h>
 
-@class FLTextView2;
+@class FLNativeTextView;
 
 class Fl_Cocoa_Text_Widget_Driver : public Fl_Text_Widget_Driver {
 public:
-  FLTextView2 *text_view;
+  FLNativeTextView *text_view;
   NSScrollView *scroll_view;
   NSString *text_before_show;
   Fl_Cocoa_Text_Widget_Driver();
@@ -42,7 +42,7 @@ public:
 };
 
 
-@interface FLTextView2 : NSTextView {
+@interface FLNativeTextView : NSTextView {
   @public
   Fl_Cocoa_Text_Widget_Driver *driver;
 }
@@ -50,7 +50,7 @@ public:
 - (void)insertText:(id)aString replacementRange:(NSRange)r;
 @end
 
-@implementation FLTextView2
+@implementation FLNativeTextView
 - (void)doCommandBySelector:(SEL)aSelector {
   NSString *s = [[NSApp currentEvent] characters];
   if ([s isEqualTo:@"c"]) { // cmd-C to copy selection
@@ -169,7 +169,7 @@ way_out:
 - (void)textDidChange:(NSNotification *)notification {
   static BOOL busy = NO;
   if (busy) return;
-  FLTextView2 *text_view = (FLTextView2*)[notification object];
+  FLNativeTextView *text_view = (FLNativeTextView*)[notification object];
   if (text_view->driver->kind != Fl_Text_Widget_Driver::SINGLE_LINE) return;
   NSLayoutManager *lom = [text_view layoutManager];
   NSUInteger gi = [lom glyphIndexForCharacterAtIndex:0];
@@ -186,7 +186,7 @@ way_out:
 }
 
 - (void)textViewDidChangeSelection:(NSNotification *)notification {
-  FLTextView2 *text_view = (FLTextView2*)[notification object];
+  FLNativeTextView *text_view = (FLNativeTextView*)[notification object];
   text_view->driver->widget->take_focus();
 }
 @end
@@ -250,7 +250,7 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     scroll_view = [[NSScrollView alloc] initWithFrame:fr];
     [[flwin contentView] addSubview:scroll_view];
     [scroll_view release];
-    text_view = [[FLTextView2 alloc] initWithFrame:fr];
+    text_view = [[FLNativeTextView alloc] initWithFrame:fr];
     [scroll_view setDocumentView:text_view];
     [text_view release];
     [(NSText*)text_view setDelegate:[[FLTextDelegate alloc] initWithScroll:scroll_view]];
