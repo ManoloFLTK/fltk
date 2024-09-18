@@ -270,13 +270,14 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     [text_view setRichText:NO];
     if (!widget->selectable()) [text_view setSelectable:NO];
     if (widget->readonly()) [text_view setEditable:NO];
-    if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) [scroll_view setHasVerticalScroller:YES];
-    [scroll_view setHasHorizontalScroller:YES];
-    [scroll_view setScrollerStyle:NSScrollerStyleOverlay];
-    if (!widget->readonly()) {
+    else {
       [flwin makeFirstResponder:text_view];
       [text_view setAllowsUndo:YES];
     }
+    [scroll_view setHasVerticalScroller:(kind == Fl_Text_Widget_Driver::MULTIPLE_LINES)];
+    [scroll_view setHasHorizontalScroller:
+      (kind == Fl_Text_Widget_Driver::SINGLE_LINE || !widget->wrap())];
+    [scroll_view setScrollerStyle:NSScrollerStyleOverlay];
     NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
     NSParagraphStyle *start = [NSParagraphStyle defaultParagraphStyle];
     [style setParagraphStyle:start];
@@ -433,7 +434,6 @@ void Fl_Cocoa_Text_Widget_Driver::focus() {
   if (!widget->readonly()) {
     if ([[text_view window] firstResponder] != text_view) {
       [[text_view window] makeFirstResponder:text_view];
-      [text_view setAllowsUndo:YES];
     }
   }
 }
