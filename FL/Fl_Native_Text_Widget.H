@@ -19,6 +19,7 @@ private:
   bool is_readonly_;
   bool is_selectable_;
   bool rtl_;
+  bool wrap_;
   Fl_Text_Widget_Driver *driver_;
 public:
   Fl_Native_Text_Widget(int x, int y, int w, int h, const char *l = 0);
@@ -60,12 +61,14 @@ public:
   int redo();
   bool can_undo() const;
   bool can_redo() const;
+  bool wrap() { return wrap_; }
 };
 
 
 class FL_EXPORT Fl_Native_Multiline_Text_Widget : public Fl_Native_Text_Widget {
 public:
   Fl_Native_Multiline_Text_Widget(int x, int y, int w, int h, const char *l = 0);
+  void wrap(bool value) { wrap_ = value; }
 };
 
 #endif /* FL_NATIVE_TEXT_WIDGET_H */

@@ -274,13 +274,13 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
       [[view window] makeFirstResponder:text_view];
       [text_view setAllowsUndo:YES];
     }
-    if (kind == Fl_Text_Widget_Driver::SINGLE_LINE || !widget->right_to_left()) {
-      NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
-      NSParagraphStyle *start = [NSParagraphStyle defaultParagraphStyle];
-      [style setParagraphStyle:start];
-      [style setLineBreakMode:NSLineBreakByClipping];
-      [text_view setDefaultParagraphStyle:style];
-    }
+    NSMutableParagraphStyle *style = [[[NSMutableParagraphStyle alloc] init] autorelease];
+    NSParagraphStyle *start = [NSParagraphStyle defaultParagraphStyle];
+    [style setParagraphStyle:start];
+    [style setLineBreakMode:
+       (kind == Fl_Text_Widget_Driver::SINGLE_LINE || !widget->wrap() ? NSLineBreakByClipping
+        : NSLineBreakByWordWrapping)];
+    [text_view setDefaultParagraphStyle:style];
     if (text_before_show) {
       [text_view setString:text_before_show];
       [text_view didChangeText];

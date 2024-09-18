@@ -20,6 +20,7 @@ Fl_Native_Text_Widget::Fl_Native_Text_Widget(int x, int y, int w, int h, const c
   text_color_ = labelcolor();
   is_readonly_ = false;
   is_selectable_ = true;
+  wrap_ = false;
   driver_->kind = Fl_Text_Widget_Driver::SINGLE_LINE;
 }
 
@@ -202,4 +203,5 @@ void Fl_Native_Text_Widget::paste() {
 
 Fl_Native_Multiline_Text_Widget::Fl_Native_Multiline_Text_Widget(int x, int y, int w, int h, const char *l) : Fl_Native_Text_Widget(x,y,w,h,l) {
   driver_->kind = Fl_Text_Widget_Driver::MULTIPLE_LINES;
+  wrap(true);
 }
