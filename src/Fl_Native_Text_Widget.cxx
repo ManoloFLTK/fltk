@@ -26,6 +26,7 @@ Fl_Native_Text_Widget::Fl_Native_Text_Widget(int x, int y, int w, int h, const c
 
 
 Fl_Native_Text_Widget::~Fl_Native_Text_Widget() {
+  if (parent()) parent()->redraw(); // to erase the box
   delete driver_;
 };
 
@@ -38,6 +39,9 @@ void Fl_Native_Text_Widget::append(const char *t, int length) {
 int Fl_Native_Text_Widget::handle(int event) {
   if (event == FL_SHOW) {
     driver_->show_widget();
+    return 1;
+  } else if (event == FL_HIDE) {
+    driver_->hide_widget();
     return 1;
   }
   if (event == FL_PUSH) return active();
