@@ -13,7 +13,7 @@ Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text
 }
 #endif
 
-Fl_Native_Text_Widget::Fl_Native_Text_Widget(int x, int y, int w, int h, const char *l) : Fl_Widget(x,y,w,h,l) {
+Fl_Native_Text_Widget::Fl_Native_Text_Widget(int x, int y, int w, int h, const char *l) : Fl_Native_Widget(x,y,w,h,l) {
   driver_ = Fl_Text_Widget_Driver::newTextWidgetDriver(this);
   font_size_ = labelsize();
   font_ = labelfont();
@@ -38,21 +38,38 @@ void Fl_Native_Text_Widget::append(const char *t, int length) {
 
 int Fl_Native_Text_Widget::handle(int event) {
   if (event == FL_SHOW) {
+    Fl_Native_Widget::handle(event);
     driver_->show_widget();
     return 1;
   } else if (event == FL_HIDE) {
     driver_->hide_widget();
     return 1;
   }
-  if (event == FL_PUSH) return active();
-  if (event == FL_FOCUS && active()) {
-    driver_->focus();
+  if (event == FL_PUSH && active()){
+    if (Fl::focus() != this) {
+      Fl::focus(this);
+      handle(FL_FOCUS);
+    }
+    return 1;
+} else if (event == FL_FOCUS && active() && !readonly()) {
     return 1;
   } else if (event == FL_UNFOCUS) {
-    driver_->unfocus();
+    return 1;
+  } else if (event == FL_KEYBOARD) {
+    if (Fl::e_keysym == FL_Tab) return 0;
     return 1;
   }
   return 0;
+}
+
+
+void Fl_Native_Text_Widget::got_focus() {
+  driver_->focus();
+}
+
+
+void Fl_Native_Text_Widget::lost_focus() {
+  driver_->unfocus();
 }
 
 

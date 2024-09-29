@@ -410,3 +410,12 @@ void Fl_Widget::user_data(Fl_Callback_User_Data* v, bool auto_free) {
     set_flag(AUTO_DELETE_USER_DATA);
 }
 
+
+#include <FL/Fl_Window.H>
+int Fl_Native_Widget::handle(int event) {
+  if (event == FL_SHOW) {
+    if (window()) window()->contains_native_ = true;
+    return 1;
+  }
+  return Fl_Widget::handle(event);
+}

@@ -6,10 +6,10 @@
 #ifndef FL_NATIVE_TEXT_WIDGET_H
 #define FL_NATIVE_TEXT_WIDGET_H
 
-#include <FL/Fl_Window.H>
+#include <FL/Fl_Widget.H>
 class Fl_Text_Widget_Driver;
 
-class FL_EXPORT Fl_Native_Text_Widget : public Fl_Widget {
+class FL_EXPORT Fl_Native_Text_Widget : public Fl_Native_Widget {
   friend class Fl_Native_Multiline_Text_Widget;
 private:
   Fl_Color cursor_color_;
@@ -62,6 +62,8 @@ public:
   bool can_undo() const;
   bool can_redo() const;
   bool wrap() { return wrap_; }
+  void got_focus() FL_OVERRIDE;
+  void lost_focus() FL_OVERRIDE;
 };
 
 
