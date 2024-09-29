@@ -153,7 +153,8 @@ int Fl_Group::handle(int event) {
   case FL_FOCUS:
     switch (navkey()) {
     default:
-      if (savedfocus_ && savedfocus_->take_focus()) return 1;
+      if (savedfocus_ && (!as_window() || !as_window()->contains_native()) &&
+          savedfocus_->take_focus()) return 1; // [NATIVE]
     case FL_Right:
     case FL_Down:
       for (i = children(); i--;) if ((*a++)->take_focus()) return 1;

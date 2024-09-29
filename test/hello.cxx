@@ -8,7 +8,7 @@ void delete_win(Fl_Widget *w) {
 }
 
 int main(int argc, char **argv) {
-  Fl_Window *window = new Fl_Window(490, 280);
+  Fl_Window *window = new Fl_Window(490, 280, "top");
   bool readonly = false;
   bool selectable = true;
   const char *label;
@@ -28,7 +28,18 @@ int main(int argc, char **argv) {
     "أنو عَبد الله مُحَمَّد بن مُوسَى الخَوارِزمي عالم رياضيات وفلك وجغرافيا مسلم. يكنى بأبي جعفر. قيل أنه ولد حوالي 164هـ 781م وقيل أنه توفيَ بعد 232 هـ أي (بعد 847م)."
     //"Request a notification when it is a good time to start drawing a new frame, by creating a frame callback."
             );
-  Fl_Native_Text_Widget *box2 = new Fl_Native_Text_Widget(20, box->y()+box->h()+10, 450, 50, label);
+#define SUBWIN 1
+#if SUBWIN
+  Fl_Window *subwin = new Fl_Window(20, box->y()+box->h()+10, 450, 50+40,"subwin");
+  subwin->color(FL_YELLOW);
+#endif
+  Fl_Native_Text_Widget *box2 = new Fl_Native_Text_Widget(
+#if SUBWIN
+      0, 0,
+#else
+      20, box->y()+box->h()+10,
+#endif
+      450, 50, label);
   box2->textfont(box->textfont());
   box2->textsize(box->textsize());
   box2->textcolor(box->textcolor());
@@ -38,7 +49,14 @@ int main(int argc, char **argv) {
   box2->right_to_left(box->right_to_left());
   box2->value("كان لإسهاماته تأثير كبير في اللغة.");
   //box2->value(box->value());
+#if SUBWIN
+  subwin->resizable(subwin);
+  //Fl_Input *input =new Fl_Input(subwin->x(),subwin->y()+subwin->h()+10, subwin->w(),30, NULL);
+  Fl_Input *input = new Fl_Input(box2->x(),box2->y()+box2->h()+10, subwin->w(),30, NULL);
+  subwin->end();
+#else
   Fl_Input *input =new Fl_Input(box2->x(),box2->y()+box2->h()+10, box2->w(),30, NULL);
+#endif
   input->value("Fl_Input");
   input->textfont(box->textfont());
   input->textsize(box->textsize());
@@ -48,5 +66,6 @@ int main(int argc, char **argv) {
   box->selectable(selectable);
   window->callback(delete_win);
   window->show();
+//printf("Native-single:%p  Native-multiple:%p\n", box2, box);
   return Fl::run();
 }

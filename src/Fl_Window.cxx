@@ -65,6 +65,7 @@ void Fl_Window::_Fl_Window() {
   fullscreen_screen_left = -1;
   fullscreen_screen_right = -1;
   callback((Fl_Callback*)default_callback);
+  contains_native_ = false; // [NATIVE]
 }
 
 Fl_Window::Fl_Window(int X,int Y,int W, int H, const char *l) :

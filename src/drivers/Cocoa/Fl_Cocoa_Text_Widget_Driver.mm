@@ -47,7 +47,6 @@ public:
   Fl_Cocoa_Text_Widget_Driver *driver;
 }
 - (void)doCommandBySelector:(SEL)aSelector;
-- (void)insertText:(id)aString replacementRange:(NSRange)r;
 @end
 
 @implementation FLNativeTextView
@@ -80,7 +79,7 @@ public:
   }
   if (aSelector == @selector(cancelOperation:)) { // escape
     Fl::e_keysym = FL_Escape;
-    Fl::handle(FL_SHORTCUT, driver->widget->window());
+    Fl::handle(FL_SHORTCUT, driver->widget->top_window());
     return;
   }
   if (aSelector == @selector(insertTab:)) { // tab
@@ -95,55 +94,6 @@ public:
     return;
   }
   [super doCommandBySelector:aSelector];
-}
-
-- (void)insertText:(id)aString replacementRange:(NSRange)r {
-  if ([aString length] && [aString isKindOfClass:[NSString class]]) {
-    unichar u = [aString characterAtIndex:0];
-    NSRange s_r = [self selectedRange];
-    s_r.length = 0;
-    if (u == 0x1c || u == 0x1d) {
-      NSParagraphStyle *style = [[self typingAttributes] valueForKey:@"NSParagraphStyle"];
-      NSString *s = [self string];
-      if (s_r.location >= [s length]) s_r.location--;
-      NSRange composed = [s rangeOfComposedCharacterSequenceAtIndex:s_r.location];
-      if (u == 0x1c) { // move char before
-        s_r.location += (driver->widget->right_to_left() ? +composed.length : -1);
-      } else { // move char after
-        s_r.location += (driver->widget->right_to_left()? (s_r.location>0?-1:0) : +composed.length);
-      }
-    } else if (u == 0x1) { // Home
-      s_r.location = 0;
-    } else if (u == 0x4) { // End
-      s_r.location = [[self string] length];
-    } else if (u == 0x1f || u == 0x1e) { // down or up arrow
-      NSLayoutManager *lom = [self layoutManager];
-      NSUInteger gi = [lom glyphIndexForCharacterAtIndex:s_r.location];
-      NSPoint pt = [lom locationForGlyphAtIndex:gi];
-      float s = Fl::screen_scale( driver->widget->window()->screen_num() );
-      pt.y += driver->widget->textsize() * (u == 0x1f /* down */ ? s : -s);
-      NSRect rect = [lom lineFragmentRectForGlyphAtIndex:gi effectiveRange:NULL];
-      pt.x += rect.origin.x;
-      pt.y += rect.origin.y;
-      if (pt.y <= 0) return; // stop at 1st line
-      gi = [lom glyphIndexForPoint:pt inTextContainer:[self textContainer]
-            fractionOfDistanceThroughGlyph:NULL];
-      s_r = [lom characterRangeForGlyphRange:NSMakeRange(gi, 1) actualGlyphRange:NULL];
-      s_r.length = 0;
-    } else if (u == 0x7f) { // delete forward
-      NSString *s = [self string];
-      if (s_r.location < [s length]) {
-        NSRange composed = [s rangeOfComposedCharacterSequenceAtIndex:s_r.location];
-        [super insertText:@"" replacementRange:composed];
-      }
-      return;
-    } else goto way_out;
-    [self setSelectedRange:s_r];
-    [self scrollRangeToVisible:s_r];
-    return;
-  }
-way_out:
-  [super insertText:aString replacementRange:r];
 }
 
 @end
@@ -249,6 +199,7 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     fr = CGRectMake(fr.origin.x * s, fr.origin.y * s, fr.size.width * s, fr.size.height * s);
     scroll_view = [[NSScrollView alloc] initWithFrame:fr];
     [[flwin contentView] addSubview:scroll_view];
+    if ([flwin parentWindow]) [flwin setIgnoresMouseEvents:NO];
     [scroll_view release];
     text_view = [[FLNativeTextView alloc] initWithFrame:fr];
     [scroll_view setDocumentView:text_view];
@@ -440,8 +391,10 @@ void Fl_Cocoa_Text_Widget_Driver::focus() {
 
 
 void Fl_Cocoa_Text_Widget_Driver::unfocus() {
-  if ([[text_view window] firstResponder] == text_view) {
-    [[text_view window] makeFirstResponder:nil];
+  NSWindow *xid = [text_view window];
+  if ([xid firstResponder] == text_view) {
+    NSView *v = [xid parentWindow] ? nil: [xid contentView];
+    [xid makeFirstResponder:v];
   }
 }
 
