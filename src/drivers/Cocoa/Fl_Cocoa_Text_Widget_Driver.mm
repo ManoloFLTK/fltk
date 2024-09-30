@@ -135,19 +135,20 @@ public:
   static BOOL busy = NO;
   if (busy) return;
   FLNativeTextView *text_view = (FLNativeTextView*)[notification object];
-  if (text_view->driver->kind != Fl_Text_Widget_Driver::SINGLE_LINE) return;
-  NSLayoutManager *lom = [text_view layoutManager];
-  NSUInteger gi = [lom glyphIndexForCharacterAtIndex:0];
-  NSPoint pt = [lom locationForGlyphAtIndex:gi];
-  CGRect fr = [scroll_view frame];
-  if (pt.x + 20 > fr.size.width) { // long text
-    fr.size.width = pt.x + 20;
-  } else if (text_view->driver->widget->right_to_left()) { // short text
-    busy = YES;
-    [text_view makeBaseWritingDirectionRightToLeft:nil];
-    busy = NO;
-  } else return;
-  [text_view setFrame:fr];
+  if (text_view->driver->kind == Fl_Text_Widget_Driver::SINGLE_LINE) {
+    NSLayoutManager *lom = [text_view layoutManager];
+    NSUInteger gi = [lom glyphIndexForCharacterAtIndex:0];
+    NSPoint pt = [lom locationForGlyphAtIndex:gi];
+    CGRect fr = [scroll_view frame];
+    if (pt.x + 20 > fr.size.width) { // long text
+      fr.size.width = pt.x + 20;
+    } else if (text_view->driver->widget->right_to_left()) { // short text
+      busy = YES;
+      [text_view makeBaseWritingDirectionRightToLeft:nil];
+      busy = NO;
+    } else return;
+    [text_view setFrame:fr];
+  }
   text_view->driver->widget->set_changed();
   if (text_view->driver->widget->when() & FL_WHEN_CHANGED)
     text_view->driver->widget->do_callback(FL_REASON_CHANGED);
