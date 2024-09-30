@@ -46,10 +46,25 @@ public:
   @public
   Fl_Cocoa_Text_Widget_Driver *driver;
 }
+- (void)insertText:(id)string replacementRange:(NSRange)r;
 - (void)doCommandBySelector:(SEL)aSelector;
 @end
 
 @implementation FLNativeTextView
+
+- (void)insertText:(id)string replacementRange:(NSRange)r {
+  if (driver->kind == Fl_Text_Widget_Driver::SINGLE_LINE &&
+      [string isKindOfClass:[NSString class]] && [string isEqualToString:@"\n"]) {
+    if (driver->widget->changed() || (driver->widget->when() & FL_WHEN_NOT_CHANGED))
+        driver->widget->do_callback(FL_REASON_ENTER_KEY);
+    [self selectAll:self];
+    if (driver->widget->when() & FL_WHEN_RELEASE)
+      Fl::focus(0);
+    return;
+  }
+  [super insertText:string replacementRange:r];
+}
+
 - (void)doCommandBySelector:(SEL)aSelector {
   NSString *s = [[NSApp currentEvent] characters];
   if ([s isEqualTo:@"c"]) { // cmd-C to copy selection
@@ -133,6 +148,9 @@ public:
     busy = NO;
   } else return;
   [text_view setFrame:fr];
+  text_view->driver->widget->set_changed();
+  if (text_view->driver->widget->when() & FL_WHEN_CHANGED)
+    text_view->driver->widget->do_callback(FL_REASON_CHANGED);
 }
 
 - (void)textViewDidChangeSelection:(NSNotification *)notification {
@@ -400,11 +418,36 @@ void Fl_Cocoa_Text_Widget_Driver::unfocus() {
 
 
 void Fl_Cocoa_Text_Widget_Driver::copy() {
-  [text_view writeSelectionToPasteboard:[NSPasteboard generalPasteboard]
+  if (text_view->driver->kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) {
+    [text_view writeSelectionToPasteboard:[NSPasteboard generalPasteboard]
                               types:[text_view writablePasteboardTypes]];
+  } else {
+    NSRange r = [text_view selectedRange];
+    if (!r.length) return;
+    NSString *sub = [[text_view string] substringWithRange:r];
+    // When single-line, replace "^J" by newline and "^I" by tab.
+    sub = [sub stringByReplacingOccurrencesOfString:@"^J" withString:@"\n"];
+    sub = [sub stringByReplacingOccurrencesOfString:@"^I" withString:@"\t"];
+    NSPasteboard *clip = [NSPasteboard generalPasteboard];
+    [clip declareTypes:[NSArray arrayWithObject:@"public.utf8-plain-text"] owner:nil];
+    [clip setString:sub forType:@"public.utf8-plain-text"];
+  }
 }
 
 
 void Fl_Cocoa_Text_Widget_Driver::paste() {
-  [text_view pasteAsPlainText:nil];
+  if (text_view->driver->kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) {
+    [text_view pasteAsPlainText:nil];
+  } else {
+    // When single-line, replace newlines by "^J" and tabs by "^I" in pasted text
+    NSPasteboard *clip = [NSPasteboard generalPasteboard];
+    NSString *found = [clip availableTypeFromArray:[NSArray arrayWithObjects:@"public.utf8-plain-text", @"public.utf16-plain-text", @"com.apple.traditional-mac-plain-text", nil]];
+    if (found) {
+      NSString *s = [clip stringForType:found];
+      s = [s stringByReplacingOccurrencesOfString:@"\n" withString:@"^J"];
+      s = [s stringByReplacingOccurrencesOfString:@"\t" withString:@"^I"];
+      NSRange r = [text_view selectedRange];
+      [text_view insertText:s replacementRange:r];
+    }
+  }
 }

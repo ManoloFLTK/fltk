@@ -7,6 +7,10 @@ void delete_win(Fl_Widget *w) {
   delete w;
 }
 
+void cb(Fl_Widget *, void *d) {
+  printf("%s runs callback\n",(char*)d);
+}
+
 int main(int argc, char **argv) {
   Fl_Window *window = new Fl_Window(490, 280, "top");
   bool readonly = false;
@@ -48,6 +52,7 @@ int main(int argc, char **argv) {
   box2->box(box->box());
   box2->right_to_left(box->right_to_left());
   box2->value("كان لإسهاماته تأثير كبير في اللغة.");
+  box2->callback(cb, (void*)"Fl_Native_Text_Widget");
   //box2->value(box->value());
 #if SUBWIN
   subwin->resizable(subwin);
@@ -58,6 +63,7 @@ int main(int argc, char **argv) {
   Fl_Input *input =new Fl_Input(box2->x(),box2->y()+box2->h()+10, box2->w(),30, NULL);
 #endif
   input->value("Fl_Input");
+  input->callback(cb, (void*)"Fl_Input");
   input->textfont(box->textfont());
   input->textsize(box->textsize());
   window->end();
