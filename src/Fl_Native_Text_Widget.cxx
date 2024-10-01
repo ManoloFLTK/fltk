@@ -5,7 +5,8 @@
 #include <FL/Fl_Native_Text_Widget.H>
 #include "../src/Fl_Text_Widget_Driver.H"
 
-#if !(defined(__APPLE__) && (!defined(FLTK_USE_X11) || !FLTK_USE_X11))
+#if !(defined(__APPLE__) && (!defined(FLTK_USE_X11) || !FLTK_USE_X11)) && \
+    !defined(FLTK_USE_WAYLAND)
 Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text_Widget *n) {
   Fl_Text_Widget_Driver *retval = new Fl_Text_Widget_Driver();
   retval->widget = n;
