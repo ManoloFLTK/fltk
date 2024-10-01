@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
   Fl_Native_Multiline_Text_Widget *box = new Fl_Native_Multiline_Text_Widget(20, 40, 450, 100, label);
   box->align(FL_ALIGN_TOP);
   box->textfont(FL_COURIER);
-  box->textsize(20);
+  box->textsize(15);
   box->textcolor(FL_DARK3);
   box->cursor_color(FL_RED);
   box->color(FL_LIGHT2);
@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
     "أنو عَبد الله مُحَمَّد بن مُوسَى الخَوارِزمي عالم رياضيات وفلك وجغرافيا مسلم. يكنى بأبي جعفر. قيل أنه ولد حوالي 164هـ 781م وقيل أنه توفيَ بعد 232 هـ أي (بعد 847م)."
     //"Request a notification when it is a good time to start drawing a new frame, by creating a frame callback."
             );
-#define SUBWIN 1
+#define SUBWIN 0//1
 #if SUBWIN
   Fl_Window *subwin = new Fl_Window(20, box->y()+box->h()+10, 450, 50+40,"subwin");
   subwin->color(FL_YELLOW);
@@ -52,6 +52,7 @@ int main(int argc, char **argv) {
   box2->box(box->box());
   box2->right_to_left(box->right_to_left());
   box2->value("كان لإسهاماته تأثير كبير في اللغة.");
+  //box2->value("Fl_Native_Text_Widget");
   box2->callback(cb, (void*)"Fl_Native_Text_Widget");
   //box2->value(box->value());
 #if SUBWIN
