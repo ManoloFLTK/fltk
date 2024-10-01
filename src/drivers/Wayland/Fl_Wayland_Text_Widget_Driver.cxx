@@ -11,9 +11,7 @@
 #include "Fl_Wayland_Graphics_Driver.H"
 
 #include <wayland-client.h>
-#include <gdk/gdk.h>
 #include <gtk/gtk.h>
-#include <gdk/gdkwayland.h>
 
 class Fl_Wayland_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   GtkWidget *scrolled;
@@ -49,6 +47,13 @@ Fl_Wayland_Text_Widget_Driver::Fl_Wayland_Text_Widget_Driver() : Fl_Text_Widget_
 
 Fl_Wayland_Text_Widget_Driver::~Fl_Wayland_Text_Widget_Driver() {
   delete[] text_before_show;
+  if (text_view) {
+    gtk_widget_destroy(window);
+    wl_subsurface_destroy(wl_subsurface);
+    wl_surface_destroy(wl_surface);
+    Fl_Wayland_Graphics_Driver::buffer_release(fake_window);
+    delete fake_window;
+  }
 }
 
 
@@ -76,53 +81,34 @@ void Fl_Wayland_Text_Widget_Driver::show_widget()  {
     gtk_widget_set_hexpand(scrolled, TRUE);
     text_view = gtk_text_view_new();
 printf("show_widget() text_view=%p scrolled=%p scale=%d\n",text_view,scrolled,scale);
-    gtk_text_view_set_editable (GTK_TEXT_VIEW (text_view), FALSE);
-    gtk_text_view_set_cursor_visible (GTK_TEXT_VIEW (text_view), FALSE);
-    gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW (text_view),
+    gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view), !widget->readonly() );
+    gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(text_view), true);
+    gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text_view),
       (kind == Fl_Text_Widget_Driver::SINGLE_LINE || !widget->wrap() ? GTK_WRAP_NONE: GTK_WRAP_WORD));
-    gtk_container_add (GTK_CONTAINER (scrolled), text_view);
-    
+    gtk_container_add(GTK_CONTAINER(scrolled), text_view);
+    gtk_container_add(GTK_CONTAINER(window), scrolled);
+    gtk_widget_show_all(window);
     if (text_before_show) {
       widget->value(text_before_show);
       delete[] text_before_show;
       text_before_show = NULL;
     }
-    gtk_container_add(GTK_CONTAINER(window), scrolled);
-    GtkAllocation allocation = {0,0, scale * (widget->w() - BORDER_WIDTH), scale * (widget->h() - BORDER_WIDTH)};
-    gtk_widget_show_all(window);
-    gtk_widget_size_allocate(scrolled, &allocation);
-    if (widget->readonly()) gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view), false);
     fake_window = new struct wld_window;
     memset(fake_window, 0, sizeof(struct wld_window));
     fake_window->wl_surface = wl_surface;
     fake_window->subsurface = wl_subsurface;
     fake_window->kind = Fl_Wayland_Window_Driver::SUBWINDOW;
     fake_window->fl_win = widget->top_window();
-    fake_window->configured_width = scale * (widget->w() - BORDER_WIDTH);
-    fake_window->configured_height = scale * (widget->h() - BORDER_WIDTH);
-    buffer = new Fl_Wayland_Graphics_Driver::wld_buffer;
-    memset(buffer, 0, sizeof(Fl_Wayland_Graphics_Driver::wld_buffer));
-    buffer->draw_buffer.width = fake_window->configured_width;
-    buffer->draw_buffer.stride = cairo_format_stride_for_width(
-                                 Fl_Cairo_Graphics_Driver::cairo_format, buffer->draw_buffer.width);
-    buffer->draw_buffer.data_size = buffer->draw_buffer.stride * fake_window->configured_height;
-    Fl_Wayland_Graphics_Driver::create_shm_buffer(buffer);
-    fake_window->buffer = buffer;
-    Fl_Wayland_Graphics_Driver::cairo_init(&buffer->draw_buffer,
-                                           buffer->draw_buffer.width,
-                                           fake_window->configured_height,
-                                           buffer->draw_buffer.stride,
-                                           Fl_Cairo_Graphics_Driver::cairo_format);
-    draw_widget();
+    resize(widget->x(), widget->y(), widget->w(), widget->h());
   }
 }
 
 
 void Fl_Wayland_Text_Widget_Driver::draw_widget()  {
-  //GtkAllocation allocation;
-  //gtk_widget_get_allocation(GTK_WIDGET(scrolled), &allocation);
-  //GtkStyleContext *style = gtk_widget_get_style_context(scrolled);
-  //gtk_render_background(style, fake_window->buffer->draw_buffer.cairo_, allocation.x, allocation.y, allocation.width, allocation.height);
+  /*GtkAllocation allocation;
+  gtk_widget_get_allocation(GTK_WIDGET(scrolled), &allocation);
+  GtkStyleContext *style = gtk_widget_get_style_context(scrolled);
+  gtk_render_background(style, fake_window->buffer->draw_buffer.cairo_, allocation.x, allocation.y, allocation.width, allocation.height);*/
   gtk_widget_draw(scrolled, fake_window->buffer->draw_buffer.cairo_);
   Fl_Wayland_Graphics_Driver::buffer_commit(fake_window, NULL);
 }
