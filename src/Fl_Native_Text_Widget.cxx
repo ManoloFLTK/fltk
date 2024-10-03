@@ -6,7 +6,7 @@
 #include "../src/Fl_Text_Widget_Driver.H"
 
 #if !(defined(__APPLE__) && (!defined(FLTK_USE_X11) || !FLTK_USE_X11)) && \
-    !defined(FLTK_USE_WAYLAND)
+    !defined(FLTK_USE_CAIRO)
 Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text_Widget *n) {
   Fl_Text_Widget_Driver *retval = new Fl_Text_Widget_Driver();
   retval->widget = n;
@@ -30,6 +30,11 @@ Fl_Native_Text_Widget::~Fl_Native_Text_Widget() {
   if (parent()) parent()->redraw(); // to erase the box
   delete driver_;
 };
+
+
+Fl_Native_Widget *Fl_Native_Text_Widget::as_native_widget() {
+  return driver_->as_native_widget();
+}
 
 
 void Fl_Native_Text_Widget::append(const char *t, int length) {
@@ -76,12 +81,13 @@ void Fl_Native_Text_Widget::lost_focus() {
 
 void Fl_Native_Text_Widget::draw() {
   draw_box();
+  driver_->draw();
 }
 
 
 void Fl_Native_Text_Widget::resize(int x, int y, int w, int h) {
   Fl_Widget::resize(x, y, w, h);
-  driver_->resize(x, y, w, h);
+  driver_->resize(this->x(), this->y(), this->w(), this->h());
 }
 
 

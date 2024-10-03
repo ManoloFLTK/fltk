@@ -306,13 +306,13 @@ elseif(FLTK_BACKEND_WAYLAND)
     drivers/Wayland/Fl_Wayland_Image_Surface_Driver.cxx
     drivers/Wayland/fl_wayland_clipboard_dnd.cxx
     drivers/Wayland/fl_wayland_platform_init.cxx
-    drivers/Wayland/Fl_Wayland_Text_Widget_Driver.cxx
     drivers/Cairo/Fl_Cairo_Graphics_Driver.cxx
     Fl_Native_File_Chooser_FLTK.cxx
     Fl_Native_File_Chooser_GTK.cxx
   )
 
     list(APPEND DRIVER_FILES
+      drivers/Cairo/Fl_Cairo_Text_Widget_Driver.cxx
       Fl_Native_File_Chooser_Kdialog.cxx
       Fl_Native_File_Chooser_Zenity.cxx)
 

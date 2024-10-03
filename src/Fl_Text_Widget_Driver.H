@@ -16,6 +16,7 @@ public:
   static Fl_Text_Widget_Driver *newTextWidgetDriver(Fl_Native_Text_Widget*);
   Fl_Native_Text_Widget *widget;
   virtual ~Fl_Text_Widget_Driver() {}
+  virtual Fl_Native_Widget *as_native_widget() { return widget; }
   virtual void show_widget() {}
   virtual void hide_widget() {}
   virtual void resize(int x, int y, int w, int h) {}
@@ -39,6 +40,7 @@ public:
   virtual void unfocus() {}
   virtual void copy() {}
   virtual void paste() {}
+  virtual void draw() {}
 };
 
 #endif /* Fl_Text_Widget_Driver_h */
