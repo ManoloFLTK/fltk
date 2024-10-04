@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 #else
       20, box->y()+box->h()+10,
 #endif
-      450, 50, label);
+      450, 50, "single-line");
   box2->textfont(box->textfont());
   box2->textsize(box->textsize());
   box2->textcolor(box->textcolor());
@@ -63,6 +63,7 @@ int main(int argc, char **argv) {
 #else
   Fl_Input *input =new Fl_Input(box2->x(),box2->y()+box2->h()+10, box2->w(),30, NULL);
 #endif
+  input->label("Fl_Input");
   input->value("Fl_Input");
   input->callback(cb, (void*)"Fl_Input");
   input->textfont(box->textfont());
