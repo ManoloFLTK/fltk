@@ -1052,6 +1052,7 @@ void Fl::focus(Fl_Widget *o)
 
   if (o && !o->visible_focus()) return;
   Fl_Widget *p = focus_;
+printf("Fl::focus(%s)\n",o?o->label():"nil");
   if (o != p) {
     Fl::compose_reset();
     focus_ = o;
@@ -1161,7 +1162,7 @@ void fl_fix_focus() {
     Fl_Widget *f = Fl::focus();
     if (f && !f->as_native_widget()) w = w->top_window(); // [NATIVE]
     if (Fl::modal()) w = Fl::modal();
-    if (!w->contains(f) || f->as_native_widget()) // [NATIVE]
+    if (!w->contains(f))
       if (!w->take_focus()) Fl::focus(w);
     Fl::e_keysym = saved;
   } else

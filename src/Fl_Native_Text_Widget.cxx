@@ -32,11 +32,6 @@ Fl_Native_Text_Widget::~Fl_Native_Text_Widget() {
 };
 
 
-Fl_Native_Widget *Fl_Native_Text_Widget::as_native_widget() {
-  return driver_->as_native_widget();
-}
-
-
 void Fl_Native_Text_Widget::append(const char *t, int length) {
   driver_->append(t, length);
 }
@@ -57,13 +52,14 @@ int Fl_Native_Text_Widget::handle(int event) {
       handle(FL_FOCUS);
     }
     return 1;
-} else if (event == FL_FOCUS && active() && !readonly()) {
+  } else if (event == FL_FOCUS && active() && !readonly()) {
     return 1;
   } else if (event == FL_UNFOCUS) {
+    driver_->unfocus();
     return 1;
   } else if (event == FL_KEYBOARD) {
     if (Fl::e_keysym == FL_Tab) return 0;
-    return 1;
+    return driver_->handle_keyboard();
   }
   return 0;
 }

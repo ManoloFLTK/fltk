@@ -27,7 +27,6 @@ public:
   void append(const char *t, int length = -1);
   void right_to_left(bool rtl) { rtl_ = rtl; }
   bool right_to_left() { return rtl_; }
-  Fl_Native_Widget *as_native_widget() FL_OVERRIDE;
   int handle(int event) FL_OVERRIDE;
   void draw() FL_OVERRIDE;
   void resize(int x, int y, int w, int h) FL_OVERRIDE;
