@@ -6,7 +6,6 @@
 #ifndef Fl_Text_Widget_Driver_h
 #define Fl_Text_Widget_Driver_h
 
-#include <FL/Fl_Window.H>
 #include <FL/Fl_Native_Text_Widget.H>
 #include <limits.h>
 
@@ -41,6 +40,7 @@ public:
   virtual void paste() {}
   virtual void draw() {}
   virtual int handle_keyboard() { return 1; }
+  virtual int handle_push() { return 1; }
 };
 
 #endif /* Fl_Text_Widget_Driver_h */

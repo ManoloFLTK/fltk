@@ -22,6 +22,8 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   GtkAllocation allocation;
 public:
   char *text_before_show;
+  int need_allocate;
+  char *text_tag_value;
   Fl_Cairo_Text_Widget_Driver();
   ~Fl_Cairo_Text_Widget_Driver();
   void show_widget() FL_OVERRIDE;
@@ -34,6 +36,7 @@ public:
   void draw() FL_OVERRIDE;
   unsigned index(int i) const FL_OVERRIDE;
   int handle_keyboard() FL_OVERRIDE;
+  int handle_push() FL_OVERRIDE;
   int insert_position() FL_OVERRIDE;
   void insert_position(int pos, int mark) FL_OVERRIDE;
   int mark() FL_OVERRIDE;
@@ -52,13 +55,27 @@ Fl_Cairo_Text_Widget_Driver::Fl_Cairo_Text_Widget_Driver() : Fl_Text_Widget_Driv
   text_view = NULL;
   font_size_color_tag = NULL;
   memset(&allocation, 0, sizeof(GtkAllocation));
+  need_allocate = 0;
+  text_tag_value = NULL;
 }
 
 Fl_Cairo_Text_Widget_Driver::~Fl_Cairo_Text_Widget_Driver() {
   delete[] text_before_show;
+  delete[] text_tag_value;
   if (text_view) {
     gtk_widget_destroy(window);
   }
+}
+
+
+static void fl_textbuffer_changed(GtkTextBuffer *buffer) {
+  GtkTextTagTable *table = gtk_text_buffer_get_tag_table(buffer);
+  GtkTextTag *tag = gtk_text_tag_table_lookup(table, "FlTextTag");
+  gchar *strval;
+  g_object_get(tag, "family", &strval, NULL);
+  Fl_Cairo_Text_Widget_Driver *dr;
+  sscanf(strval, "%p", &dr);
+  dr->need_allocate = 2;
 }
 
 
@@ -71,9 +88,9 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
   if (widget->window()->shown() && !text_view) {
     window = gtk_offscreen_window_new();
     scrolled = gtk_scrolled_window_new(NULL, NULL);
-    gtk_widget_set_vexpand(scrolled, (kind == Fl_Text_Widget_Driver::SINGLE_LINE || !widget->wrap()));
-    gtk_widget_set_hexpand(scrolled, TRUE);
     text_view = gtk_text_view_new();
+    //gtk_text_view_set_left_margin(GTK_TEXT_VIEW(text_view), 3);
+    //gtk_text_view_set_right_margin(GTK_TEXT_VIEW(text_view), 3);
     //layout = gtk_widget_create_pango_layout(text_view, NULL);
     gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view), !widget->readonly() );
     gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(text_view), true);
@@ -87,10 +104,24 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
     gtk_widget_override_background_color(text_view, GTK_STATE_FLAG_NORMAL, &bg);
     gtk_container_add(GTK_CONTAINER(scrolled), text_view);
     gtk_container_add(GTK_CONTAINER(window), scrolled);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled),
+      (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES && widget->wrap() ? GTK_POLICY_NEVER: GTK_POLICY_ALWAYS), //H
+          (kind == Fl_Text_Widget_Driver::SINGLE_LINE ? GTK_POLICY_NEVER : GTK_POLICY_ALWAYS) //V
+                                   );
     gtk_widget_show_all(window);
     
-    /* Use a tag to change the color for all the widget */
     buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view));
+    GtkTextBufferClass *tbc = GTK_TEXT_BUFFER_GET_CLASS(buffer);
+    tbc->changed = fl_textbuffer_changed;
+    // Hack: store the &Fl_Cairo_Text_Widget_Driver in the GtkTextBuffer's "FlTextTag" GtkTextTag
+    // and its "family" property. A better approach would be to replace the GtkTextBuffer
+    // by a derived class that memorizes the corresponding Fl_Cairo_Text_Widget_Driver.
+    // But how to emulate a derived class with the C-based GTK API ???
+    text_tag_value = new char[20];
+    snprintf(text_tag_value, 20, "%p", this);
+    gtk_text_buffer_create_tag(buffer, "FlTextTag", "family", text_tag_value, NULL);
+    
+    // Use a tag to change the color for all the widget
     char color_str[8];
     Fl::get_color(widget->textcolor(), r, g, b);
     snprintf(color_str, sizeof(color_str), "#%2.2x%2.2x%2.2x", r, g, b);
@@ -101,15 +132,11 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
     snprintf(font_str, sizeof(font_str), "%s %dpx", fname, widget->textsize());
     font_size_color_tag = gtk_text_buffer_create_tag(buffer, NULL,
                       "foreground", color_str, "font", font_str, NULL);
-    GtkTextIter start, end;
-    gtk_text_buffer_get_start_iter(buffer, &start);
-    gtk_text_buffer_get_end_iter(buffer, &end);
-    gtk_text_buffer_apply_tag(buffer, font_size_color_tag, &start, &end);
-    
     if (text_before_show) widget->value(text_before_show);
+    GtkTextIter start;
     gtk_text_buffer_get_start_iter(buffer, &start);
     gtk_text_buffer_place_cursor(buffer, &start);
-    resize(widget->x(), widget->y(), widget->w(), widget->h());
+    draw();
   }
 }
 
@@ -121,12 +148,14 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
  */
 
 void Fl_Cairo_Text_Widget_Driver::draw()  {
+  if (Fl_Window::current() != widget->window()) widget->window()->make_current();
   int tmp_width = widget->w() - 2 * BORDER_WIDTH;
   int tmp_height = widget->h() - 2 * BORDER_WIDTH;
-  if (1|| tmp_width != allocation.width || tmp_height != allocation.height) {//TODO improve test?
+  if (need_allocate || tmp_width != allocation.width || tmp_height != allocation.height) {
     allocation.width = tmp_width;
     allocation.height = tmp_height;
     gtk_widget_size_allocate(scrolled, &allocation);
+    if (need_allocate > 0) need_allocate--;
   }
   Fl_Image_Surface *surface = new Fl_Image_Surface(tmp_width, tmp_height, 1);
   Fl_Surface_Device::push_current(surface);
@@ -134,11 +163,9 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
   //gtk_render_background(style, dr->cr(), 0, 0, allocation.width, allocation.height);
   gtk_widget_draw(scrolled, dr->cr());
   if (Fl::focus() == widget) {
-    GtkTextIter iter;
-    gtk_text_buffer_get_iter_at_mark(buffer, &iter, gtk_text_buffer_get_insert(buffer));
-    GdkRectangle strong, weak;
-    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), &iter, &strong, &weak);
-    // the native insertion crusor, but how to set its color?
+    GdkRectangle strong;
+    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
+    // the native insertion cursor, but how to set its color?
     //GtkStyleContext *style = gtk_widget_get_style_context(text_view);
     //gtk_render_insertion_cursor(style, dr->cr(), strong.x, strong.y, layout, 0, PANGO_DIRECTION_RTL);
     fl_color(widget->cursor_color()); dr->line_style(FL_SOLID, 2);
@@ -185,7 +212,7 @@ void Fl_Cairo_Text_Widget_Driver::value(const char *t, int len) {
 
 void Fl_Cairo_Text_Widget_Driver::replace(int from, int to, const char *text, int len) {
   insert_position(from, to);
-  gtk_text_buffer_delete_selection(buffer, true, true);
+  if (from != to) gtk_text_buffer_delete_selection(buffer, true, true);
   GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
   GtkTextIter iter;
   gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
@@ -197,32 +224,21 @@ void Fl_Cairo_Text_Widget_Driver::replace(int from, int to, const char *text, in
 
 
 void Fl_Cairo_Text_Widget_Driver::resize(int x, int y, int w, int h) {
-  int new_width = (w - 2 * BORDER_WIDTH);
-  int new_height = (h - 2 * BORDER_WIDTH);
-  if (new_width != allocation.width || new_height != allocation.height) {
-    allocation.width = new_width;
-    allocation.height = new_height;
-    gtk_widget_size_allocate(scrolled, &allocation);
-  }
-  widget->window()->make_current();
   draw();
 }
 
 
 void Fl_Cairo_Text_Widget_Driver::focus() {
-  if (!widget->readonly() /*&& !gtk_widget_is_focus(text_view)*/) {
-    printf("focus(%s)\n",widget->label());
+  if (!widget->readonly()) {
+    //printf("focus(%s)\n",widget->label());
     gtk_widget_grab_focus(text_view);
-    widget->window()->make_current();
     draw();
-//printf("gtk_widget_has_focus=%d gtk_widget_is_focus=%d\n",
-//           gtk_widget_has_focus(text_view), gtk_widget_is_focus(text_view));
   }
 }
 
 
 void Fl_Cairo_Text_Widget_Driver::unfocus() {
-  printf("unfocus(%s)\n",widget->label());
+  //printf("unfocus(%s)\n",widget->label());
   draw();
 }
 
@@ -249,6 +265,59 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
      }*/
     return 1;
   }
+  int mods = Fl::event_state() & (FL_META|FL_CTRL|FL_ALT);
+  unsigned int shift = Fl::event_state() & FL_SHIFT;
+  int retval = 0;
+  if (Fl::event_key() == FL_Delete) {
+    int selected = (insert_position() != mark()) ? 1 : 0;
+    if (mods == 0 && shift && selected) {
+      //TODO: kf_copy_cut();            // Shift-Delete with selection (WP,NP,WOW,GE,KE,OF)
+    } else if (mods == 0 && ((shift && !selected) || !shift)) {
+       // Delete or Shift-Delete no selection (WP,NP,WOW,GE,KE,!OF)
+      GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
+      GtkTextIter iter, next;
+      gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
+      gtk_text_iter_assign(&next, &iter);
+      gtk_text_iter_forward_char(&next);
+      gtk_text_buffer_delete(buffer, &iter, &next);
+      draw();
+      return 1;
+    } else if (mods == FL_CTRL) {// kf_delete_word_right()  Ctrl-Delete    (WP,!NP,WOW,GE,KE,!OF)
+      GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
+      GtkTextIter iter, next;
+      gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
+      gtk_text_iter_assign(&next, &iter);
+      gtk_text_iter_forward_word_end(&next);
+      gtk_text_buffer_delete(buffer, &iter, &next);
+      draw();
+      return 1;
+    }
+  } else if (Fl::event_key() == FL_BackSpace) {
+    if (mods == 0) { // Backspace      (WP,NP,WOW,GE,KE,OF)
+      if (gtk_text_buffer_get_has_selection(buffer)) {
+        gtk_text_buffer_delete_selection(buffer, true, true);
+      } else {
+        GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
+        GtkTextIter iter;
+        gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
+        gtk_text_buffer_backspace (buffer, &iter, true, true);
+      }
+      draw();
+      retval = 1;
+    }
+    else if (mods == FL_CTRL) {//   kf_delete_word_left()  Ctrl-Backspace (WP,!NP,WOW,GE,KE,!OF)
+      GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
+      GtkTextIter iter, next;
+      gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
+      gtk_text_iter_assign(&next, &iter);
+      gtk_text_iter_backward_word_start(&next);
+      gtk_text_buffer_delete(buffer, &iter, &next);
+      draw();
+      return 1;
+    }
+  }
+  if (retval >= 1) return retval;
+  
   if (Fl::e_keysym == FL_Right || Fl::e_keysym == FL_Left) {
     GtkTextIter where;
     gtk_text_buffer_get_iter_at_mark(buffer, &where, gtk_text_buffer_get_insert(buffer));
@@ -258,10 +327,46 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
       gtk_text_iter_forward_char(&where);
     }
     gtk_text_buffer_place_cursor(buffer, &where);
+    gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(text_view), gtk_text_buffer_get_insert(buffer),
+      0.2, FALSE, 0.05, 0.);
+    draw();
+    return 1;
+  } else if (kind == MULTIPLE_LINES && (Fl::e_keysym == FL_Down || Fl::e_keysym == FL_Up)) {
+    GtkTextIter where;
+    GdkRectangle strong;
+    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
+    strong.y += widget->textsize() * (Fl::e_keysym == FL_Down ? +1.2 : -1);
+    gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where, strong.x-1, strong.y);
+    gtk_text_buffer_place_cursor(buffer, &where);
+    // after the cursor moved
+    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
+    if (strong.y > widget->h()-widget->textsize()/2) {
+      puts("condition");
+      gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(text_view), gtk_text_buffer_get_insert(buffer), 0.2, FALSE, 0.05, 0.05);
+      //gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(text_view), gtk_text_buffer_get_insert(buffer));
+    }
     draw();
     return 1;
   }
   return 0;
+}
+
+
+int Fl_Cairo_Text_Widget_Driver::handle_push() {
+  GtkTextIter where;
+  gtk_text_view_get_iter_at_location (GTK_TEXT_VIEW(text_view), &where,
+                                                         Fl::event_x() - widget->x(),
+                                                         Fl::event_y() - widget->y());
+  gtk_text_buffer_place_cursor(buffer, &where);
+  if (Fl::event_clicks()) {
+    gtk_text_iter_backward_word_start(&where);
+    GtkTextIter word_end;
+    gtk_text_iter_assign(&word_end, &where);
+    gtk_text_iter_forward_word_end(&where);
+    gtk_text_buffer_select_range (buffer, &where, &word_end);
+  }
+  draw();
+  return 1;
 }
 
 
@@ -301,13 +406,18 @@ int Fl_Cairo_Text_Widget_Driver::insert_position() {
 
 
 void Fl_Cairo_Text_Widget_Driver::insert_position(int pos, int mark) {
+  bool need_selection = (pos != mark);
   pos = byte_pos_to_char_pos(this, pos);
   GtkTextMark *gtk_mark = gtk_text_buffer_get_insert(buffer);
   GtkTextIter where;
   gtk_text_buffer_get_start_iter (buffer, &where);
   gtk_text_iter_set_offset(&where, pos);
   gtk_text_buffer_move_mark(buffer, gtk_mark, &where);
-  
+  if (!need_selection) {
+    gtk_mark = gtk_text_buffer_get_selection_bound(buffer);
+    gtk_text_buffer_move_mark(buffer, gtk_mark, &where);
+    return;
+  }
   mark = byte_pos_to_char_pos(this, mark);
   gtk_text_iter_set_offset(&where, mark);
   gtk_mark = gtk_text_buffer_get_selection_bound(buffer);

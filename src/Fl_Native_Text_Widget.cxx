@@ -3,6 +3,7 @@
 //
 
 #include <FL/Fl_Native_Text_Widget.H>
+#include <FL/Fl_Group.H>
 #include "../src/Fl_Text_Widget_Driver.H"
 
 #if !(defined(__APPLE__) && (!defined(FLTK_USE_X11) || !FLTK_USE_X11)) && \
@@ -16,12 +17,15 @@ Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text
 
 Fl_Native_Text_Widget::Fl_Native_Text_Widget(int x, int y, int w, int h, const char *l) : Fl_Native_Widget(x,y,w,h,l) {
   driver_ = Fl_Text_Widget_Driver::newTextWidgetDriver(this);
-  font_size_ = labelsize();
-  font_ = labelfont();
-  text_color_ = labelcolor();
+  font_size_ = FL_NORMAL_SIZE;
+  font_ = FL_HELVETICA;
+  text_color_ = FL_FOREGROUND_COLOR;
+  cursor_color_ = FL_FOREGROUND_COLOR;
+  color(FL_BACKGROUND2_COLOR, FL_SELECTION_COLOR);
   is_readonly_ = false;
   is_selectable_ = true;
   wrap_ = false;
+  rtl_ = false;
   driver_->kind = Fl_Text_Widget_Driver::SINGLE_LINE;
 }
 
@@ -51,7 +55,7 @@ int Fl_Native_Text_Widget::handle(int event) {
       Fl::focus(this);
       handle(FL_FOCUS);
     }
-    return 1;
+    return driver_->handle_push();
   } else if (event == FL_FOCUS && active() && !readonly()) {
     return 1;
   } else if (event == FL_UNFOCUS) {
@@ -115,7 +119,7 @@ int Fl_Native_Text_Widget::value(const char *t, int l) {
 
 
 int Fl_Native_Text_Widget::value(const char *t) {
-  return t ? value(t, strlen(t)) : value("", 0);
+  return t ? value(t, (int)strlen(t)) : value("", 0);
 }
 
 
