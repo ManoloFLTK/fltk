@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
   Fl_Native_Multiline_Text_Widget *box = new Fl_Native_Multiline_Text_Widget(20, 40, 450, 100, label);
   box->align(FL_ALIGN_TOP);
   box->textfont(FL_COURIER);
-  box->textsize(15);
+  box->textsize(20);
   box->textcolor(FL_DARK3);
   box->cursor_color(FL_RED);
   box->color(FL_LIGHT2);
