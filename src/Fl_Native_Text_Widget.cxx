@@ -64,6 +64,8 @@ int Fl_Native_Text_Widget::handle(int event) {
   } else if (event == FL_KEYBOARD) {
     if (Fl::e_keysym == FL_Tab) return 0;
     return driver_->handle_keyboard();
+  } else if (event == FL_PASTE) {
+    return driver_->handle_paste();
   }
   return 0;
 }

@@ -30,7 +30,8 @@ int main(int argc, char **argv) {
   box->right_to_left(true);
   box->value(
     "أنو عَبد الله مُحَمَّد بن مُوسَى الخَوارِزمي عالم رياضيات وفلك وجغرافيا مسلم. يكنى بأبي جعفر. قيل أنه ولد حوالي 164هـ 781م وقيل أنه توفيَ بعد 232 هـ أي (بعد 847م)."
-    //"Request a notification when it is a good time to start drawing a new frame, by creating a frame callback."
+ //"Le comité Nobel de physique a surpris son monde. En célébrant, mardi 8 octobre, deux pionniers des « réseaux de neurones artificiels », l’Américain John Hopfield (91 ans) et le Britannique Geoffrey Hinton (76 ans), il surfe sur la tendance actuelle de l’intelligence artificielle, qu’on associerait plus volontiers à l’informatique."
+ //" C’est la reconnaissance qu’un courant de la physique, la physique statistique, a fait l’effort d’aller vers d’autres domaines. C’est une bonne nouvelle , constate Rémi Monasson, chercheur du CNRS au Laboratoire de physique de l’Ecole normale supérieure de Paris. Stéphane Mallat, professeur au Collège de France, salue un prix « surprenant » et constate qu’en retour, l’intelligence artificielle aide beaucoup les physiciens de nos jours, pour l’imagerie, la modélisation, les simulations…"
             );
 #define SUBWIN 0//1
 #if SUBWIN
@@ -50,7 +51,7 @@ int main(int argc, char **argv) {
   box2->cursor_color(FL_RED);
   box2->color(box->color());
   box2->box(box->box());
-  box2->right_to_left(box->right_to_left());
+  box2->right_to_left(true);
   box2->value("كان لإسهاماته تأثير كبير في اللغة.");
   //box2->value("Fl_Native_Text_Widget");
   box2->callback(cb, (void*)"Fl_Native_Text_Widget");
@@ -73,6 +74,8 @@ int main(int argc, char **argv) {
   box->readonly(readonly);
   box->selectable(selectable);
   window->callback(delete_win);
+//box->hide();
+//box2->hide();
   window->show();
 //printf("Native-single:%p  Native-multiple:%p\n", box2, box);
   return Fl::run();
