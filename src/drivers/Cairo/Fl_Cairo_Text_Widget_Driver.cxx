@@ -404,7 +404,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     Fl::copy(buf, (int)strlen(buf), 1);
     delete[] buf;
     return 1;
-  } else if (
+  } else if (Fl::e_keysym ==
 #if __APPLE_CC__
              '8'
 #else
