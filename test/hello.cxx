@@ -21,8 +21,8 @@ int main(int argc, char **argv) {
   else label = "Editable native text boxes";
   Fl_Native_Multiline_Text_Widget *box = new Fl_Native_Multiline_Text_Widget(20, 40, 450, 100, label);
   box->align(FL_ALIGN_TOP);
-  box->textfont(FL_COURIER);
-  box->textsize(20);
+  box->textfont(FL_HELVETICA);
+  box->textsize(25);
   box->textcolor(FL_DARK3);
   box->cursor_color(FL_RED);
   box->color(FL_LIGHT2);
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
   box2->color(box->color());
   box2->box(box->box());
   box2->right_to_left(true);
-  box2->value("كان لإسهاماته تأثير كبير في اللغة.");
+  box2->value("كان لإسهاماته تأثير كبير فيالخَوارِزمي الخَوارِزمياللغة الخَوارِزمي.");
   //box2->value("Fl_Native_Text_Widget");
   box2->callback(cb, (void*)"Fl_Native_Text_Widget");
   //box2->value(box->value());
