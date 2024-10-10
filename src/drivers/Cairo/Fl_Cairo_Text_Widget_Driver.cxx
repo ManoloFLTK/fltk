@@ -194,7 +194,8 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
     if (v_fl_scrollbar)  {
       gtk_widget_get_allocated_size(v_bar, &alloc2, NULL);
       if (alloc2.width > 1) {
-        v_fl_scrollbar->resize(widget->x() + BORDER_WIDTH + allocation.width ,
+        v_fl_scrollbar->resize(widget->x() + BORDER_WIDTH +
+                                 (widget->right_to_left() ? 0 : allocation.width),
                                widget->y() + BORDER_WIDTH,
                                alloc2.width, allocation.height);
         gdouble d = gtk_adjustment_get_upper(v_adjust);
@@ -231,7 +232,9 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
     dr->yxline(strong.x, strong.y, strong.y + widget->textsize());
   }
   Fl_Surface_Device::pop_current();
-  fl_copy_offscreen(widget->x() + BORDER_WIDTH, widget->y() + BORDER_WIDTH, tmp_width, tmp_height, surface->offscreen(), 0, 0);
+  fl_copy_offscreen(widget->x() + BORDER_WIDTH +
+                    (v_fl_scrollbar && widget->right_to_left() ? v_fl_scrollbar->w() : 0),
+                    widget->y() + BORDER_WIDTH, tmp_width, tmp_height, surface->offscreen(), 0, 0);
   delete surface;
   widget->damage(FL_DAMAGE_CHILD); // important
 }
