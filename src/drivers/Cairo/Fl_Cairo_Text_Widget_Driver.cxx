@@ -24,6 +24,9 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   GtkWidget *window;
   GtkTextTag* font_size_color_tag;
   GtkAllocation allocation;
+  int lineheight;
+  void text_view_scroll_mark_onscreen();
+  void compute_lineheight();
 public:
   char *text_before_show;
   int need_allocate;
@@ -67,6 +70,7 @@ Fl_Cairo_Text_Widget_Driver::Fl_Cairo_Text_Widget_Driver() : Fl_Text_Widget_Driv
   v_fl_scrollbar = new Fl_Scrollbar(0, 0, 1, 1, NULL);
   h_fl_scrollbar = new Fl_Scrollbar(0, 0, 1, 1, NULL);
   h_fl_scrollbar->type(FL_HORIZONTAL);
+  lineheight = 0;
 }
 
 Fl_Cairo_Text_Widget_Driver::~Fl_Cairo_Text_Widget_Driver() {
@@ -75,10 +79,8 @@ Fl_Cairo_Text_Widget_Driver::~Fl_Cairo_Text_Widget_Driver() {
   if (text_view) {
     gtk_widget_destroy(window);
   }
-  //if (v_fl_scrollbar) delete v_fl_scrollbar;//TODO better
+  //if (v_fl_scrollbar) delete v_fl_scrollbar;//TODO better, needs an Fl_Group!
   //if (h_fl_scrollbar) delete h_fl_scrollbar;
-  //if (v_adjust) g_object_unref(v_adjust);
-  //if (h_adjust) g_object_unref(h_adjust);
 }
 
 
@@ -425,37 +427,59 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
       gtk_text_iter_forward_char(&where);
     }
     gtk_text_buffer_place_cursor(buffer, &where);
-    gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(text_view), gtk_text_buffer_get_insert(buffer),
-      0.2, FALSE, 0.05, 0.);
+    if (v_fl_scrollbar) {
+      if (!lineheight) compute_lineheight();
+      text_view_scroll_mark_onscreen();
+    }
     draw();
     return 1;
   } else if (kind == MULTIPLE_LINES && (Fl::e_keysym == FL_Down || Fl::e_keysym == FL_Up)) {
     GtkTextIter where;
     GdkRectangle strong;
-    int lineheight = widget->textsize();
+    if (!lineheight) compute_lineheight();
     gtk_text_buffer_get_iter_at_mark(buffer, &where, gtk_text_buffer_get_insert(buffer));
     gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
-    strong.y += lineheight * (Fl::e_keysym == FL_Down ? +1.3 : -1);
+    strong.y += lineheight * (Fl::e_keysym == FL_Down ? +1 : -1);
     gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where, strong.x-1, strong.y);
     gtk_text_buffer_place_cursor(buffer, &where);
     // after the cursor moved
-    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
-    gtk_text_view_buffer_to_window_coords(GTK_TEXT_VIEW(text_view),
-                                          GTK_TEXT_WINDOW_TEXT, strong.x, strong.y, &strong.x, &strong.y);
-    if (strong.y > widget->h() - lineheight || strong.y < 0) {
-      puts("condition");
-      //gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(text_view), gtk_text_buffer_get_insert(buffer), 0.2, FALSE, 0.05, 0.05);
-      //gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(text_view), gtk_text_buffer_get_insert(buffer));
-      double d = gtk_adjustment_get_value(v_adjust);
-      gtk_adjustment_set_value(v_adjust,d +lineheight * (Fl::e_keysym == FL_Down ? +1 : -1));
-      double d2 = gtk_adjustment_get_value(v_adjust);printf("d=%.0f d2=%.0f\n",d,d2);
-      v_fl_scrollbar->value( (int)gtk_adjustment_get_value(v_adjust) );
-      gtk_widget_size_allocate(scrolled, &allocation);//necessary
-    }
+    text_view_scroll_mark_onscreen();
     draw();
     return 1;
   }
   return 0;
+}
+
+
+void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_onscreen() {
+  GdkRectangle strong;
+  gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
+  gtk_text_view_buffer_to_window_coords(GTK_TEXT_VIEW(text_view),
+                                        GTK_TEXT_WINDOW_TEXT,
+                                        strong.x, strong.y, &strong.x, &strong.y);
+  if (strong.y > widget->h() - lineheight || strong.y < 0) {
+    double d = gtk_adjustment_get_value(v_adjust);
+    gtk_adjustment_set_value(v_adjust, d + lineheight * (strong.y < 0 ? -1 : +1));
+    v_fl_scrollbar->value( (int)gtk_adjustment_get_value(v_adjust) );
+    gtk_widget_size_allocate(scrolled, &allocation);//necessary
+  }
+}
+
+
+void Fl_Cairo_Text_Widget_Driver::compute_lineheight() {
+  if (!lineheight) {
+    GtkTextIter keep, where;
+    GdkRectangle strong, strong2;
+    gtk_text_buffer_get_iter_at_mark(buffer, &where, gtk_text_buffer_get_insert(buffer));
+    keep = where;
+    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
+    strong2.y = strong.y + widget->textsize() * 1.3;
+    gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where, strong.x-1, strong2.y);
+    gtk_text_buffer_place_cursor(buffer, &where);
+    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong2, NULL);
+    lineheight = strong2.y - strong.y;
+    gtk_text_buffer_place_cursor(buffer, &keep);
+  }
 }
 
 
