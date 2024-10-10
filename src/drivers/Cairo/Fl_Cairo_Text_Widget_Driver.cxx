@@ -461,7 +461,7 @@ void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_onscreen() {
     double d = gtk_adjustment_get_value(v_adjust);
     gtk_adjustment_set_value(v_adjust, d + lineheight * (strong.y < 0 ? -1 : +1));
     v_fl_scrollbar->value( (int)gtk_adjustment_get_value(v_adjust) );
-    gtk_widget_size_allocate(scrolled, &allocation);//necessary
+    if (!need_allocate) need_allocate = 1; // important
   }
 }
 
@@ -470,15 +470,22 @@ void Fl_Cairo_Text_Widget_Driver::compute_lineheight() {
   if (!lineheight) {
     GtkTextIter keep, where;
     GdkRectangle strong, strong2;
+    double factor = 1.3;
+    bool b = false;
     gtk_text_buffer_get_iter_at_mark(buffer, &where, gtk_text_buffer_get_insert(buffer));
     keep = where;
     gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
-    strong2.y = strong.y + widget->textsize() * 1.3;
-    gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where, strong.x-1, strong2.y);
-    gtk_text_buffer_place_cursor(buffer, &where);
-    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong2, NULL);
-    lineheight = strong2.y - strong.y;
+    do {
+      strong2.y = strong.y + widget->textsize() * factor;
+      b = gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where, strong.x-1, strong2.y);
+//printf("f=%.2f b=%d ",factor, b);
+      gtk_text_buffer_place_cursor(buffer, &where);
+      gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong2, NULL);
+      lineheight = strong2.y - strong.y;
+      factor *= 1.1;
+    } while (b && !lineheight);
     gtk_text_buffer_place_cursor(buffer, &keep);
+//printf("fontsize=%d lineheight=%d\n",widget->textsize(),lineheight);
   }
 }
 
