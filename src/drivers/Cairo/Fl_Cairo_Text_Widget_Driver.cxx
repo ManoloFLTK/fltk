@@ -131,10 +131,6 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
       (kind == Fl_Text_Widget_Driver::SINGLE_LINE || !widget->wrap() ? GTK_WRAP_NONE: GTK_WRAP_WORD));
     gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(text_view), false);
     gtk_widget_set_can_focus(text_view, !widget->readonly());
-    uchar r,g,b;
-    Fl::get_color(widget->color(),r,g,b);
-    GdkRGBA bg = {r/255., g/255., b/255., 1.};
-    gtk_widget_override_background_color(text_view, GTK_STATE_FLAG_NORMAL, &bg);
     gtk_container_add(GTK_CONTAINER(scrolled), text_view);
     gtk_container_add(GTK_CONTAINER(window), scrolled);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled),
@@ -157,17 +153,41 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
     snprintf(text_tag_value, 20, "%p", this);
     gtk_text_buffer_create_tag(buffer, "FlTextTag", "family", text_tag_value, NULL);
     
-    // Use a tag to change the color for all the widget
-    char color_str[8];
-    Fl::get_color(widget->textcolor(), r, g, b);
-    snprintf(color_str, sizeof(color_str), "#%2.2x%2.2x%2.2x", r, g, b);
+    // Use a tag to set the font for the text_view
     char font_str[88];
     extern Fl_Fontdesc* fl_fonts;
     if (!fl_fonts) fl_fonts = Fl_Graphics_Driver::default_driver().calc_fl_fonts();
     const char *fname = (fl_fonts + widget->textfont())->name;
     snprintf(font_str, sizeof(font_str), "%s %dpx", fname, widget->textsize());
-    font_size_color_tag = gtk_text_buffer_create_tag(buffer, NULL,
-                      "foreground", color_str, "font", font_str, NULL);
+    font_size_color_tag = gtk_text_buffer_create_tag(buffer, NULL, "font", font_str, NULL);
+    
+    // use css to set all colors
+    GtkStyleContext *style_context = gtk_widget_get_style_context(text_view);
+    gtk_style_context_add_class(style_context, GTK_STYLE_CLASS_VIEW);
+    GtkCssProvider *css_provider = gtk_css_provider_new();
+    uchar r,g,b;
+    char bg_color_str[8];
+    Fl::get_color(widget->color(),r,g,b);
+    snprintf(bg_color_str, sizeof(bg_color_str), "#%2.2x%2.2x%2.2x", r, g, b);
+    char color_str[8];
+    Fl::get_color(widget->textcolor(), r, g, b);
+    snprintf(color_str, sizeof(color_str), "#%2.2x%2.2x%2.2x", r, g, b);
+    char sel_color_str[8];
+    Fl::get_color(widget->selection_color(), r, g, b);
+    snprintf(sel_color_str, sizeof(sel_color_str), "#%2.2x%2.2x%2.2x", r, g, b);
+    char text_sel_color_str[8];
+    Fl::get_color(fl_contrast(widget->textcolor(), widget->selection_color()), r, g, b);
+    snprintf(text_sel_color_str, sizeof(text_sel_color_str), "#%2.2x%2.2x%2.2x", r, g, b);
+    char line[200];
+    snprintf(line, sizeof(line), 
+             //"textview text { background-color: %s; color: %s; }"
+             ".view text { background-color: %s; color: %s; }"
+             ".view text selection { background-color: %s;  color: %s; }",
+             bg_color_str, color_str, sel_color_str, text_sel_color_str);
+    gtk_css_provider_load_from_data(css_provider, line, -1, NULL);
+    gtk_style_context_add_provider (style_context, GTK_STYLE_PROVIDER(css_provider),
+                                    GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    
     if (text_before_show) widget->value(text_before_show);
     GtkTextIter iter;
     if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) gtk_text_buffer_get_start_iter(buffer, &iter);
@@ -177,12 +197,6 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
   }
 }
 
-/* attempt for provider
- GtkCssProvider  *cssProvider = gtk_css_provider_new();
- const char css[] = "FlTextView { color: red; }";
- gtk_css_provider_load_from_data(cssProvider, css, -1, NULL);
- gtk_style_context_add_provider(style, GTK_STYLE_PROVIDER(cssProvider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
- */
 
 void Fl_Cairo_Text_Widget_Driver::draw()  {
   if (Fl_Window::current() != widget->window()) widget->window()->make_current();
