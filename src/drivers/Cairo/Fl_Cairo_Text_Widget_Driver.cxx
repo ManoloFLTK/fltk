@@ -290,6 +290,7 @@ void Fl_Cairo_Text_Widget_Driver::value(const char *t, int len) {
 void Fl_Cairo_Text_Widget_Driver::replace(int from, int to, const char *text, int len) {
   insert_position(from, to);
   if (from != to) gtk_text_buffer_delete_selection(buffer, true, true);
+  if (!len) return;
   GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
   GtkTextIter iter;
   gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
@@ -410,7 +411,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
       draw();
       return 1;
     }
-  } else if (Fl::e_keysym == 'a' && Fl::event_ctrl()) { // select All
+  } else if (Fl::event_key() == 'a' && Fl::event_ctrl()) { // select All
     GtkTextIter start, end;
     gtk_text_buffer_get_start_iter(buffer, &start);
     gtk_text_buffer_get_end_iter(buffer, &end);
@@ -418,7 +419,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     gtk_text_buffer_move_mark(buffer, gtk_text_buffer_get_selection_bound(buffer), &end);
     draw();
     return 1;
-  } else if (Fl::e_keysym ==
+  } else if (Fl::event_key() ==
 #if __APPLE_CC__
              '7'
 #else
@@ -433,7 +434,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     Fl::copy(buf, (int)strlen(buf), 1);
     delete[] buf;
     return 1;
-  } else if (Fl::e_keysym ==
+  } else if (Fl::event_key() ==
 #if __APPLE_CC__
              '8'
 #else
@@ -442,14 +443,31 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
              && Fl::event_ctrl()) { // paste
     Fl::paste(*widget, 1);
     return 1;
+  } else if (Fl::event_key() ==
+#if __APPLE_CC__
+             '6'
+#else
+             'x'
+#endif
+             && Fl::event_ctrl()) { // cut
+    GtkTextIter start, end;
+    gtk_text_buffer_get_iter_at_mark(buffer, &start, gtk_text_buffer_get_insert(buffer));
+    gtk_text_buffer_get_iter_at_mark(buffer, &end, gtk_text_buffer_get_selection_bound(buffer));
+    gtk_text_buffer_select_range(buffer, &start, &end);
+    const char *buf = gtk_text_buffer_get_text(buffer, &start, &end, false);
+    Fl::copy(buf, (int)strlen(buf), 1);
+    delete[] buf;
+    gtk_text_buffer_delete_selection(buffer, true, !widget->readonly());
+    draw();
+    return 1;
   }
   if (retval >= 1) return retval;
   
-  if (Fl::e_keysym == FL_Right || Fl::e_keysym == FL_Left) {
+  if (Fl::event_key() == FL_Right || Fl::event_key() == FL_Left) {
     GtkTextIter before, after;
     gtk_text_buffer_get_iter_at_mark(buffer, &before, gtk_text_buffer_get_insert(buffer));
     after = before;
-    if (Fl::e_keysym == (widget->right_to_left() ? FL_Right : FL_Left)) {
+    if (Fl::event_key() == (widget->right_to_left() ? FL_Right : FL_Left)) {
       gtk_text_iter_backward_char(&after);
     } else     {
       gtk_text_iter_forward_char(&after);
@@ -464,13 +482,13 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     }
     draw();
     return 1;
-  } else if (kind == MULTIPLE_LINES && (Fl::e_keysym == FL_Down || Fl::e_keysym == FL_Up)) {
+  } else if (kind == MULTIPLE_LINES && (Fl::event_key() == FL_Down || Fl::event_key() == FL_Up)) {
     GtkTextIter where;
     GdkRectangle strong;
     if (!lineheight) compute_lineheight();
     gtk_text_buffer_get_iter_at_mark(buffer, &where, gtk_text_buffer_get_insert(buffer));
     gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
-    strong.y += lineheight * (Fl::e_keysym == FL_Down ? +1 : -1);
+    strong.y += lineheight * (Fl::event_key() == FL_Down ? +1 : -1);
     gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where, strong.x-1, strong.y);
     gtk_text_buffer_place_cursor(buffer, &where);
     // after the cursor moved

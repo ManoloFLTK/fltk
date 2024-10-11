@@ -41,7 +41,6 @@ void Fl_Native_Text_Widget::append(const char *t, int length) {
 
 
 int Fl_Native_Text_Widget::handle(int event) {
-  int retval = 0;
   if (event == FL_SHOW) {
     driver_->show_widget();
     return Fl_Native_Widget::handle(event);
@@ -68,7 +67,7 @@ int Fl_Native_Text_Widget::handle(int event) {
   } else if (event == FL_PASTE) {
     return driver_->handle_paste();
   }
-  return 0;
+  return Fl_Native_Widget::handle(event);
 }
 
 
