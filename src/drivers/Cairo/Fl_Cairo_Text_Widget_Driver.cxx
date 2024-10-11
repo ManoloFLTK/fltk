@@ -22,7 +22,7 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   GtkTextBuffer *buffer;
   //PangoLayout *layout;
   GtkWidget *window;
-  GtkTextTag* font_size_color_tag;
+  GtkTextTag* font_size_tag;
   GtkAllocation allocation;
   int lineheight;
   void text_view_scroll_mark_onscreen();
@@ -31,7 +31,6 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
 public:
   char *text_before_show;
   int need_allocate;
-  char *text_tag_value;
   Fl_Cairo_Text_Widget_Driver();
   ~Fl_Cairo_Text_Widget_Driver();
   void show_widget() FL_OVERRIDE;
@@ -62,10 +61,9 @@ Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text
 Fl_Cairo_Text_Widget_Driver::Fl_Cairo_Text_Widget_Driver() : Fl_Text_Widget_Driver() {
   text_before_show = NULL;
   text_view = NULL;
-  font_size_color_tag = NULL;
+  font_size_tag = NULL;
   memset(&allocation, 0, sizeof(GtkAllocation));
   need_allocate = 0;
-  text_tag_value = NULL;
   v_bar = h_bar = NULL;
   v_adjust = h_adjust = NULL;
   v_fl_scrollbar = new Fl_Scrollbar(0, 0, 1, 1, NULL);
@@ -76,7 +74,6 @@ Fl_Cairo_Text_Widget_Driver::Fl_Cairo_Text_Widget_Driver() : Fl_Text_Widget_Driv
 
 Fl_Cairo_Text_Widget_Driver::~Fl_Cairo_Text_Widget_Driver() {
   delete[] text_before_show;
-  delete[] text_tag_value;
   if (text_view) {
     gtk_widget_destroy(window);
   }
@@ -85,16 +82,24 @@ Fl_Cairo_Text_Widget_Driver::~Fl_Cairo_Text_Widget_Driver() {
 }
 
 
+static void mytagf(GtkTextTag *tag, void *data) {
+  GtkTextTag **val = (GtkTextTag**)data;
+  *val = tag;
+}
+
 typedef void (*changed_f_t)(GtkTextBuffer*);
 changed_f_t old_changed_f = NULL;
 static void fl_textbuffer_changed(GtkTextBuffer *buffer) {
   //old_changed_f(buffer); //utile?
   GtkTextTagTable *table = gtk_text_buffer_get_tag_table(buffer);
-  GtkTextTag *tag = gtk_text_tag_table_lookup(table, "FlTextTag");
+//printf("gtk_text_tag_table_get_size=%d\n",gtk_text_tag_table_get_size(table));
+  GtkTextTag *tag;
+  gtk_text_tag_table_foreach(table, mytagf, &tag); // there's only one element in the table
   gchar *strval;
-  g_object_get(tag, "family", &strval, NULL);
+  g_object_get(G_OBJECT(tag), "name", &strval, NULL);
   Fl_Cairo_Text_Widget_Driver *dr;
   sscanf(strval, "%p", &dr);
+  free(strval);
   dr->need_allocate = 2;
 }
 
@@ -145,21 +150,17 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
       old_changed_f = tbc->changed;
       tbc->changed = fl_textbuffer_changed;
     }
-    // Hack: store the &Fl_Cairo_Text_Widget_Driver in the GtkTextBuffer's "FlTextTag" GtkTextTag
-    // and its "family" property. A better approach would be to replace the GtkTextBuffer
-    // by a derived class that memorizes the corresponding Fl_Cairo_Text_Widget_Driver.
-    // But how to emulate a derived class with the C-based GTK API ???
-    text_tag_value = new char[20];
-    snprintf(text_tag_value, 20, "%p", this);
-    gtk_text_buffer_create_tag(buffer, "FlTextTag", "family", text_tag_value, NULL);
-    
-    // Use a tag to set the font for the text_view
+    // Create a GtkTextTag to set the font+size for the text_view and attach it to the GtkTextBuffer
+    // Name this tag with the address of corresponding Fl_Cairo_Text_Widget_Driver
+    // This will allow fl_textbuffer_changed() to recover the Fl_Cairo_Text_Widget_Driver from the buffer
+    char text_tag_name[20];
+    snprintf(text_tag_name, 20, "%p", this);
     char font_str[88];
     extern Fl_Fontdesc* fl_fonts;
     if (!fl_fonts) fl_fonts = Fl_Graphics_Driver::default_driver().calc_fl_fonts();
     const char *fname = (fl_fonts + widget->textfont())->name;
     snprintf(font_str, sizeof(font_str), "%s %dpx", fname, widget->textsize());
-    font_size_color_tag = gtk_text_buffer_create_tag(buffer, NULL, "font", font_str, NULL);
+    font_size_tag = gtk_text_buffer_create_tag(buffer, text_tag_name, "font", font_str, NULL);
     
     // use css to set all colors
     GtkStyleContext *style_context = gtk_widget_get_style_context(text_view);
@@ -279,7 +280,7 @@ void Fl_Cairo_Text_Widget_Driver::value(const char *t, int len) {
     GtkTextIter start, end;
     gtk_text_buffer_get_start_iter (buffer, &start);
     gtk_text_buffer_get_end_iter (buffer, &end);
-    gtk_text_buffer_apply_tag(buffer, font_size_color_tag, &start, &end);
+    gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
     if (text_before_show) {
       delete[] text_before_show;
       text_before_show = NULL;
@@ -302,7 +303,7 @@ void Fl_Cairo_Text_Widget_Driver::replace(int from, int to, const char *text, in
   if (need_apply_tag) {
     gtk_text_buffer_get_start_iter(buffer, &start);
     gtk_text_buffer_get_end_iter(buffer, &end);
-    gtk_text_buffer_apply_tag(buffer, font_size_color_tag, &start, &end);
+    gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
   }
   if (from < to || len > 0) {
     draw();
@@ -573,7 +574,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_paste() {
   if (need_apply_tag) {
     gtk_text_buffer_get_start_iter(buffer, &start);
     gtk_text_buffer_get_end_iter(buffer, &end);
-    gtk_text_buffer_apply_tag(buffer, font_size_color_tag, &start, &end);
+    gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
   }
   draw();
   return 1;
