@@ -6,7 +6,8 @@
 #ifndef FL_NATIVE_TEXT_WIDGET_H
 #define FL_NATIVE_TEXT_WIDGET_H
 
-#include <FL/Fl_Widget.H>
+#include <FL/Fl_Group.H>
+
 class Fl_Text_Widget_Driver;
 
 class FL_EXPORT Fl_Native_Text_Widget : public Fl_Native_Widget {

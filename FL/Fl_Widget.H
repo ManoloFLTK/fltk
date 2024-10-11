@@ -1282,17 +1282,6 @@ public:
 };
 
 
-class /*FL_EXPORT?*/ Fl_Native_Widget : public Fl_Widget { // [NATIVE]
-protected:
-  Fl_Native_Widget(int x, int y, int w, int h, const char *l = NULL) : Fl_Widget(x,y,w,h,l) {}
-public:
-  Fl_Native_Widget *as_native_widget() FL_OVERRIDE { return this; }
-  int handle(int) FL_OVERRIDE;
-  virtual void got_focus() {}
-  virtual void lost_focus() {}
-};
-
-
 /**
     Reserved type numbers (necessary for my cheapo RTTI) start here.
     Grep the header files for "RESERVED_TYPE" to find the next available

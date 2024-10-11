@@ -31,7 +31,6 @@ Fl_Native_Text_Widget::Fl_Native_Text_Widget(int x, int y, int w, int h, const c
 
 
 Fl_Native_Text_Widget::~Fl_Native_Text_Widget() {
-  if (parent()) parent()->redraw(); // to erase the box
   delete driver_;
 };
 
@@ -42,25 +41,27 @@ void Fl_Native_Text_Widget::append(const char *t, int length) {
 
 
 int Fl_Native_Text_Widget::handle(int event) {
+  int retval = 0;
   if (event == FL_SHOW) {
-    Fl_Native_Widget::handle(event);
     driver_->show_widget();
-    return 1;
+    return Fl_Native_Widget::handle(event);
   } else if (event == FL_HIDE) {
     driver_->hide_widget();
-    return 1;
+    return Fl_Native_Widget::handle(event);
   }
   if (event == FL_PUSH && active()){
     if (Fl::focus() != this) {
       Fl::focus(this);
       handle(FL_FOCUS);
     }
-    return driver_->handle_push();
+    driver_->handle_push();
+    return Fl_Native_Widget::handle(event);
   } else if (event == FL_FOCUS && active() && !readonly()) {
+    Fl_Native_Widget::handle(event);
     return 1;
   } else if (event == FL_UNFOCUS) {
     driver_->unfocus();
-    return 1;
+    return Fl_Native_Widget::handle(event);
   } else if (event == FL_KEYBOARD) {
     if (Fl::e_keysym == FL_Tab) return 0;
     return driver_->handle_keyboard();
@@ -82,13 +83,13 @@ void Fl_Native_Text_Widget::lost_focus() {
 
 
 void Fl_Native_Text_Widget::draw() {
-  draw_box();
+  Fl_Native_Widget::draw();
   driver_->draw();
 }
 
 
 void Fl_Native_Text_Widget::resize(int x, int y, int w, int h) {
-  Fl_Widget::resize(x, y, w, h);
+  Fl_Native_Widget::resize(x, y, w, h);
   driver_->resize(this->x(), this->y(), this->w(), this->h());
 }
 

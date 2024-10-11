@@ -1037,3 +1037,12 @@ void Fl_Group::draw_outside_label(const Fl_Widget& widget) const {
   }
   widget.draw_label(X,Y,W,H,(Fl_Align)a);
 }
+
+
+#include <FL/Fl_Window.H>
+int Fl_Native_Widget::handle(int event) {
+  if (event == FL_SHOW) {
+    if (window()) window()->contains_native_ = true;
+  }
+  return Fl_Group::handle(event);
+}

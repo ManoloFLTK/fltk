@@ -66,9 +66,7 @@ Fl_Cairo_Text_Widget_Driver::Fl_Cairo_Text_Widget_Driver() : Fl_Text_Widget_Driv
   need_allocate = 0;
   v_bar = h_bar = NULL;
   v_adjust = h_adjust = NULL;
-  v_fl_scrollbar = new Fl_Scrollbar(0, 0, 1, 1, NULL);
-  h_fl_scrollbar = new Fl_Scrollbar(0, 0, 1, 1, NULL);
-  h_fl_scrollbar->type(FL_HORIZONTAL);
+  v_fl_scrollbar = h_fl_scrollbar = NULL;
   lineheight = 0;
 }
 
@@ -77,8 +75,6 @@ Fl_Cairo_Text_Widget_Driver::~Fl_Cairo_Text_Widget_Driver() {
   if (text_view) {
     gtk_widget_destroy(window);
   }
-  //if (v_fl_scrollbar) delete v_fl_scrollbar;//TODO better, needs an Fl_Group!
-  //if (h_fl_scrollbar) delete h_fl_scrollbar;
 }
 
 
@@ -112,15 +108,15 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
   }
   if (widget->window()->shown() && !text_view) {
     window = gtk_offscreen_window_new();
+    widget->begin();
     if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) {
-      if (widget->wrap()) {
-        delete h_fl_scrollbar;
-        h_fl_scrollbar = NULL;
-      }
-    } else {
-      delete v_fl_scrollbar;
-      v_fl_scrollbar = NULL;
+      v_fl_scrollbar = new Fl_Scrollbar(0, 0, 1, 1, NULL);
     }
+    if (kind == Fl_Text_Widget_Driver::SINGLE_LINE || !widget->wrap()) {
+      h_fl_scrollbar = new Fl_Scrollbar(0, 0, 1, 1, NULL);
+      h_fl_scrollbar->type(FL_HORIZONTAL);
+    }
+    widget->end();
     if (v_fl_scrollbar) v_adjust = gtk_adjustment_new(0, 0, 10, 1, 1, 5); // temp values
     if (h_fl_scrollbar) h_adjust = gtk_adjustment_new(0, 0, 10, 1, 1, 5);
     scrolled = gtk_scrolled_window_new(h_adjust, v_adjust);
@@ -215,6 +211,7 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
                                  (widget->right_to_left() ? 0 : allocation.width),
                                widget->y() + BORDER_WIDTH,
                                alloc2.width, allocation.height);
+        v_fl_scrollbar->parent()->init_sizes();
         gdouble d = gtk_adjustment_get_upper(v_adjust);
         v_fl_scrollbar->value(v_fl_scrollbar->value(), allocation.height, 1, int (d));
       }
@@ -225,6 +222,7 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
         h_fl_scrollbar->resize(widget->x() + BORDER_WIDTH ,
                                widget->y() + BORDER_WIDTH + allocation.height,
                                allocation.width, alloc2.height);
+        h_fl_scrollbar->parent()->init_sizes();
         gdouble d = gtk_adjustment_get_upper(h_adjust);
         h_fl_scrollbar->value(h_fl_scrollbar->value(), allocation.width, 1, int (d));
       }
