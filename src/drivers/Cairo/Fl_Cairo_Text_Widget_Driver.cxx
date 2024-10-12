@@ -16,11 +16,9 @@
 /* TODO
  - simplifier compute_lineheight() avec gtk_text_view_forward_display_line()
  - improve code to compute location of Fl_Scrollbar's in scene
- - use 3 children in group rather than 2 ?
  - handle wheel events
  - transmit Fl_Scrollbar changes to GtkScroller
  - finalize parameters of Fl_Scrollbar and GtkScroller
- - shift-click ends selection
  - drag to select
  - drag-and-drop
  */
@@ -584,19 +582,24 @@ void Fl_Cairo_Text_Widget_Driver::compute_lineheight() {
 
 
 int Fl_Cairo_Text_Widget_Driver::handle_push() {
-  GtkTextIter where;
+  GtkTextIter where, insert;
   double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
   double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
   gtk_text_view_get_iter_at_location (GTK_TEXT_VIEW(text_view), &where,
-                                                         Fl::event_x() - widget->x() + dh,
-                                                         Fl::event_y() - widget->y() + dv);
-  gtk_text_buffer_place_cursor(buffer, &where);
-  if (Fl::event_clicks()) {
+                                      Fl::event_x() - widget->x() + dh,
+                                      Fl::event_y() - widget->y() + dv);
+  gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
+  if (Fl::event_shift()) {
+    gtk_text_buffer_select_range(buffer, &insert, &where);
+  } else if (Fl::event_clicks()) {
+    gtk_text_buffer_place_cursor(buffer, &where);
     gtk_text_iter_backward_word_start(&where);
     GtkTextIter word_end;
     gtk_text_iter_assign(&word_end, &where);
     gtk_text_iter_forward_word_end(&where);
-    gtk_text_buffer_select_range (buffer, &where, &word_end);
+    gtk_text_buffer_select_range(buffer, &where, &word_end);
+  } else {
+    gtk_text_buffer_place_cursor(buffer, &where);
   }
   draw();
   return 1;
