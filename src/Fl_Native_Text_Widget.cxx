@@ -49,8 +49,8 @@ int Fl_Native_Text_Widget::handle(int event) {
     driver_->hide_widget();
     return Fl_Native_Widget::handle(event);
   }
-  if (event == FL_PUSH || event == FL_DRAG || event == FL_MOVE || event == FL_RELEASE ||
-      event == FL_MOUSEWHEEL) {
+  if (event == FL_PUSH || event == FL_DRAG || event == FL_ENTER || event == FL_MOVE || event == FL_RELEASE ||
+      event == FL_MOUSEWHEEL || event == FL_LEAVE) {
     int r = 0;
     if (event == FL_PUSH && active()){
       if (Fl::focus() != this) {
@@ -74,11 +74,6 @@ int Fl_Native_Text_Widget::handle(int event) {
   } else if (event == FL_DND_ENTER || event == FL_DND_DRAG || event == FL_DND_RELEASE ||
              event == FL_DND_LEAVE) {
     return driver_->handle_dnd(event);
-  } else if (event == FL_ENTER && !readonly()) {
-    window()->cursor(FL_CURSOR_INSERT);
-    return 1;
-  } else if (event == FL_LEAVE) {
-    window()->cursor(FL_CURSOR_DEFAULT);
   }
   return Fl_Native_Widget::handle(event);
 }

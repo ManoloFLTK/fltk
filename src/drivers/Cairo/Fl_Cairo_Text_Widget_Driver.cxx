@@ -655,6 +655,17 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
       widget->window()->cursor(FL_CURSOR_INSERT);
       return 1;
     }
+  } else if((event == FL_ENTER || event == FL_MOVE) && !widget->readonly()) {
+    bool b = Fl::event_inside(
+            widget->x() + Fl::box_dx(widget->box()), widget->y() + Fl::box_dy(widget->box()),
+            widget->w() - Fl::box_dw(widget->box()), widget->h() - Fl::box_dh(widget->box()));
+    if (b && v_fl_scrollbar && Fl::event_inside(v_fl_scrollbar)) b = false;
+    if (b && h_fl_scrollbar && Fl::event_inside(h_fl_scrollbar)) b = false;
+    widget->window()->cursor(b ? FL_CURSOR_INSERT : FL_CURSOR_DEFAULT);
+    return 1;
+  } else if(event == FL_LEAVE) {
+    widget->window()->cursor(FL_CURSOR_DEFAULT);
+    return 1;
   }
   return 0;
 }
