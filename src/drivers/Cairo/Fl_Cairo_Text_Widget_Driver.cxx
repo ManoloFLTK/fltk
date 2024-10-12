@@ -15,10 +15,10 @@
 
 /* TODO
  - improve code to compute location of Fl_Scrollbar's in scene
- - handle wheel events
  - transmit Fl_Scrollbar changes to GtkScroller
  - finalize parameters of Fl_Scrollbar and GtkScroller
  - drag to select
+ - work with multiple paragraphs
  */
 
 class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
@@ -368,8 +368,14 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
   if (Fl::compose(del)) {
     if (del || Fl::event_length()) {
       if (widget->readonly()) fl_beep();
-      else replace(insert_position(), del ? insert_position()-del : mark(),
-                   Fl::event_text(), Fl::event_length());
+      else {
+        if (del) {
+          int insert = insert_position();
+          replace(insert, insert - del, NULL, 0);
+        } else gtk_text_buffer_delete_selection(buffer, true, !widget->readonly());
+        gtk_text_buffer_insert_at_cursor(buffer, Fl::event_text(), Fl::event_length());
+        draw();
+      }
     }
     /*if (Fl::screen_driver()->has_marked_text() && Fl::compose_state) {
      this->mark( this->insert_position() - Fl::compose_state );
@@ -380,7 +386,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
   unsigned int shift = Fl::event_state() & FL_SHIFT;
   int retval = 0;
   if (Fl::event_key() == FL_Delete) {
-    int selected = (insert_position() != mark()) ? 1 : 0;
+    int selected = gtk_text_buffer_get_has_selection(buffer);
     if (mods == 0 && shift && selected) {
       GtkTextIter start, end; // copy_cut(): Shift-Delete with selection (WP,NP,WOW,GE,KE,OF)
       gtk_text_buffer_get_iter_at_mark(buffer, &start, gtk_text_buffer_get_insert(buffer));
@@ -575,6 +581,9 @@ static Fl_Widget *dnd_save_focus = NULL;
 static int drag_start = -1;
 
 int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
+  if (v_fl_scrollbar && Fl::event_inside(v_fl_scrollbar)) return v_fl_scrollbar->handle(event);
+  if (h_fl_scrollbar && Fl::event_inside(h_fl_scrollbar)) return h_fl_scrollbar->handle(event);
+
   if (event == FL_PUSH) {
     if (Fl::dnd_text_ops() && (Fl::event_button() != FL_RIGHT_MOUSE)) {
       GtkTextIter oldpos, oldmark;
@@ -665,6 +674,16 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
     return 1;
   } else if(event == FL_LEAVE) {
     widget->window()->cursor(FL_CURSOR_DEFAULT);
+    return 1;
+  } else if(event == FL_MOUSEWHEEL) {
+    if (v_fl_scrollbar) {
+      int val = v_fl_scrollbar->value();
+      v_fl_scrollbar->value(val + Fl::event_dy());
+    }
+    if (h_fl_scrollbar) {
+      int val = h_fl_scrollbar->value();
+      h_fl_scrollbar->value(val + Fl::event_dx());
+    }
     return 1;
   }
   return 0;

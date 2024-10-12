@@ -44,13 +44,12 @@ void Fl_Native_Text_Widget::append(const char *t, int length) {
 int Fl_Native_Text_Widget::handle(int event) {
   if (event == FL_SHOW) {
     driver_->show_widget();
-    return Fl_Native_Widget::handle(event);
+    return 1;
   } else if (event == FL_HIDE) {
     driver_->hide_widget();
-    return Fl_Native_Widget::handle(event);
-  }
-  if (event == FL_PUSH || event == FL_DRAG || event == FL_ENTER || event == FL_MOVE || event == FL_RELEASE ||
-      event == FL_MOUSEWHEEL || event == FL_LEAVE) {
+    return 1;
+  } else if (event == FL_PUSH || event == FL_DRAG || event == FL_ENTER || event == FL_MOVE ||
+             event == FL_RELEASE || event == FL_MOUSEWHEEL || event == FL_LEAVE) {
     int r = 0;
     if (event == FL_PUSH && active()){
       if (Fl::focus() != this) {
