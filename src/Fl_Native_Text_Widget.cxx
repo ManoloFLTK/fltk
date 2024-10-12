@@ -66,6 +66,9 @@ int Fl_Native_Text_Widget::handle(int event) {
     return driver_->handle_keyboard();
   } else if (event == FL_PASTE) {
     return driver_->handle_paste();
+  } else if (event == FL_DND_ENTER || event == FL_DND_DRAG || event == FL_DND_RELEASE ||
+             event == FL_DND_LEAVE) {
+    return driver_->handle_dnd(event);
   }
   return Fl_Native_Widget::handle(event);
 }

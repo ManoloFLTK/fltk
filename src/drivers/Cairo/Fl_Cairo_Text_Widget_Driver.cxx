@@ -1,5 +1,5 @@
 //
-//  Fl_Wayland_Text_Widget_Driver.cxx
+//  Fl_Cairo_Text_Widget_Driver.cxx
 //
 
 #include <config.h> // for BORDER_WIDTH
@@ -14,13 +14,14 @@
 #include <gtk/gtk.h>
 
 /* TODO
- - simplifier compute_lineheight() avec gtk_text_view_forward_display_line()
  - improve code to compute location of Fl_Scrollbar's in scene
  - handle wheel events
  - transmit Fl_Scrollbar changes to GtkScroller
  - finalize parameters of Fl_Scrollbar and GtkScroller
  - drag to select
- - drag-and-drop
+ - drag-and-drop receiver : OK but use GtkTextIter instead of byte offsets
+ - drag-and-drop donor
+ - use Fl::box_dx() & friends instead of BORDER_WIDTH
  */
 
 class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
@@ -55,6 +56,7 @@ public:
   int handle_keyboard() FL_OVERRIDE;
   int handle_push() FL_OVERRIDE;
   int handle_paste() FL_OVERRIDE;
+  int handle_dnd(int event) FL_OVERRIDE;
   int insert_position() FL_OVERRIDE;
   void insert_position(int pos, int mark) FL_OVERRIDE;
   int mark() FL_OVERRIDE;
@@ -559,24 +561,14 @@ void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_h(GtkTextIter *before) {
 
 void Fl_Cairo_Text_Widget_Driver::compute_lineheight() {
   if (!lineheight) {
-    GtkTextIter keep, where;
-    GdkRectangle strong, strong2;
-    double factor = 1.3;
-    bool b = false;
+    GtkTextIter where;
+    GdkRectangle old_strong, new_strong;
     gtk_text_buffer_get_iter_at_mark(buffer, &where, gtk_text_buffer_get_insert(buffer));
-    keep = where;
-    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
-    do {
-      strong2.y = strong.y + widget->textsize() * factor;
-      b = gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where, strong.x-1, strong2.y);
-//printf("f=%.2f b=%d ",factor, b);
-      gtk_text_buffer_place_cursor(buffer, &where);
-      gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong2, NULL);
-      lineheight = strong2.y - strong.y;
-      factor *= 1.1;
-    } while (b && !lineheight);
-    gtk_text_buffer_place_cursor(buffer, &keep);
-//printf("fontsize=%d lineheight=%d\n",widget->textsize(),lineheight);
+    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &old_strong, NULL);
+    if (gtk_text_view_forward_display_line(GTK_TEXT_VIEW(text_view), &where)) {
+      gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), &where, &new_strong, NULL);
+      lineheight = new_strong.y - old_strong.y;
+    }
   }
 }
 
@@ -690,3 +682,68 @@ int Fl_Cairo_Text_Widget_Driver::mark() {
   return char_pos_to_byte_pos(this, pos);
 }
 
+
+int Fl_Cairo_Text_Widget_Driver::handle_dnd(int event) {
+  static int dnd_save_position, dnd_save_mark;
+  static Fl_Widget *dnd_save_focus = NULL;
+  
+  switch (event) {
+    case FL_DND_ENTER:
+      Fl::belowmouse(widget); // send the leave events first
+      if (dnd_save_focus != widget) {
+        dnd_save_position = insert_position();
+        dnd_save_mark = mark();
+        dnd_save_focus = Fl::focus();
+        Fl::focus(widget);
+        widget->handle(FL_FOCUS);
+      }
+      // fall through:
+    case FL_DND_DRAG:
+      {
+      // move insertion point to Fl::event_x(), Fl::event_y()
+      GtkTextIter where;
+      double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
+      double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
+      gtk_text_view_get_iter_at_location (GTK_TEXT_VIEW(text_view), &where,
+                                          Fl::event_x() - widget->x() + dh,
+                                          Fl::event_y() - widget->y() + dv);
+      gtk_text_buffer_place_cursor(buffer, &where);
+      draw();
+      }
+      return 1;
+      
+    case FL_DND_LEAVE:
+      insert_position(dnd_save_position, dnd_save_mark);
+      if (dnd_save_focus && dnd_save_focus != widget) {
+        Fl::focus(dnd_save_focus);
+        widget->handle(FL_UNFOCUS);
+      }
+      Fl::first_window()->cursor(FL_CURSOR_MOVE);
+      dnd_save_focus = NULL;
+      return 1;
+      
+    case FL_DND_RELEASE:
+      if (dnd_save_focus == widget) {
+        if (!widget->readonly()) {
+          // remove the selected text
+          int old_position = insert_position();
+          if (dnd_save_mark > dnd_save_position) {
+            int tmp = dnd_save_mark;
+            dnd_save_mark = dnd_save_position;
+            dnd_save_position = tmp;
+          }
+          replace(dnd_save_mark, dnd_save_position, NULL, 0);
+          if (old_position > dnd_save_position)
+            widget->insert_position(old_position - (dnd_save_position - dnd_save_mark));
+          else
+            widget->insert_position(old_position);
+        }
+      } else if (dnd_save_focus) {
+        dnd_save_focus->handle(FL_UNFOCUS);
+      }
+      dnd_save_focus = NULL;
+      widget->take_focus();
+      return 1;
+  }
+  return 0;
+}

@@ -41,7 +41,8 @@ public:
   virtual void draw() {}
   virtual int handle_keyboard() { return 1; }
   virtual int handle_push() { return 1; }
-  virtual int handle_paste() { return 0; }
+  virtual int handle_paste() { return 1; }
+  virtual int handle_dnd(int event) { return 1; }
 };
 
 #endif /* Fl_Text_Widget_Driver_h */
