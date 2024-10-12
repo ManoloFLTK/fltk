@@ -1,5 +1,5 @@
 //
-//  Fl_Wayland_Text_Widget_Drver.cxx
+//  Fl_Wayland_Text_Widget_Driver.cxx
 //
 
 #include <config.h> // for BORDER_WIDTH
@@ -12,6 +12,18 @@
 #include <FL/fl_ask.H>          // fl_beep()
 
 #include <gtk/gtk.h>
+
+/* TODO
+ - simplifier compute_lineheight() avec gtk_text_view_forward_display_line()
+ - improve code to compute location of Fl_Scrollbar's in scene
+ - use 3 children in group rather than 2 ?
+ - handle wheel events
+ - transmit Fl_Scrollbar changes to GtkScroller
+ - finalize parameters of Fl_Scrollbar and GtkScroller
+ - shift-click ends selection
+ - drag to select
+ - drag-and-drop
+ */
 
 class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   GtkWidget *scrolled;
@@ -161,7 +173,6 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
     // use css to set all colors
     GtkStyleContext *style_context = gtk_widget_get_style_context(text_view);
     gtk_style_context_add_class(style_context, GTK_STYLE_CLASS_VIEW);
-    GtkCssProvider *css_provider = gtk_css_provider_new();
     uchar r,g,b;
     char bg_color_str[8];
     Fl::get_color(widget->color(),r,g,b);
@@ -181,6 +192,7 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
              ".view text { background-color: %s; color: %s; }"
              ".view text selection { background-color: %s;  color: %s; }",
              bg_color_str, color_str, sel_color_str, text_sel_color_str);
+    GtkCssProvider *css_provider = gtk_css_provider_new();
     gtk_css_provider_load_from_data(css_provider, line, -1, NULL);
     gtk_style_context_add_provider (style_context, GTK_STYLE_PROVIDER(css_provider),
                                     GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
@@ -198,7 +210,10 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
 void Fl_Cairo_Text_Widget_Driver::draw()  {
   if (Fl_Window::current() != widget->window()) widget->window()->make_current();
   int tmp_width = widget->w() - 2 * BORDER_WIDTH - (v_bar ? gtk_widget_get_allocated_width(v_bar) : 0);
+  // gtk_widget_get_allocated_height(h_bar) peut être incorrect ici et devenir valable apres
+  // gtk_widget_size_allocate(scrolled,..)
   int tmp_height = widget->h() - 2 * BORDER_WIDTH - (h_bar ? gtk_widget_get_allocated_height(h_bar) : 0);
+  if (h_bar && gtk_widget_get_allocated_height(h_bar) <= 1) h_fl_scrollbar->clear_visible();
   if (need_allocate || tmp_width != allocation.width || tmp_height != allocation.height) {
     allocation.width = tmp_width;
     allocation.height = tmp_height;
@@ -222,9 +237,15 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
         h_fl_scrollbar->resize(widget->x() + BORDER_WIDTH ,
                                widget->y() + BORDER_WIDTH + allocation.height,
                                allocation.width, alloc2.height);
+//printf("%dx%d %dx%d widget->h()=%d allocation.height=%d tmp_height=%d\n",widget->x() + BORDER_WIDTH , widget->y() + BORDER_WIDTH + allocation.height,   allocation.width, alloc2.height, widget->h(), allocation.height,tmp_height);
         h_fl_scrollbar->parent()->init_sizes();
         gdouble d = gtk_adjustment_get_upper(h_adjust);
         h_fl_scrollbar->value(h_fl_scrollbar->value(), allocation.width, 1, int (d));
+        if (need_allocate == 1) {
+          h_fl_scrollbar->set_visible();
+          h_fl_scrollbar->redraw();
+          ((Fl_Widget*)h_fl_scrollbar)->draw();
+        }
       }
     }
     gtk_widget_get_allocated_size(scrolled, &alloc2, NULL);
@@ -234,8 +255,15 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
   Fl_Surface_Device::push_current(surface);
   Fl_Cairo_Graphics_Driver *dr = (Fl_Cairo_Graphics_Driver*)surface->driver();
   //gtk_render_background(style, dr->cr(), 0, 0, allocation.width, allocation.height);
+  GtkTextIter insert, sel_end;
+  bool selection_active = gtk_text_buffer_get_selection_bounds(buffer, &insert, &sel_end);
+  if (Fl::focus() != widget) { // temporarily hide selection when widget not focused
+    gtk_text_buffer_select_range(buffer, &insert, &insert);
+  }
   gtk_widget_draw(scrolled, dr->cr());
-  if (Fl::focus() == widget) {
+  if (Fl::focus() != widget) {
+    gtk_text_buffer_select_range(buffer, &insert, &sel_end);
+  } else if (!selection_active) {
     GdkRectangle strong;
     gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
     gtk_text_view_buffer_to_window_coords(GTK_TEXT_VIEW(text_view),
@@ -318,15 +346,14 @@ void Fl_Cairo_Text_Widget_Driver::resize(int x, int y, int w, int h) {
 void Fl_Cairo_Text_Widget_Driver::focus() {
   if (!widget->readonly()) {
     //printf("focus(%s)\n",widget->label());
-    gtk_widget_grab_focus(text_view);
-    draw();
+    widget->redraw();
   }
 }
 
 
 void Fl_Cairo_Text_Widget_Driver::unfocus() {
   //printf("unfocus(%s)\n",widget->label());
-  draw();
+  widget->redraw();
 }
 
 
