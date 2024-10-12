@@ -2,7 +2,6 @@
 //  Fl_Cairo_Text_Widget_Driver.cxx
 //
 
-#include <config.h> // for BORDER_WIDTH
 #include "../../Fl_Text_Widget_Driver.H"
 #include <FL/Fl_Native_Text_Widget.H>
 #include <FL/Fl_Image_Surface.H>
@@ -20,7 +19,6 @@
  - transmit Fl_Scrollbar changes to GtkScroller
  - finalize parameters of Fl_Scrollbar and GtkScroller
  - drag to select
- - use Fl::box_dx() & friends instead of BORDER_WIDTH
  */
 
 class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
@@ -208,10 +206,10 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
 
 void Fl_Cairo_Text_Widget_Driver::draw()  {
   if (Fl_Window::current() != widget->window()) widget->window()->make_current();
-  int tmp_width = widget->w() - 2 * BORDER_WIDTH - (v_bar ? gtk_widget_get_allocated_width(v_bar) : 0);
+  int tmp_width = widget->w() - Fl::box_dw(widget->box()) - (v_bar ? gtk_widget_get_allocated_width(v_bar) : 0);
   // gtk_widget_get_allocated_height(h_bar) peut être incorrect ici et devenir valable apres
   // gtk_widget_size_allocate(scrolled,..)
-  int tmp_height = widget->h() - 2 * BORDER_WIDTH - (h_bar ? gtk_widget_get_allocated_height(h_bar) : 0);
+  int tmp_height = widget->h() - Fl::box_dw(widget->box()) - (h_bar ? gtk_widget_get_allocated_height(h_bar) : 0);
   if (h_bar && gtk_widget_get_allocated_height(h_bar) <= 1) h_fl_scrollbar->clear_visible();
   if (need_allocate || tmp_width != allocation.width || tmp_height != allocation.height) {
     allocation.width = tmp_width;
@@ -221,9 +219,9 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
     if (v_fl_scrollbar)  {
       gtk_widget_get_allocated_size(v_bar, &alloc2, NULL);
       if (alloc2.width > 1) {
-        v_fl_scrollbar->resize(widget->x() + BORDER_WIDTH +
+        v_fl_scrollbar->resize(widget->x() + Fl::box_dx(widget->box()) +
                                  (widget->right_to_left() ? 0 : allocation.width),
-                               widget->y() + BORDER_WIDTH,
+                               widget->y() + Fl::box_dy(widget->box()),
                                alloc2.width, allocation.height);
         v_fl_scrollbar->parent()->init_sizes();
         gdouble d = gtk_adjustment_get_upper(v_adjust);
@@ -233,8 +231,8 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
     if (h_fl_scrollbar)  {
       gtk_widget_get_allocated_size(h_bar, &alloc2, NULL);
       if (alloc2.width > 1) {
-        h_fl_scrollbar->resize(widget->x() + BORDER_WIDTH ,
-                               widget->y() + BORDER_WIDTH + allocation.height,
+        h_fl_scrollbar->resize(widget->x() + Fl::box_dx(widget->box()) ,
+                               widget->y() + Fl::box_dy(widget->box()) + allocation.height,
                                allocation.width, alloc2.height);
 //printf("%dx%d %dx%d widget->h()=%d allocation.height=%d tmp_height=%d\n",widget->x() + BORDER_WIDTH , widget->y() + BORDER_WIDTH + allocation.height,   allocation.width, alloc2.height, widget->h(), allocation.height,tmp_height);
         h_fl_scrollbar->parent()->init_sizes();
@@ -274,9 +272,9 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
     dr->yxline(strong.x, strong.y, strong.y + widget->textsize());
   }
   Fl_Surface_Device::pop_current();
-  fl_copy_offscreen(widget->x() + BORDER_WIDTH +
+  fl_copy_offscreen(widget->x() + Fl::box_dx(widget->box()) +
                     (v_fl_scrollbar && widget->right_to_left() ? v_fl_scrollbar->w() : 0),
-                    widget->y() + BORDER_WIDTH, tmp_width, tmp_height, surface->offscreen(), 0, 0);
+                    widget->y() + Fl::box_dy(widget->box()), tmp_width, tmp_height, surface->offscreen(), 0, 0);
   delete surface;
   widget->damage(FL_DAMAGE_CHILD); // important
 }
