@@ -10,6 +10,7 @@
 #include "../Cairo/Fl_Cairo_Graphics_Driver.H"
 #include <FL/fl_draw.H>
 #include <FL/fl_ask.H>          // fl_beep()
+#include "../../Fl_Screen_Driver.H"
 
 #include <gtk/gtk.h>
 
@@ -19,8 +20,6 @@
  - transmit Fl_Scrollbar changes to GtkScroller
  - finalize parameters of Fl_Scrollbar and GtkScroller
  - drag to select
- - drag-and-drop receiver : OK but use GtkTextIter instead of byte offsets
- - drag-and-drop donor
  - use Fl::box_dx() & friends instead of BORDER_WIDTH
  */
 
@@ -54,7 +53,7 @@ public:
   void draw() FL_OVERRIDE;
   unsigned index(int i) const FL_OVERRIDE;
   int handle_keyboard() FL_OVERRIDE;
-  int handle_push() FL_OVERRIDE;
+  int handle_mouse(int event) FL_OVERRIDE;
   int handle_paste() FL_OVERRIDE;
   int handle_dnd(int event) FL_OVERRIDE;
   int insert_position() FL_OVERRIDE;
@@ -573,28 +572,93 @@ void Fl_Cairo_Text_Widget_Driver::compute_lineheight() {
 }
 
 
-int Fl_Cairo_Text_Widget_Driver::handle_push() {
-  GtkTextIter where, insert;
-  double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
-  double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
-  gtk_text_view_get_iter_at_location (GTK_TEXT_VIEW(text_view), &where,
-                                      Fl::event_x() - widget->x() + dh,
-                                      Fl::event_y() - widget->y() + dv);
-  gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
-  if (Fl::event_shift()) {
-    gtk_text_buffer_select_range(buffer, &insert, &where);
-  } else if (Fl::event_clicks()) {
-    gtk_text_buffer_place_cursor(buffer, &where);
-    gtk_text_iter_backward_word_start(&where);
-    GtkTextIter word_end;
-    gtk_text_iter_assign(&word_end, &where);
-    gtk_text_iter_forward_word_end(&where);
-    gtk_text_buffer_select_range(buffer, &where, &word_end);
-  } else {
-    gtk_text_buffer_place_cursor(buffer, &where);
+static GtkTextIter dnd_iter_position, dnd_iter_mark, newpos;
+static Fl_Widget *dnd_save_focus = NULL;
+static int drag_start = -1;
+
+int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
+  if (event == FL_PUSH) {
+    if (Fl::dnd_text_ops() && (Fl::event_button() != FL_RIGHT_MOUSE)) {
+      GtkTextIter oldpos, oldmark;
+      gtk_text_buffer_get_selection_bounds(buffer, &oldpos, &oldmark);
+      // move insertion point to Fl::event_x(), Fl::event_y()
+      GtkTextIter where;
+      double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
+      double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
+      gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where,
+                                          Fl::event_x() - widget->x() + dh,
+                                          Fl::event_y() - widget->y() + dv);
+      gtk_text_buffer_place_cursor(buffer, &where);
+      //draw();
+
+      newpos = where;
+      gtk_text_buffer_select_range(buffer, &oldpos, &oldmark);
+      GtkTextIter current_insert, current_mark;
+      gtk_text_buffer_get_selection_bounds(buffer, &current_insert, &current_mark);
+      if (Fl::focus()==widget && !Fl::event_state(FL_SHIFT)  &&
+          ( (gtk_text_iter_compare(&newpos, &current_mark)>=0 && gtk_text_iter_compare(&newpos, &current_insert)<0) ||
+           (gtk_text_iter_compare(&newpos, &current_insert)>=0 && gtk_text_iter_compare(&newpos, &current_mark)<0)
+           ) ) {
+        // user clicked in the selection, may be trying to drag
+        drag_start = gtk_text_iter_get_offset(&newpos);
+        return 1;
+      }
+      drag_start = -1;
+    }
+    
+    GtkTextIter where, insert;
+    double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
+    double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
+    gtk_text_view_get_iter_at_location (GTK_TEXT_VIEW(text_view), &where,
+                                        Fl::event_x() - widget->x() + dh,
+                                        Fl::event_y() - widget->y() + dv);
+    gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
+    if (Fl::event_shift()) {
+      gtk_text_buffer_select_range(buffer, &insert, &where);
+    } else if (Fl::event_clicks()) {
+      gtk_text_buffer_place_cursor(buffer, &where);
+      gtk_text_iter_backward_word_start(&where);
+      GtkTextIter word_end;
+      gtk_text_iter_assign(&word_end, &where);
+      gtk_text_iter_forward_word_end(&where);
+      gtk_text_buffer_select_range(buffer, &where, &word_end);
+    } else {
+      gtk_text_buffer_place_cursor(buffer, &where);
+    }
+    draw();
+    return 1;
+  } else if(event == FL_DRAG) {
+    if (Fl::dnd_text_ops()) {
+      if (drag_start >= 0) {
+        if (Fl::event_is_click()) return 1; // debounce the mouse
+        // save the position because sometimes we don't get DND_ENTER:
+        gtk_text_buffer_get_iter_at_mark(buffer, &dnd_iter_position,
+                                         gtk_text_buffer_get_insert(buffer));
+        gtk_text_buffer_get_iter_at_mark(buffer, &dnd_iter_mark,
+                                         gtk_text_buffer_get_selection_bound(buffer));
+        dnd_save_focus = widget;
+        // drag the data:
+        //gtk_text_buffer_select_range(buffer, &dnd_iter_position, &dnd_iter_mark);
+        const char *buf = gtk_text_buffer_get_text(buffer, &dnd_iter_position, &dnd_iter_mark, false);
+        Fl::copy(buf, (int)strlen(buf), 0);
+        delete[] buf;
+        
+        Fl::screen_driver()->dnd(1);
+        return 1;
+      }
+    }
+  } else if(event == FL_RELEASE) {
+    if (Fl::event_is_click() && drag_start >= 0) {
+      // user clicked in the field and wants to reset the cursor position...
+      GtkTextIter current;
+      gtk_text_buffer_get_iter_at_offset(buffer, &current, drag_start);
+      gtk_text_buffer_select_range(buffer, &current, &current);
+      drag_start = -1;
+      widget->window()->cursor(FL_CURSOR_INSERT);
+      return 1;
+    }
   }
-  draw();
-  return 1;
+  return 0;
 }
 
 
@@ -684,36 +748,43 @@ int Fl_Cairo_Text_Widget_Driver::mark() {
 
 
 int Fl_Cairo_Text_Widget_Driver::handle_dnd(int event) {
-  static int dnd_save_position, dnd_save_mark;
-  static Fl_Widget *dnd_save_focus = NULL;
-  
   switch (event) {
     case FL_DND_ENTER:
       Fl::belowmouse(widget); // send the leave events first
       if (dnd_save_focus != widget) {
-        dnd_save_position = insert_position();
-        dnd_save_mark = mark();
+        gtk_text_buffer_get_iter_at_mark(buffer, &dnd_iter_position,
+                                         gtk_text_buffer_get_insert(buffer));
+        gtk_text_buffer_get_iter_at_mark(buffer, &dnd_iter_mark,
+                                         gtk_text_buffer_get_selection_bound(buffer));
         dnd_save_focus = Fl::focus();
         Fl::focus(widget);
         widget->handle(FL_FOCUS);
       }
       // fall through:
     case FL_DND_DRAG:
-      {
-      // move insertion point to Fl::event_x(), Fl::event_y()
-      GtkTextIter where;
-      double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
-      double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
-      gtk_text_view_get_iter_at_location (GTK_TEXT_VIEW(text_view), &where,
-                                          Fl::event_x() - widget->x() + dh,
-                                          Fl::event_y() - widget->y() + dv);
-      gtk_text_buffer_place_cursor(buffer, &where);
-      draw();
+      if (Fl::event_inside(widget)) {
+        // move insertion point to Fl::event_x(), Fl::event_y()
+        GtkTextIter where;
+        double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
+        double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
+        bool b = gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where,
+                                           Fl::event_x() - widget->x() + dh,
+                                           Fl::event_y() - widget->y() + dv);
+        if (b) {
+          gtk_text_buffer_place_cursor(buffer, &where);
+          draw();
+        }
       }
       return 1;
       
     case FL_DND_LEAVE:
-      insert_position(dnd_save_position, dnd_save_mark);
+      GtkTextIter start, end;
+      gtk_text_buffer_get_start_iter(buffer, &start);
+      gtk_text_buffer_get_end_iter(buffer, &end);
+      if (gtk_text_iter_in_range(&dnd_iter_position, &start, &end) &&
+          gtk_text_iter_in_range(&dnd_iter_mark, &start, &end)) {
+        gtk_text_buffer_select_range(buffer, &dnd_iter_position, &dnd_iter_mark);
+      }
       if (dnd_save_focus && dnd_save_focus != widget) {
         Fl::focus(dnd_save_focus);
         widget->handle(FL_UNFOCUS);
@@ -726,23 +797,22 @@ int Fl_Cairo_Text_Widget_Driver::handle_dnd(int event) {
       if (dnd_save_focus == widget) {
         if (!widget->readonly()) {
           // remove the selected text
-          int old_position = insert_position();
-          if (dnd_save_mark > dnd_save_position) {
-            int tmp = dnd_save_mark;
-            dnd_save_mark = dnd_save_position;
-            dnd_save_position = tmp;
+          GtkTextIter old_iter;
+          gtk_text_buffer_get_iter_at_mark(buffer, &old_iter, gtk_text_buffer_get_insert(buffer));
+          if (gtk_text_iter_compare(&dnd_iter_mark, &dnd_iter_position) > 0) {
+            GtkTextIter tmp_iter = dnd_iter_mark;
+            dnd_iter_mark = dnd_iter_position;
+            dnd_iter_position = tmp_iter;
           }
-          replace(dnd_save_mark, dnd_save_position, NULL, 0);
-          if (old_position > dnd_save_position)
-            widget->insert_position(old_position - (dnd_save_position - dnd_save_mark));
-          else
-            widget->insert_position(old_position);
+          gtk_text_buffer_delete(buffer, &dnd_iter_mark, &dnd_iter_position);
+        
         }
       } else if (dnd_save_focus) {
         dnd_save_focus->handle(FL_UNFOCUS);
       }
       dnd_save_focus = NULL;
       widget->take_focus();
+      widget->window()->cursor(FL_CURSOR_INSERT);
       return 1;
   }
   return 0;

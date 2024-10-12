@@ -40,7 +40,7 @@ public:
   virtual void paste() {}
   virtual void draw() {}
   virtual int handle_keyboard() { return 1; }
-  virtual int handle_push() { return 1; }
+  virtual int handle_mouse(int event) { return 0; }
   virtual int handle_paste() { return 1; }
   virtual int handle_dnd(int event) { return 1; }
 };

@@ -4,6 +4,7 @@
 
 #include <FL/Fl_Native_Text_Widget.H>
 #include <FL/Fl_Group.H>
+#include <FL/Fl_Window.H>
 #include "../src/Fl_Text_Widget_Driver.H"
 
 #if !(defined(__APPLE__) && (!defined(FLTK_USE_X11) || !FLTK_USE_X11)) && \
@@ -48,13 +49,17 @@ int Fl_Native_Text_Widget::handle(int event) {
     driver_->hide_widget();
     return Fl_Native_Widget::handle(event);
   }
-  if (event == FL_PUSH && active()){
-    if (Fl::focus() != this) {
-      Fl::focus(this);
-      handle(FL_FOCUS);
+  if (event == FL_PUSH || event == FL_DRAG || event == FL_MOVE || event == FL_RELEASE ||
+      event == FL_MOUSEWHEEL) {
+    int r = 0;
+    if (event == FL_PUSH && active()){
+      if (Fl::focus() != this) {
+        Fl::focus(this);
+        handle(FL_FOCUS);
+      }
     }
-    driver_->handle_push();
-    return Fl_Native_Widget::handle(event);
+    r = driver_->handle_mouse(event);
+    return (r ? r : Fl_Native_Widget::handle(event));
   } else if (event == FL_FOCUS && active() && !readonly()) {
     Fl_Native_Widget::handle(event);
     return 1;
@@ -69,6 +74,11 @@ int Fl_Native_Text_Widget::handle(int event) {
   } else if (event == FL_DND_ENTER || event == FL_DND_DRAG || event == FL_DND_RELEASE ||
              event == FL_DND_LEAVE) {
     return driver_->handle_dnd(event);
+  } else if (event == FL_ENTER && !readonly()) {
+    window()->cursor(FL_CURSOR_INSERT);
+    return 1;
+  } else if (event == FL_LEAVE) {
+    window()->cursor(FL_CURSOR_DEFAULT);
   }
   return Fl_Native_Widget::handle(event);
 }
