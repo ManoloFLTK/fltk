@@ -17,9 +17,9 @@
  - improve code to compute location of Fl_Scrollbar's in scene
  - transmit Fl_Scrollbar changes to GtkScroller
  - finalize parameters of Fl_Scrollbar and GtkScroller
- - drag to select
  - implement selectable()
  - implement hide()
+ - implement undo/redo
  - work with multiple paragraphs
  */
 
@@ -617,7 +617,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
     GtkTextIter where, insert;
     double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
     double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
-    gtk_text_view_get_iter_at_location (GTK_TEXT_VIEW(text_view), &where,
+    gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where,
                                         Fl::event_x() - widget->x() + dh,
                                         Fl::event_y() - widget->y() + dv);
     gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
@@ -651,6 +651,18 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
       Fl::screen_driver()->dnd(1);
       return 1;
     }
+    // make selection follow the pointer
+    GtkTextIter where, insert;
+    double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
+    double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
+    gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where,
+                                        Fl::event_x() - widget->x() + dh,
+                                        Fl::event_y() - widget->y() + dv);
+    gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
+    gtk_text_buffer_select_range(buffer, &insert, &where);
+    draw();
+    return 1;
+    
   } else if(event == FL_RELEASE) {
     if (Fl::event_is_click() && drag_start >= 0) {
       // user clicked in the field and wants to reset the cursor position...
