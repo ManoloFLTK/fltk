@@ -18,6 +18,8 @@
  - transmit Fl_Scrollbar changes to GtkScroller
  - finalize parameters of Fl_Scrollbar and GtkScroller
  - drag to select
+ - implement selectable()
+ - implement hide()
  - work with multiple paragraphs
  */
 
@@ -260,7 +262,7 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
   gtk_widget_draw(scrolled, dr->cr());
   if (Fl::focus() != widget) {
     gtk_text_buffer_select_range(buffer, &insert, &sel_end);
-  } else if (!selection_active) {
+  } else if (!selection_active) { // draw insertion cursor
     GdkRectangle strong;
     gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
     gtk_text_view_buffer_to_window_coords(GTK_TEXT_VIEW(text_view),
@@ -269,7 +271,7 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
     //GtkStyleContext *style = gtk_widget_get_style_context(text_view);
     //gtk_render_insertion_cursor(style, dr->cr(), strong.x, strong.y, layout, 0, PANGO_DIRECTION_RTL);
     fl_color(widget->cursor_color()); dr->line_style(FL_SOLID, 2);
-    dr->yxline(strong.x, strong.y, strong.y + widget->textsize());
+    dr->yxline(strong.x, strong.y, strong.y + (lineheight ? lineheight : int(1.2*widget->textsize())));
   }
   Fl_Surface_Device::pop_current();
   fl_copy_offscreen(widget->x() + Fl::box_dx(widget->box()) +
@@ -316,9 +318,8 @@ void Fl_Cairo_Text_Widget_Driver::replace(int from, int to, const char *text, in
   insert_position(from, to);
   if (from != to) gtk_text_buffer_delete_selection(buffer, true, true);
   if (!len) return;
-  GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
   GtkTextIter iter;
-  gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
+  gtk_text_buffer_get_iter_at_mark(buffer, &iter, gtk_text_buffer_get_insert(buffer));
   GtkTextIter start, end;
   gtk_text_buffer_get_start_iter(buffer, &start);
   gtk_text_buffer_get_end_iter(buffer, &end);
@@ -329,7 +330,7 @@ void Fl_Cairo_Text_Widget_Driver::replace(int from, int to, const char *text, in
     gtk_text_buffer_get_end_iter(buffer, &end);
     gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
   }
-  if (from < to || len > 0) {
+  if (from != to || len > 0) {
     draw();
   }
 }
@@ -635,24 +636,20 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
     draw();
     return 1;
   } else if(event == FL_DRAG) {
-    if (Fl::dnd_text_ops()) {
-      if (drag_start >= 0) {
-        if (Fl::event_is_click()) return 1; // debounce the mouse
-        // save the position because sometimes we don't get DND_ENTER:
-        gtk_text_buffer_get_iter_at_mark(buffer, &dnd_iter_position,
-                                         gtk_text_buffer_get_insert(buffer));
-        gtk_text_buffer_get_iter_at_mark(buffer, &dnd_iter_mark,
-                                         gtk_text_buffer_get_selection_bound(buffer));
-        dnd_save_focus = widget;
-        // drag the data:
-        //gtk_text_buffer_select_range(buffer, &dnd_iter_position, &dnd_iter_mark);
-        const char *buf = gtk_text_buffer_get_text(buffer, &dnd_iter_position, &dnd_iter_mark, false);
-        Fl::copy(buf, (int)strlen(buf), 0);
-        delete[] buf;
-        
-        Fl::screen_driver()->dnd(1);
-        return 1;
-      }
+    if (drag_start >= 0) {
+      if (Fl::event_is_click()) return 1; // debounce the mouse
+      // save the position because sometimes we don't get DND_ENTER:
+      gtk_text_buffer_get_iter_at_mark(buffer, &dnd_iter_position,
+                                       gtk_text_buffer_get_insert(buffer));
+      gtk_text_buffer_get_iter_at_mark(buffer, &dnd_iter_mark,
+                                       gtk_text_buffer_get_selection_bound(buffer));
+      dnd_save_focus = widget;
+      // drag the data:
+      const char *buf = gtk_text_buffer_get_text(buffer, &dnd_iter_position, &dnd_iter_mark, false);
+      Fl::copy(buf, (int)strlen(buf), 0);
+      delete[] buf;
+      Fl::screen_driver()->dnd(1);
+      return 1;
     }
   } else if(event == FL_RELEASE) {
     if (Fl::event_is_click() && drag_start >= 0) {
@@ -751,7 +748,6 @@ void Fl_Cairo_Text_Widget_Driver::insert_position(int pos, int mark) {
   pos = byte_pos_to_char_pos(this, pos);
   GtkTextMark *gtk_mark = gtk_text_buffer_get_insert(buffer);
   GtkTextIter where;
-  gtk_text_buffer_get_start_iter (buffer, &where);
   gtk_text_iter_set_offset(&where, pos);
   gtk_text_buffer_move_mark(buffer, gtk_mark, &where);
   if (!need_selection) {

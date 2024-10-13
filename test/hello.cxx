@@ -15,11 +15,7 @@ int main(int argc, char **argv) {
   Fl_Window *window = new Fl_Window(490, 280, "top");
   bool readonly = false;
   bool selectable = true;
-  const char *label;
-  if (readonly && !selectable) label = "Read only native text boxes";
-  else if (readonly && selectable) label = "Selectable native text boxes";
-  else label = "Editable native text boxes";
-  Fl_Native_Multiline_Text_Widget *box = new Fl_Native_Multiline_Text_Widget(20, 40, 450, 100, label);
+  Fl_Native_Multiline_Text_Widget *box = new Fl_Native_Multiline_Text_Widget(20, 30, 450, 100, "Fl_Native_Multiline_Text_Widget");
   box->align(FL_ALIGN_TOP);
   box->textfont(FL_HELVETICA);
   box->textsize(25);
@@ -35,16 +31,16 @@ int main(int argc, char **argv) {
             );
 #define SUBWIN 0//1
 #if SUBWIN
-  Fl_Window *subwin = new Fl_Window(20, box->y()+box->h()+10, 450, 50+40,"subwin");
+  Fl_Window *subwin = new Fl_Window(20, box->y()+box->h()+20, 450, 50+40,"subwin");
   subwin->color(FL_YELLOW);
 #endif
   Fl_Native_Text_Widget *box2 = new Fl_Native_Text_Widget(
 #if SUBWIN
       0, 0,
 #else
-      20, box->y()+box->h()+10,
+      20, box->y()+box->h()+20,
 #endif
-      450, 50, "single-line");
+      450, 50, "Fl_Native_Text_Widget");
   box2->textfont(box->textfont());
   box2->textsize(box->textsize());
   box2->textcolor(box->textcolor());
@@ -58,17 +54,17 @@ int main(int argc, char **argv) {
   //box2->value(box->value());
 #if SUBWIN
   subwin->resizable(subwin);
-  //Fl_Input *input =new Fl_Input(subwin->x(),subwin->y()+subwin->h()+10, subwin->w(),30, NULL);
-  Fl_Input *input = new Fl_Input(box2->x(),box2->y()+box2->h()+10, subwin->w(),30, NULL);
+  Fl_Input *input = new Fl_Input(box2->x(),box2->y()+box2->h()+20, subwin->w(),30, NULL);
   subwin->end();
 #else
-  Fl_Input *input =new Fl_Input(box2->x(),box2->y()+box2->h()+10, box2->w(),30, NULL);
+  Fl_Input *input =new Fl_Input(box2->x(),box2->y()+box2->h()+20, box2->w(),30, NULL);
 #endif
   input->label("Fl_Input");
-  input->value("Fl_Input");
+  input->align(FL_ALIGN_TOP);
+  input->value("Lorem ipsum dolor sit amet.");
   input->callback(cb, (void*)"Fl_Input");
-  input->textfont(box->textfont());
-  input->textsize(box->textsize());
+  //input->textfont(box->textfont());
+  //input->textsize(box->textsize());
   window->end();
   window->resizable(box);
   box->readonly(readonly);

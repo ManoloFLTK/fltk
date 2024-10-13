@@ -60,7 +60,6 @@ int Fl_Native_Text_Widget::handle(int event) {
     r = driver_->handle_mouse(event);
     return (r ? r : Fl_Native_Widget::handle(event));
   } else if (event == FL_FOCUS && active() && !readonly()) {
-    Fl_Native_Widget::handle(event);
     return 1;
   } else if (event == FL_UNFOCUS) {
     driver_->unfocus();
