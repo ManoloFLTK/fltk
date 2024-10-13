@@ -687,11 +687,11 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
   } else if(event == FL_MOUSEWHEEL) {
     if (v_fl_scrollbar) {
       int val = v_fl_scrollbar->value();
-      v_fl_scrollbar->value(val + Fl::event_dy());
+      v_fl_scrollbar->value(val + (lineheight?lineheight:widget->textsize()) * Fl::event_dy());
     }
     if (h_fl_scrollbar) {
       int val = h_fl_scrollbar->value();
-      h_fl_scrollbar->value(val + Fl::event_dx());
+      h_fl_scrollbar->value(val + widget->textsize() * Fl::event_dx());
     }
     return 1;
   }
