@@ -17,8 +17,6 @@
  - improve code to compute location of Fl_Scrollbar's in scene
  - transmit Fl_Scrollbar changes to GtkScroller
  - finalize parameters of Fl_Scrollbar and GtkScroller
- - implement selectable()
- - implement hide()
  - implement undo/redo
  - work with multiple paragraphs
  */
@@ -442,7 +440,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
       draw();
       return 1;
     }
-  } else if (Fl::event_key() == 'a' && Fl::event_ctrl()) { // select All
+  } else if (Fl::event_key() == 'a' && Fl::event_ctrl() && widget->selectable()) { // select All
     GtkTextIter start, end;
     gtk_text_buffer_get_start_iter(buffer, &start);
     gtk_text_buffer_get_end_iter(buffer, &end);
@@ -586,7 +584,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
   if (h_fl_scrollbar && Fl::event_inside(h_fl_scrollbar)) return h_fl_scrollbar->handle(event);
 
   if (event == FL_PUSH) {
-    if (Fl::dnd_text_ops() && (Fl::event_button() != FL_RIGHT_MOUSE)) {
+    if (Fl::dnd_text_ops() && (Fl::event_button() != FL_RIGHT_MOUSE) && widget->selectable()) {
       GtkTextIter oldpos, oldmark;
       gtk_text_buffer_get_selection_bounds(buffer, &oldpos, &oldmark);
       // move insertion point to Fl::event_x(), Fl::event_y()
@@ -621,9 +619,9 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
                                         Fl::event_x() - widget->x() + dh,
                                         Fl::event_y() - widget->y() + dv);
     gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
-    if (Fl::event_shift()) {
+    if (Fl::event_shift() && widget->selectable()) {
       gtk_text_buffer_select_range(buffer, &insert, &where);
-    } else if (Fl::event_clicks()) {
+    } else if (Fl::event_clicks() && widget->selectable()) {
       gtk_text_buffer_place_cursor(buffer, &where);
       gtk_text_iter_backward_word_start(&where);
       GtkTextIter word_end;
@@ -635,7 +633,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
     }
     draw();
     return 1;
-  } else if(event == FL_DRAG) {
+  } else if(event == FL_DRAG && widget->selectable()) {
     if (drag_start >= 0) {
       if (Fl::event_is_click()) return 1; // debounce the mouse
       // save the position because sometimes we don't get DND_ENTER:
