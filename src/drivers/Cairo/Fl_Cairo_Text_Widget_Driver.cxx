@@ -385,6 +385,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
   unsigned int shift = Fl::event_state() & FL_SHIFT;
   int retval = 0;
   if (Fl::event_key() == FL_Delete) {
+    if (widget->readonly()) { fl_beep(); return 1; }
     int selected = gtk_text_buffer_get_has_selection(buffer);
     if (mods == 0 && shift && selected) {
       GtkTextIter start, end; // copy_cut(): Shift-Delete with selection (WP,NP,WOW,GE,KE,OF)
@@ -418,6 +419,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
       return 1;
     }
   } else if (Fl::event_key() == FL_BackSpace) {
+    if (widget->readonly()) { fl_beep(); return 1; }
     if (mods == 0) { // Backspace      (WP,NP,WOW,GE,KE,OF)
       if (gtk_text_buffer_get_has_selection(buffer)) {
         gtk_text_buffer_delete_selection(buffer, true, true);
@@ -470,7 +472,8 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
              'v'
 #endif
              && Fl::event_ctrl()) { // paste
-    Fl::paste(*widget, 1);
+    if (widget->readonly()) fl_beep();
+    else Fl::paste(*widget, 1);
     return 1;
   } else if (Fl::event_key() ==
 #if __APPLE_CC__
@@ -479,6 +482,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
              'x'
 #endif
              && Fl::event_ctrl()) { // cut
+    if (widget->readonly()) { fl_beep(); return 1; }
     GtkTextIter start, end;
     gtk_text_buffer_get_iter_at_mark(buffer, &start, gtk_text_buffer_get_insert(buffer));
     gtk_text_buffer_get_iter_at_mark(buffer, &end, gtk_text_buffer_get_selection_bound(buffer));
@@ -511,7 +515,8 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     }
     draw();
     return 1;
-  } else if (kind == MULTIPLE_LINES && (Fl::event_key() == FL_Down || Fl::event_key() == FL_Up)) {
+  } else if (Fl::event_key() == FL_Down || Fl::event_key() == FL_Up) {
+    if (kind == SINGLE_LINE) return 1;
     GtkTextIter where;
     GdkRectangle strong;
     if (!lineheight) compute_lineheight();
