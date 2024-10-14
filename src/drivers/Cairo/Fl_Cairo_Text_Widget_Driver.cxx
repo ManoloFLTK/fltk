@@ -10,12 +10,12 @@
 #include <FL/fl_draw.H>
 #include <FL/fl_ask.H>          // fl_beep()
 #include "../../Fl_Screen_Driver.H"
+#include <FL/fl_callback_macros.H>
 
 #include <gtk/gtk.h>
 
 /* TODO
  - improve code to compute location of Fl_Scrollbar's in scene
- - transmit Fl_Scrollbar changes to GtkScroller
  - finalize parameters of Fl_Scrollbar and GtkScroller
  - implement undo/redo
  - work with multiple paragraphs
@@ -109,6 +109,13 @@ static void fl_textbuffer_changed(GtkTextBuffer *buffer) {
 }
 
 
+static void scroll_cb(Fl_Scrollbar *sb, GtkAdjustment *adjust, int *p_need_allocate) {
+  int v = sb->value();
+  gtk_adjustment_set_value(adjust, v);
+  *p_need_allocate = 1;
+}
+
+
 void Fl_Cairo_Text_Widget_Driver::show_widget()  {
   static bool first = true;
   if (first) {
@@ -126,8 +133,20 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
       h_fl_scrollbar->type(FL_HORIZONTAL);
     }
     widget->end();
-    if (v_fl_scrollbar) v_adjust = gtk_adjustment_new(0, 0, 10, 1, 1, 5); // temp values
-    if (h_fl_scrollbar) h_adjust = gtk_adjustment_new(0, 0, 10, 1, 1, 5);
+    if (v_fl_scrollbar) {
+      v_adjust = gtk_adjustment_new(0, 0, 10, 1, 1, 5); // temp values
+      FL_FUNCTION_CALLBACK_3(v_fl_scrollbar, scroll_cb,
+                             Fl_Scrollbar*, v_fl_scrollbar,
+                             GtkAdjustment*, v_adjust,
+                             int*, &need_allocate);
+    }
+    if (h_fl_scrollbar) {
+      h_adjust = gtk_adjustment_new(0, 0, 10, 1, 1, 5);
+      FL_FUNCTION_CALLBACK_3(h_fl_scrollbar, scroll_cb,
+                             Fl_Scrollbar*, h_fl_scrollbar,
+                             GtkAdjustment*, h_adjust,
+                             int*, &need_allocate);
+    }
     scrolled = gtk_scrolled_window_new(h_adjust, v_adjust);
     text_view = gtk_text_view_new();
     if (v_fl_scrollbar) v_bar = gtk_scrolled_window_get_vscrollbar(GTK_SCROLLED_WINDOW(scrolled));
@@ -689,12 +708,14 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
     return 1;
   } else if(event == FL_MOUSEWHEEL) {
     if (v_fl_scrollbar) {
-      int val = v_fl_scrollbar->value();
-      v_fl_scrollbar->value(val + (lineheight?lineheight:widget->textsize()) * Fl::event_dy());
+      int val = v_fl_scrollbar->value() + (lineheight?lineheight:widget->textsize()) * Fl::event_dy();
+      int changed = v_fl_scrollbar->value( v_fl_scrollbar->clamp(val) );
+      if (changed) v_fl_scrollbar->do_callback();
     }
     if (h_fl_scrollbar) {
-      int val = h_fl_scrollbar->value();
-      h_fl_scrollbar->value(val + widget->textsize() * Fl::event_dx());
+      int val = h_fl_scrollbar->value() + widget->textsize() * Fl::event_dx();
+      int changed = h_fl_scrollbar->value( h_fl_scrollbar->clamp(val) );
+      if (changed) h_fl_scrollbar->do_callback();
     }
     return 1;
   }
