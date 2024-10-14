@@ -237,10 +237,9 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
     if (v_fl_scrollbar) gtk_widget_get_allocated_size(v_bar, &alloc_v_scroll, NULL);
     if (h_fl_scrollbar) gtk_widget_get_allocated_size(h_bar, &alloc_h_scroll, NULL);
     if (need_allocate && (v_bar || h_bar)) {
-      tmp_width = widget->w() - Fl::box_dw(widget->box()) - (v_bar ? alloc_v_scroll.width : 0);
-      tmp_height = widget->h() - Fl::box_dw(widget->box()) - (h_bar ? alloc_h_scroll.height : 0);
-      allocation.width = tmp_width;
-      allocation.height = tmp_height;
+      allocation.width = widget->w() - Fl::box_dw(widget->box()) - (v_bar ? alloc_v_scroll.width : 0);
+      allocation.height = widget->h() - Fl::box_dh(widget->box()) - (h_bar ? alloc_h_scroll.height : 0);
+      gtk_widget_size_allocate(scrolled, &allocation);
     }
     if (v_fl_scrollbar)  {
       v_fl_scrollbar->resize(widget->x() + Fl::box_dx(widget->box()) +
@@ -261,7 +260,7 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
     }
     if (need_allocate > 0) need_allocate--;
   }
-  Fl_Image_Surface *surface = new Fl_Image_Surface(tmp_width, tmp_height, 1);
+  Fl_Image_Surface *surface = new Fl_Image_Surface(allocation.width, allocation.height, 1);
   Fl_Surface_Device::push_current(surface);
   Fl_Cairo_Graphics_Driver *dr = (Fl_Cairo_Graphics_Driver*)surface->driver();
   //gtk_render_background(style, dr->cr(), 0, 0, allocation.width, allocation.height);
