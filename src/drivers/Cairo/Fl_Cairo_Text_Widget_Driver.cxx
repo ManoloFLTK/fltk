@@ -15,7 +15,6 @@
 #include <gtk/gtk.h>
 
 /* TODO
- - improve code to compute location of Fl_Scrollbar's in scene
  - finalize parameters of Fl_Scrollbar and GtkScroller
  - implement undo/redo
  - work with multiple paragraphs
@@ -227,45 +226,39 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
 void Fl_Cairo_Text_Widget_Driver::draw()  {
   if (Fl_Window::current() != widget->window()) widget->window()->make_current();
   int tmp_width = widget->w() - Fl::box_dw(widget->box()) - (v_bar ? gtk_widget_get_allocated_width(v_bar) : 0);
-  // gtk_widget_get_allocated_height(h_bar) peut être incorrect ici et devenir valable apres
+  // gtk_widget_get_allocated_height(h_bar) may be incorrect (==1) here and become correct after
   // gtk_widget_size_allocate(scrolled,..)
   int tmp_height = widget->h() - Fl::box_dw(widget->box()) - (h_bar ? gtk_widget_get_allocated_height(h_bar) : 0);
-  if (h_bar && gtk_widget_get_allocated_height(h_bar) <= 1) h_fl_scrollbar->clear_visible();
   if (need_allocate || tmp_width != allocation.width || tmp_height != allocation.height) {
     allocation.width = tmp_width;
     allocation.height = tmp_height;
     gtk_widget_size_allocate(scrolled, &allocation);
-    GtkAllocation alloc2;
+    GtkAllocation alloc_v_scroll, alloc_h_scroll;
+    if (v_fl_scrollbar) gtk_widget_get_allocated_size(v_bar, &alloc_v_scroll, NULL);
+    if (h_fl_scrollbar) gtk_widget_get_allocated_size(h_bar, &alloc_h_scroll, NULL);
+    if (need_allocate && (v_bar || h_bar)) {
+      tmp_width = widget->w() - Fl::box_dw(widget->box()) - (v_bar ? alloc_v_scroll.width : 0);
+      tmp_height = widget->h() - Fl::box_dw(widget->box()) - (h_bar ? alloc_h_scroll.height : 0);
+      allocation.width = tmp_width;
+      allocation.height = tmp_height;
+    }
     if (v_fl_scrollbar)  {
-      gtk_widget_get_allocated_size(v_bar, &alloc2, NULL);
-      if (alloc2.width > 1) {
-        v_fl_scrollbar->resize(widget->x() + Fl::box_dx(widget->box()) +
-                                 (widget->right_to_left() ? 0 : allocation.width),
-                               widget->y() + Fl::box_dy(widget->box()),
-                               alloc2.width, allocation.height);
-        v_fl_scrollbar->parent()->init_sizes();
-        gdouble d = gtk_adjustment_get_upper(v_adjust);
-        v_fl_scrollbar->value(v_fl_scrollbar->value(), allocation.height, 1, int (d));
-      }
+      v_fl_scrollbar->resize(widget->x() + Fl::box_dx(widget->box()) +
+                             (widget->right_to_left() ? 0 : allocation.width),
+                             widget->y() + Fl::box_dy(widget->box()),
+                             alloc_v_scroll.width, allocation.height);
+      v_fl_scrollbar->parent()->init_sizes();
+      gdouble d = gtk_adjustment_get_upper(v_adjust);
+      v_fl_scrollbar->value(v_fl_scrollbar->value(), allocation.height, 1, int (d));
     }
     if (h_fl_scrollbar)  {
-      gtk_widget_get_allocated_size(h_bar, &alloc2, NULL);
-      if (alloc2.width > 1) {
-        h_fl_scrollbar->resize(widget->x() + Fl::box_dx(widget->box()) ,
-                               widget->y() + Fl::box_dy(widget->box()) + allocation.height,
-                               allocation.width, alloc2.height);
-//printf("%dx%d %dx%d widget->h()=%d allocation.height=%d tmp_height=%d\n",widget->x() + BORDER_WIDTH , widget->y() + BORDER_WIDTH + allocation.height,   allocation.width, alloc2.height, widget->h(), allocation.height,tmp_height);
-        h_fl_scrollbar->parent()->init_sizes();
-        gdouble d = gtk_adjustment_get_upper(h_adjust);
-        h_fl_scrollbar->value(h_fl_scrollbar->value(), allocation.width, 1, int (d));
-        if (need_allocate == 1) {
-          h_fl_scrollbar->set_visible();
-          h_fl_scrollbar->redraw();
-          ((Fl_Widget*)h_fl_scrollbar)->draw();
-        }
-      }
+      h_fl_scrollbar->resize(widget->x() + Fl::box_dx(widget->box()) ,
+                             widget->y() + Fl::box_dy(widget->box()) + allocation.height,
+                             allocation.width, alloc_h_scroll.height);
+      h_fl_scrollbar->parent()->init_sizes();
+      gdouble d = gtk_adjustment_get_upper(h_adjust);
+      h_fl_scrollbar->value(h_fl_scrollbar->value(), allocation.width, 1, int (d));
     }
-    gtk_widget_get_allocated_size(scrolled, &alloc2, NULL);
     if (need_allocate > 0) need_allocate--;
   }
   Fl_Image_Surface *surface = new Fl_Image_Surface(tmp_width, tmp_height, 1);
