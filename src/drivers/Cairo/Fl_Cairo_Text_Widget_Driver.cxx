@@ -113,6 +113,7 @@ static void scroll_cb(Fl_Scrollbar *sb, GtkAdjustment *adjust, int *p_need_alloc
   int v = sb->value();
   gtk_adjustment_set_value(adjust, v);
   *p_need_allocate = 1;
+  ((Fl_Widget*)sb->parent())->draw();
 }
 
 
