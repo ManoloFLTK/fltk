@@ -16,6 +16,7 @@
 
 /* TODO
  - finalize parameters of Fl_Scrollbar and GtkScroller
+ - substitute \n by ^J when single-line
  - implement undo/redo
  */
 
@@ -547,6 +548,12 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     text_view_scroll_mark_onscreen();
     draw();
     return 1;
+  } else if (Fl::event_key() == FL_Enter && kind == MULTIPLE_LINES && !widget->readonly()) {
+    gtk_text_buffer_delete_selection(buffer, true, true);
+    gtk_text_buffer_insert_at_cursor(buffer, "\n", 1);
+    text_view_scroll_mark_onscreen();
+    draw();
+    return 1;
   }
   return 0;
 }
@@ -734,29 +741,20 @@ int Fl_Cairo_Text_Widget_Driver::handle_paste() {
   gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
   gtk_text_buffer_get_start_iter(buffer, &start);
   gtk_text_buffer_get_end_iter(buffer, &end);
+  bool start_empty = gtk_text_iter_equal(&end, &start);
   bool need_apply_tag = gtk_text_iter_equal(&insert, &start) ||
     !gtk_text_iter_in_range(&insert, &start, &end);
-#if 1//SHOW_CR
-  extern char *strtok(char *str, const char *sep);
-  char *q = strtok((char*)Fl::event_text(), "\n");
-  while (q) {
-    gtk_text_buffer_insert_at_cursor(buffer,  q, (gint)strlen(q));
-    char buf[5];
-    int l = fl_utf8encode(0x240d, buf); // U240D = ␍ (carriage return)
-    buf[l] = 0;
-    gtk_text_buffer_insert_at_cursor(buffer,  buf, l);
-    gtk_text_buffer_insert_at_cursor(buffer,  "\n", 1);
-    q = strtok(NULL, "\n");
-  }
-#else
   gtk_text_buffer_insert_interactive(buffer, &insert,
                                      Fl::event_text(), (gint)strlen(Fl::event_text()),
                                      !widget->readonly());
-#endif
   if (need_apply_tag) {
     gtk_text_buffer_get_start_iter(buffer, &start);
     gtk_text_buffer_get_end_iter(buffer, &end);
     gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
+  }
+  if (start_empty) {
+    gtk_text_buffer_get_start_iter(buffer, &start);
+    gtk_text_buffer_place_cursor(buffer, &start);
   }
   draw();
   return 1;
