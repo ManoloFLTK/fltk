@@ -567,7 +567,6 @@ void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_onscreen() {
                                         strong.x, strong.y, &strong2.x, &strong2.y);
   if (strong2.y > widget->h() - lineheight || strong2.y < 0) {
     if (strong2.y > widget->h() - lineheight && strong.y+ lineheight/2 > upper) {
-      gtk_adjustment_set_upper(v_adjust, strong.y + lineheight/2);
       upper = strong.y + lineheight/2;
 //printf("upper=%.1f\n",upper);
       gtk_adjustment_set_upper(v_adjust, upper);
