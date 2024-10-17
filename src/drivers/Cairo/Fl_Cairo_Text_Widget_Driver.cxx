@@ -335,7 +335,7 @@ void Fl_Cairo_Text_Widget_Driver::replace(int from, int to, const char *text, in
   GtkTextIter start, end;
   gtk_text_buffer_get_start_iter(buffer, &start);
   gtk_text_buffer_get_end_iter(buffer, &end);
-  bool need_apply_tag = gtk_text_iter_equal(&iter, &start) || !gtk_text_iter_in_range(&iter, &start, &end);
+  bool need_apply_tag = gtk_text_iter_equal(&iter, &start) || gtk_text_iter_equal(&iter, &end);
   gtk_text_buffer_insert(buffer, &iter, text, len);
   if (need_apply_tag) {
     gtk_text_buffer_get_start_iter(buffer, &start);
@@ -385,8 +385,20 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
         if (del) {
           int insert = insert_position();
           replace(insert, insert - del, NULL, 0);
-        } else gtk_text_buffer_delete_selection(buffer, true, !widget->readonly());
-        gtk_text_buffer_insert_at_cursor(buffer, Fl::event_text(), Fl::event_length());
+        } else {
+          gtk_text_buffer_delete_selection(buffer, true, !widget->readonly());
+          GtkTextIter insert, start, end;
+          gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
+          gtk_text_buffer_get_start_iter(buffer, &start);
+          gtk_text_buffer_get_end_iter(buffer, &end);
+          bool need_apply_tag = gtk_text_iter_equal(&insert, &start) || gtk_text_iter_equal(&insert, &end);
+          gtk_text_buffer_insert_at_cursor(buffer, Fl::event_text(), Fl::event_length());
+          if (need_apply_tag) {
+            gtk_text_buffer_get_start_iter(buffer, &start);
+            gtk_text_buffer_get_end_iter(buffer, &end);
+            gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
+          }
+        }
         draw();
       }
     }
@@ -658,11 +670,19 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
       gtk_text_buffer_select_range(buffer, &insert, &where);
     } else if (Fl::event_clicks() && widget->selectable()) {
       gtk_text_buffer_place_cursor(buffer, &where);
-      gtk_text_iter_backward_word_start(&where);
-      GtkTextIter word_end;
-      gtk_text_iter_assign(&word_end, &where);
-      gtk_text_iter_forward_word_end(&where);
-      gtk_text_buffer_select_range(buffer, &where, &word_end);
+      if (Fl::event_clicks() >= 2) {
+        gtk_text_iter_forward_line(&where);
+        GtkTextIter begin_line;
+        gtk_text_iter_assign(&begin_line, &where);
+        gtk_text_iter_backward_line(&where);
+        gtk_text_buffer_select_range(buffer, &begin_line, &where);
+      } else {
+        gtk_text_iter_backward_word_start(&where);
+        GtkTextIter word_end;
+        gtk_text_iter_assign(&word_end, &where);
+        gtk_text_iter_forward_word_end(&where);
+        gtk_text_buffer_select_range(buffer, &where, &word_end);
+      }
     } else {
       gtk_text_buffer_place_cursor(buffer, &where);
     }
@@ -741,8 +761,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_paste() {
   gtk_text_buffer_get_start_iter(buffer, &start);
   gtk_text_buffer_get_end_iter(buffer, &end);
   bool start_empty = gtk_text_iter_equal(&end, &start);
-  bool need_apply_tag = gtk_text_iter_equal(&insert, &start) ||
-    !gtk_text_iter_in_range(&insert, &start, &end);
+  bool need_apply_tag = gtk_text_iter_equal(&insert, &start) || gtk_text_iter_equal(&insert, &end);
   gtk_text_buffer_insert_interactive(buffer, &insert,
                                      Fl::event_text(), (gint)strlen(Fl::event_text()),
                                      !widget->readonly());
