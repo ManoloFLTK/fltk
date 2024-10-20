@@ -36,7 +36,7 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   void text_view_scroll_mark_onscreen();
   void compute_lineheight();
   void text_view_scroll_mark_h(GtkTextIter *before);
-  void scan_all_paragraphs(GtkTextIter&, GtkTextIter&);
+  void scan_all_paragraphs();
 public:
   double upper;
   char *text_before_show;
@@ -308,8 +308,8 @@ const char *Fl_Cairo_Text_Widget_Driver::value() {
 }
 
 
-void Fl_Cairo_Text_Widget_Driver::scan_all_paragraphs(GtkTextIter &start, GtkTextIter &end) {
-  GtkTextIter current;
+void Fl_Cairo_Text_Widget_Driver::scan_all_paragraphs() {
+  GtkTextIter start, end, current;
   gtk_text_buffer_get_start_iter (buffer, &start);
   gtk_text_buffer_get_end_iter (buffer, &end);
   gtk_adjustment_set_upper(v_adjust, 0);
@@ -328,17 +328,16 @@ void Fl_Cairo_Text_Widget_Driver::scan_all_paragraphs(GtkTextIter &start, GtkTex
 //printf("upper=%.1f\n",upper);
       gtk_adjustment_set_upper(v_adjust, upper);
       gtk_adjustment_set_value(v_adjust, upper);
-      v_fl_scrollbar->maximum(upper);
-      v_fl_scrollbar->value(upper);
       gtk_widget_size_allocate(scrolled, &allocation);
     }
   }  while(gtk_text_iter_get_offset(&current) < gtk_text_iter_get_offset(&end));
+  v_fl_scrollbar->maximum(upper);
   gtk_adjustment_set_value(v_adjust, 0);
   v_fl_scrollbar->value(0);
   gtk_text_buffer_place_cursor(buffer, &start);
   compute_lineheight();
   need_allocate = 1;
-  while (need_allocate) draw();
+  draw();
 //printf("upper=%.1f v_fl_scrollbar=%d\n",gtk_adjustment_get_upper(v_adjust), v_fl_scrollbar->value());
 }
 
@@ -360,7 +359,7 @@ void Fl_Cairo_Text_Widget_Driver::value(const char *t, int len) {
       delete[] text_before_show;
       text_before_show = NULL;
     }
-    if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) scan_all_paragraphs(start, end);
+    if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) scan_all_paragraphs();
   }
 }
 
@@ -818,8 +817,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_paste() {
     gtk_text_buffer_get_start_iter(buffer, &start);
     gtk_text_buffer_place_cursor(buffer, &start);
     if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) {
-      gtk_text_buffer_get_end_iter(buffer, &end);
-      scan_all_paragraphs(start, end);
+      scan_all_paragraphs();
     }
   }
   draw();
