@@ -3,12 +3,26 @@
 #include <FL/Fl_Native_Text_Widget.H>
 #include <FL/Fl_Input.H>
 
+#include <stdio.h>
+
 void delete_win(Fl_Widget *w) {
   delete w;
 }
 
 void cb(Fl_Widget *, void *d) {
   printf("%s runs callback\n",(char*)d);
+}
+
+void load_file(Fl_Native_Multiline_Text_Widget *box, const char *fname)
+{
+  FILE *in = fopen(fname, "r");
+  fseek(in, 0, SEEK_END);
+  long pos = ftell(in);
+  rewind(in);
+  char *text = new char[pos + 1];
+  fread(text, 1, pos, in);
+  fclose(in);
+  box->value(text, (int)pos);
 }
 
 int main(int argc, char **argv) {
@@ -24,11 +38,12 @@ int main(int argc, char **argv) {
   box->color(FL_LIGHT2);
   box->box(FL_DOWN_FRAME);
   box->right_to_left(true);
-  box->value(
+  /*box->value(
     "أنو عَبد الله مُحَمَّد بن مُوسَى الخَوارِزمي عالم رياضيات وفلك وجغرافيا مسلم. يكنى بأبي جعفر. قيل أنه ولد حوالي 164هـ 781م وقيل أنه توفيَ بعد 232 هـ أي (بعد 847م)."
  //"Le comité Nobel de physique a surpris son monde. En célébrant, mardi 8 octobre, deux pionniers des « réseaux de neurones artificiels », l’Américain John Hopfield (91 ans) et le Britannique Geoffrey Hinton (76 ans), il surfe sur la tendance actuelle de l’intelligence artificielle, qu’on associerait plus volontiers à l’informatique."
  //" C’est la reconnaissance qu’un courant de la physique, la physique statistique, a fait l’effort d’aller vers d’autres domaines. C’est une bonne nouvelle , constate Rémi Monasson, chercheur du CNRS au Laboratoire de physique de l’Ecole normale supérieure de Paris. Stéphane Mallat, professeur au Collège de France, salue un prix « surprenant » et constate qu’en retour, l’intelligence artificielle aide beaucoup les physiciens de nos jours, pour l’imagerie, la modélisation, les simulations…"
-            );
+            );*/
+  load_file(box, argv[1]);
 #define SUBWIN 0//1
 #if SUBWIN
   Fl_Window *subwin = new Fl_Window(20, box->y()+box->h()+20, 450, 50+40,"subwin");
