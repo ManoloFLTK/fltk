@@ -32,17 +32,18 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   //PangoLayout *layout;
   GtkWidget *window;
   GtkTextTag* font_size_tag;
+  char *text_before_show;
   GtkAllocation allocation;
+  double upper;
   int lineheight;
+  int need_allocate;
   static const int h_slider_height = 10;
+  static void textbuffer_changed(GtkTextBuffer *buffer);
   void text_view_scroll_mark_onscreen();
   void compute_lineheight();
   void text_view_scroll_mark_h(GtkTextIter *before);
   void scan_all_paragraphs();
 public:
-  double upper;
-  char *text_before_show;
-  int need_allocate;
   Fl_Cairo_Text_Widget_Driver();
   ~Fl_Cairo_Text_Widget_Driver();
   void show_widget() FL_OVERRIDE;
@@ -98,9 +99,10 @@ static void mytagf(GtkTextTag *tag, void *data) {
   *val = tag;
 }
 
-typedef void (*changed_f_t)(GtkTextBuffer*);
-changed_f_t old_changed_f = NULL;
-static void fl_textbuffer_changed(GtkTextBuffer *buffer) {
+
+static void (*old_changed_f)(GtkTextBuffer*) = NULL;
+
+void Fl_Cairo_Text_Widget_Driver::textbuffer_changed(GtkTextBuffer *buffer) {
   //old_changed_f(buffer); //utile?
   GtkTextTagTable *table = gtk_text_buffer_get_tag_table(buffer);
 //printf("gtk_text_tag_table_get_size=%d\n",gtk_text_tag_table_get_size(table));
@@ -179,11 +181,11 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
     GtkTextBufferClass *tbc = GTK_TEXT_BUFFER_GET_CLASS(buffer);
     if (!old_changed_f) {
       old_changed_f = tbc->changed;
-      tbc->changed = fl_textbuffer_changed;
+      tbc->changed = textbuffer_changed;
     }
     // Create a GtkTextTag to set the font+size for the text_view and attach it to the GtkTextBuffer
     // Name this tag with the address of corresponding Fl_Cairo_Text_Widget_Driver
-    // This will allow fl_textbuffer_changed() to recover the Fl_Cairo_Text_Widget_Driver from the buffer
+    // This will allow textbuffer_changed() to recover the Fl_Cairo_Text_Widget_Driver from the buffer
     char text_tag_name[20];
     snprintf(text_tag_name, 20, "%p", this);
     char font_str[88];
