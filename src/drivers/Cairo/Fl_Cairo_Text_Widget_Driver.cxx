@@ -794,27 +794,22 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
 
 
 int Fl_Cairo_Text_Widget_Driver::handle_paste() {
+  if (widget->readonly()) { fl_beep(); return 1; }
   GtkTextIter insert, start, end;
-  gtk_text_buffer_delete_selection (buffer, true, !widget->readonly());
-  gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
+  gtk_text_buffer_delete_selection (buffer, true, true);
   gtk_text_buffer_get_start_iter(buffer, &start);
   gtk_text_buffer_get_end_iter(buffer, &end);
-  bool start_empty = gtk_text_iter_equal(&end, &start);
+  if (gtk_text_iter_equal(&end, &start)) {
+    value(Fl::event_text(), Fl::event_length());
+    return 1;
+  }
+  gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
   bool need_apply_tag = gtk_text_iter_equal(&insert, &start) || gtk_text_iter_equal(&insert, &end);
-  gtk_text_buffer_insert_interactive(buffer, &insert,
-                                     Fl::event_text(), (gint)strlen(Fl::event_text()),
-                                     !widget->readonly());
+  gtk_text_buffer_insert_interactive(buffer, &insert, Fl::event_text(), Fl::event_length(), true);
   if (need_apply_tag) {
     gtk_text_buffer_get_start_iter(buffer, &start);
     gtk_text_buffer_get_end_iter(buffer, &end);
     gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
-  }
-  if (start_empty) {
-    gtk_text_buffer_get_start_iter(buffer, &start);
-    gtk_text_buffer_place_cursor(buffer, &start);
-    if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) {
-      scan_all_paragraphs();
-    }
   }
   draw();
   return 1;
