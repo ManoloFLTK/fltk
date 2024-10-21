@@ -670,6 +670,9 @@ static int drag_start = -1;
 int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
   if (v_fl_scrollbar && Fl::event_inside(v_fl_scrollbar)) return v_fl_scrollbar->handle(event);
   if (h_fl_slider && Fl::event_inside(h_fl_slider)) return h_fl_slider->handle(event);
+  double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
+  double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
+  int v_scroll_w = (v_fl_scrollbar && widget->right_to_left() ? v_fl_scrollbar->w() : 0);
 
   if (event == FL_PUSH) {
     if (Fl::dnd_text_ops() && (Fl::event_button() != FL_RIGHT_MOUSE) && widget->selectable()) {
@@ -680,10 +683,9 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
       double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
       double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
       gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where,
-                                          Fl::event_x() - widget->x() + dh,
-                                          Fl::event_y() - widget->y() + dv);
+        Fl::event_x() - (widget->x() + Fl::box_dx(widget->box()) + v_scroll_w) + dh,
+        Fl::event_y() - (widget->y() + Fl::box_dy(widget->box())) + dv);
       gtk_text_buffer_place_cursor(buffer, &where);
-      //draw();
 
       newpos = where;
       gtk_text_buffer_select_range(buffer, &oldpos, &oldmark);
@@ -701,11 +703,9 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
     }
     
     GtkTextIter where, insert;
-    double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
-    double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
     gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where,
-                                        Fl::event_x() - widget->x() + dh,
-                                        Fl::event_y() - widget->y() + dv);
+      Fl::event_x() - (widget->x() + Fl::box_dx(widget->box()) + v_scroll_w) + dh,
+      Fl::event_y() - (widget->y() + Fl::box_dy(widget->box())) + dv);
     gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
     if (Fl::event_shift() && widget->selectable()) {
       gtk_text_buffer_select_range(buffer, &insert, &where);
@@ -747,11 +747,9 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
     }
     // make selection follow the pointer
     GtkTextIter where, insert;
-    double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
-    double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
     gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where,
-                                        Fl::event_x() - widget->x() + dh,
-                                        Fl::event_y() - widget->y() + dv);
+      Fl::event_x() - (widget->x() + Fl::box_dx(widget->box()) + v_scroll_w) + dh,
+      Fl::event_y() - (widget->y() + Fl::box_dy(widget->box())) + dv);
     gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
     gtk_text_buffer_select_range(buffer, &insert, &where);
     draw();
@@ -906,9 +904,10 @@ int Fl_Cairo_Text_Widget_Driver::handle_dnd(int event) {
         GtkTextIter where;
         double dv = (v_adjust ? gtk_adjustment_get_value(v_adjust) : 0);
         double dh = (h_adjust ? gtk_adjustment_get_value(h_adjust) : 0);
+        int v_scroll_w = (v_fl_scrollbar && widget->right_to_left() ? v_fl_scrollbar->w() : 0);
         bool b = gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where,
-                                           Fl::event_x() - widget->x() + dh,
-                                           Fl::event_y() - widget->y() + dv);
+          Fl::event_x() - (widget->x() + Fl::box_dx(widget->box()) + v_scroll_w) + dh,
+          Fl::event_y() - (widget->y() + Fl::box_dy(widget->box())) + dv);
         if (b) {
           gtk_text_buffer_place_cursor(buffer, &where);
           draw();
