@@ -313,23 +313,23 @@ void Fl_Cairo_Text_Widget_Driver::scan_all_paragraphs() {
   gtk_text_buffer_get_start_iter (buffer, &start);
   gtk_text_buffer_get_end_iter (buffer, &end);
   gtk_adjustment_set_upper(v_adjust, 0);
+  while (need_allocate) draw();
   upper = 0;
 //printf("end=%d chars upper=%.1f\n",gtk_text_iter_get_offset(&end), upper);
-  while (need_allocate) draw();
   current = start;
   do {
 //printf("current=%d\n",gtk_text_iter_get_offset(&current));
-    gboolean b = gtk_text_iter_forward_line(&current);
+    /*gboolean b =*/ gtk_text_iter_forward_line(&current);
 //printf("next line=%d b=%d\n",gtk_text_iter_get_offset(&current),b);
     GdkRectangle strong;
     gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), &current, &strong, NULL);
     if (strong.y > upper) {
-      upper = strong.y;
+      upper = strong.y + 1;
 //printf("upper=%.1f\n",upper);
       gtk_adjustment_set_upper(v_adjust, upper);
-      gtk_adjustment_set_value(v_adjust, upper);
-      gtk_widget_size_allocate(scrolled, &allocation);
     }
+    gtk_adjustment_set_value(v_adjust, upper);
+    //gtk_widget_size_allocate(scrolled, &allocation);
   }  while(gtk_text_iter_get_offset(&current) < gtk_text_iter_get_offset(&end));
   v_fl_scrollbar->maximum(upper);
   gtk_adjustment_set_value(v_adjust, 0);
