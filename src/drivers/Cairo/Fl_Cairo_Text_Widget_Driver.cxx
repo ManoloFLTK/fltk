@@ -24,7 +24,8 @@
 class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   GtkWidget *scrolled;
   GtkWidget *v_bar, *h_bar;
-  Fl_Scrollbar *v_fl_scrollbar, *h_fl_scrollbar;
+  Fl_Scrollbar *v_fl_scrollbar;
+  Fl_Slider *h_fl_slider;
   GtkAdjustment *v_adjust, *h_adjust;
   GtkWidget *text_view;
   GtkTextBuffer *buffer;
@@ -33,6 +34,7 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   GtkTextTag* font_size_tag;
   GtkAllocation allocation;
   int lineheight;
+  static const int h_slider_height = 10;
   void text_view_scroll_mark_onscreen();
   void compute_lineheight();
   void text_view_scroll_mark_h(GtkTextIter *before);
@@ -77,7 +79,8 @@ Fl_Cairo_Text_Widget_Driver::Fl_Cairo_Text_Widget_Driver() : Fl_Text_Widget_Driv
   need_allocate = 0;
   v_bar = h_bar = NULL;
   v_adjust = h_adjust = NULL;
-  v_fl_scrollbar = h_fl_scrollbar = NULL;
+  v_fl_scrollbar = NULL;
+  h_fl_slider = NULL;
   lineheight = 0;
   upper = 0;
 }
@@ -112,7 +115,7 @@ static void fl_textbuffer_changed(GtkTextBuffer *buffer) {
 }
 
 
-static void scroll_cb(Fl_Scrollbar *sb, GtkAdjustment *adjust, int *p_need_allocate) {
+static void scroll_cb(Fl_Slider *sb, GtkAdjustment *adjust, int *p_need_allocate) {
   int v = sb->value();
   gtk_adjustment_set_value(adjust, v);
   *p_need_allocate = 1;
@@ -133,28 +136,28 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
       v_fl_scrollbar = new Fl_Scrollbar(0, 0, 1, 1, NULL);
     }
     if (kind == Fl_Text_Widget_Driver::SINGLE_LINE || !widget->wrap()) {
-      h_fl_scrollbar = new Fl_Scrollbar(0, 0, 1, 1, NULL);
-      h_fl_scrollbar->type(FL_HORIZONTAL);
+      h_fl_slider = new Fl_Slider(0, 0, 1, 1, NULL);
+      h_fl_slider->type(FL_HORIZONTAL);
     }
     widget->end();
     if (v_fl_scrollbar) {
       v_adjust = gtk_adjustment_new(0, 0, 10, 1, 1, 5); // temp values
       FL_FUNCTION_CALLBACK_3(v_fl_scrollbar, scroll_cb,
-                             Fl_Scrollbar*, v_fl_scrollbar,
+                             Fl_Slider*, v_fl_scrollbar,
                              GtkAdjustment*, v_adjust,
                              int*, &need_allocate);
     }
-    if (h_fl_scrollbar) {
+    if (h_fl_slider) {
       h_adjust = gtk_adjustment_new(0, 0, 10, 1, 1, 5);
-      FL_FUNCTION_CALLBACK_3(h_fl_scrollbar, scroll_cb,
-                             Fl_Scrollbar*, h_fl_scrollbar,
+      FL_FUNCTION_CALLBACK_3(h_fl_slider, scroll_cb,
+                             Fl_Slider*, h_fl_slider,
                              GtkAdjustment*, h_adjust,
                              int*, &need_allocate);
     }
     scrolled = gtk_scrolled_window_new(h_adjust, v_adjust);
     text_view = gtk_text_view_new();
     if (v_fl_scrollbar) v_bar = gtk_scrolled_window_get_vscrollbar(GTK_SCROLLED_WINDOW(scrolled));
-    if (h_fl_scrollbar) h_bar = gtk_scrolled_window_get_hscrollbar(GTK_SCROLLED_WINDOW(scrolled));
+    if (h_fl_slider) h_bar = gtk_scrolled_window_get_hscrollbar(GTK_SCROLLED_WINDOW(scrolled));
     gtk_text_view_set_left_margin(GTK_TEXT_VIEW(text_view), 3);
     gtk_text_view_set_right_margin(GTK_TEXT_VIEW(text_view), 3);
     //layout = gtk_widget_create_pango_layout(text_view, NULL);
@@ -230,38 +233,31 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
 void Fl_Cairo_Text_Widget_Driver::draw()  {
   if (!widget->visible()) return;
   if (Fl_Window::current() != widget->window()) widget->window()->make_current();
-  int tmp_width = widget->w() - Fl::box_dw(widget->box()) - (v_bar ? gtk_widget_get_allocated_width(v_bar) : 0);
-  // gtk_widget_get_allocated_height(h_bar) may be incorrect (==1) here and become correct after
-  // gtk_widget_size_allocate(scrolled,..)
-  int tmp_height = widget->h() - Fl::box_dw(widget->box()) - (h_bar ? gtk_widget_get_allocated_height(h_bar) : 0);
-  if (need_allocate || tmp_width != allocation.width || tmp_height != allocation.height) {
-    allocation.width = tmp_width;
-    allocation.height = tmp_height;
+  int text_width = widget->w() - Fl::box_dw(widget->box()) - (v_bar ? Fl::scrollbar_size() : 0);
+  int text_height = widget->h() - Fl::box_dh(widget->box()) - (h_bar ? h_slider_height : 0);
+  if (need_allocate || text_width != allocation.width || text_height != allocation.height) {
+    allocation.width = text_width;
+    allocation.height = text_height;
     gtk_widget_size_allocate(scrolled, &allocation);
     GtkAllocation alloc_v_scroll, alloc_h_scroll;
     if (v_fl_scrollbar) gtk_widget_get_allocated_size(v_bar, &alloc_v_scroll, NULL);
-    if (h_fl_scrollbar) gtk_widget_get_allocated_size(h_bar, &alloc_h_scroll, NULL);
-    if (need_allocate && (v_bar || h_bar)) {
-      allocation.width = widget->w() - Fl::box_dw(widget->box()) - (v_bar ? alloc_v_scroll.width : 0);
-      allocation.height = widget->h() - Fl::box_dh(widget->box()) - (h_bar ? alloc_h_scroll.height : 0);
-      gtk_widget_size_allocate(scrolled, &allocation);
-    }
+    if (h_fl_slider) gtk_widget_get_allocated_size(h_bar, &alloc_h_scroll, NULL);
     if (v_fl_scrollbar)  {
       v_fl_scrollbar->resize(widget->x() + Fl::box_dx(widget->box()) +
                              (widget->right_to_left() ? 0 : allocation.width),
                              widget->y() + Fl::box_dy(widget->box()),
-                             alloc_v_scroll.width, allocation.height);
+                             Fl::scrollbar_size(), allocation.height);
       v_fl_scrollbar->parent()->init_sizes();
       if (need_allocate == 1) upper = gtk_adjustment_get_upper(v_adjust);
       v_fl_scrollbar->value(v_fl_scrollbar->value(), allocation.height, 1, int (upper));
     }
-    if (h_fl_scrollbar)  {
-      h_fl_scrollbar->resize(widget->x() + Fl::box_dx(widget->box()) ,
+    if (h_fl_slider)  {
+      h_fl_slider->resize(widget->x() + Fl::box_dx(widget->box()) ,
                              widget->y() + Fl::box_dy(widget->box()) + allocation.height,
-                             allocation.width, alloc_h_scroll.height);
-      h_fl_scrollbar->parent()->init_sizes();
+                             allocation.width, h_slider_height);
+      h_fl_slider->parent()->init_sizes();
       gdouble d = gtk_adjustment_get_upper(h_adjust);
-      h_fl_scrollbar->value(h_fl_scrollbar->value(), allocation.width, 1, int (d));
+      h_fl_slider->scrollvalue(h_fl_slider->value(), allocation.width, 1, int(d));
     }
     if (need_allocate > 0) need_allocate--;
   }
@@ -291,7 +287,7 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
   Fl_Surface_Device::pop_current();
   fl_copy_offscreen(widget->x() + Fl::box_dx(widget->box()) +
                     (v_fl_scrollbar && widget->right_to_left() ? v_fl_scrollbar->w() : 0),
-                    widget->y() + Fl::box_dy(widget->box()), tmp_width, tmp_height, surface->offscreen(), 0, 0);
+                    widget->y() + Fl::box_dy(widget->box()), text_width, text_height, surface->offscreen(), 0, 0);
   delete surface;
   widget->damage(FL_DAMAGE_CHILD); // important
 }
@@ -574,7 +570,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
       if (!lineheight) compute_lineheight();
       text_view_scroll_mark_onscreen();
     }
-    if (h_fl_scrollbar) {
+    if (h_fl_slider) {
       text_view_scroll_mark_h(&before);
     }
     draw();
@@ -644,7 +640,7 @@ void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_h(GtkTextIter *before) {
   if (strong.x > allocation.width || strong.x < 0) {
     double d = gtk_adjustment_get_value(h_adjust);
     gtk_adjustment_set_value(h_adjust, d + charwidth);
-    h_fl_scrollbar->value( (int)gtk_adjustment_get_value(h_adjust) );
+    h_fl_slider->value( (int)gtk_adjustment_get_value(h_adjust) );
     if (!need_allocate) need_allocate = 1; // important
   }
 }
@@ -671,7 +667,7 @@ static int drag_start = -1;
 
 int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
   if (v_fl_scrollbar && Fl::event_inside(v_fl_scrollbar)) return v_fl_scrollbar->handle(event);
-  if (h_fl_scrollbar && Fl::event_inside(h_fl_scrollbar)) return h_fl_scrollbar->handle(event);
+  if (h_fl_slider && Fl::event_inside(h_fl_slider)) return h_fl_slider->handle(event);
 
   if (event == FL_PUSH) {
     if (Fl::dnd_text_ops() && (Fl::event_button() != FL_RIGHT_MOUSE) && widget->selectable()) {
@@ -774,7 +770,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
             widget->x() + Fl::box_dx(widget->box()), widget->y() + Fl::box_dy(widget->box()),
             widget->w() - Fl::box_dw(widget->box()), widget->h() - Fl::box_dh(widget->box()));
     if (b && v_fl_scrollbar && Fl::event_inside(v_fl_scrollbar)) b = false;
-    if (b && h_fl_scrollbar && Fl::event_inside(h_fl_scrollbar)) b = false;
+    if (b && h_fl_slider && Fl::event_inside(h_fl_slider)) b = false;
     widget->window()->cursor(b ? FL_CURSOR_INSERT : FL_CURSOR_DEFAULT);
     return 1;
   } else if(event == FL_LEAVE) {
@@ -786,10 +782,10 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
       int changed = v_fl_scrollbar->value( v_fl_scrollbar->clamp(val) );
       if (changed) v_fl_scrollbar->do_callback();
     }
-    if (h_fl_scrollbar) {
-      int val = h_fl_scrollbar->value() + widget->textsize() * Fl::event_dx();
-      int changed = h_fl_scrollbar->value( h_fl_scrollbar->clamp(val) );
-      if (changed) h_fl_scrollbar->do_callback();
+    if (h_fl_slider) {
+      int val = h_fl_slider->value() + widget->textsize() * Fl::event_dx();
+      int changed = h_fl_slider->value( h_fl_slider->clamp(val) );
+      if (changed) h_fl_slider->do_callback();
     }
     return 1;
   }
