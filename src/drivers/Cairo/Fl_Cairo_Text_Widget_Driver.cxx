@@ -43,6 +43,7 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   void compute_lineheight();
   void text_view_scroll_mark_h(GtkTextIter *before);
   void scan_all_paragraphs();
+  static void scan_single_line(Fl_Cairo_Text_Widget_Driver *o);
 public:
   Fl_Cairo_Text_Widget_Driver();
   ~Fl_Cairo_Text_Widget_Driver();
@@ -100,10 +101,19 @@ static void mytagf(GtkTextTag *tag, void *data) {
 }
 
 
+void Fl_Cairo_Text_Widget_Driver::scan_single_line(Fl_Cairo_Text_Widget_Driver *o) {
+  Fl::remove_check((Fl_Timeout_Handler)scan_single_line, o);
+  while (o->need_allocate-- > 0) o->draw();
+  int val = gtk_adjustment_get_value(o->h_adjust);
+  o->h_fl_slider->scrollvalue(val, o->h_fl_slider->w(), 1, gtk_adjustment_get_upper(o->h_adjust));
+}
+
+
 static void (*old_changed_f)(GtkTextBuffer*) = NULL;
 
 void Fl_Cairo_Text_Widget_Driver::textbuffer_changed(GtkTextBuffer *buffer) {
-  //old_changed_f(buffer); //utile?
+  static bool busy = false;
+  if (busy) return;
   GtkTextTagTable *table = gtk_text_buffer_get_tag_table(buffer);
 //printf("gtk_text_tag_table_get_size=%d\n",gtk_text_tag_table_get_size(table));
   GtkTextTag *tag;
@@ -113,6 +123,22 @@ void Fl_Cairo_Text_Widget_Driver::textbuffer_changed(GtkTextBuffer *buffer) {
   Fl_Cairo_Text_Widget_Driver *dr;
   sscanf(strval, "%p", &dr);
   free(strval);
+  if (dr->kind == SINGLE_LINE) {
+    GtkTextIter start, end;
+    gboolean found = true;
+    gtk_text_buffer_get_start_iter(buffer, &start);
+    while (found) {
+      found = gtk_text_iter_forward_search(&start, "\n", GTK_TEXT_SEARCH_TEXT_ONLY,
+                                           &start, &end, NULL);
+      if (found) {
+        busy = true;
+        gtk_text_buffer_delete(buffer, &start, &end);
+        gtk_text_buffer_insert(buffer, &start, "␍", -1); // U+240D
+        busy = false;
+      }
+    }
+    Fl::add_check((Fl_Timeout_Handler)scan_single_line, dr);
+  }
   dr->need_allocate = 2;
 }
 
@@ -252,6 +278,7 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
       v_fl_scrollbar->parent()->init_sizes();
       if (need_allocate == 1) upper = gtk_adjustment_get_upper(v_adjust);
       v_fl_scrollbar->value(v_fl_scrollbar->value(), allocation.height, 1, int (upper));
+      if (lineheight) v_fl_scrollbar->linesize(lineheight);
     }
     if (h_fl_slider)  {
       h_fl_slider->resize(widget->x() + Fl::box_dx(widget->box()) ,
@@ -328,7 +355,7 @@ void Fl_Cairo_Text_Widget_Driver::scan_all_paragraphs() {
     }
     gtk_adjustment_set_value(v_adjust, upper);
     //gtk_widget_size_allocate(scrolled, &allocation);
-  }  while(gtk_text_iter_get_offset(&current) < gtk_text_iter_get_offset(&end));
+  }  while(gtk_text_iter_compare(&current, &end) < 0);
   v_fl_scrollbar->maximum(upper);
   gtk_adjustment_set_value(v_adjust, 0);
   v_fl_scrollbar->value(0);
