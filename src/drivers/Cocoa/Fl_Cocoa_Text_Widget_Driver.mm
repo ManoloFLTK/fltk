@@ -436,7 +436,7 @@ void Fl_Cocoa_Text_Widget_Driver::copy() {
     sub = [sub stringByReplacingOccurrencesOfString:pdf withString:@""];
     sub = [sub stringByReplacingOccurrencesOfString:rle withString:@""];
     sub = [sub stringByReplacingOccurrencesOfString:@"␍" withString:@"\n"];
-    sub = [sub stringByReplacingOccurrencesOfString:@"^I" withString:@"\t"];
+    sub = [sub stringByReplacingOccurrencesOfString:@"␉" withString:@"\t"];
     NSPasteboard *clip = [NSPasteboard generalPasteboard];
     [clip declareTypes:[NSArray arrayWithObject:@"public.utf8-plain-text"] owner:nil];
     [clip setString:sub forType:@"public.utf8-plain-text"];
@@ -448,13 +448,13 @@ void Fl_Cocoa_Text_Widget_Driver::paste() {
   if (text_view->driver->kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) {
     [text_view pasteAsPlainText:nil];
   } else {
-    // When single-line, replace newlines by "␍" and tabs by "^I" in pasted text
+    // When single-line, replace newlines by "␍" and tabs by "␉" in pasted text
     NSPasteboard *clip = [NSPasteboard generalPasteboard];
     NSString *found = [clip availableTypeFromArray:[NSArray arrayWithObjects:@"public.utf8-plain-text", @"public.utf16-plain-text", @"com.apple.traditional-mac-plain-text", nil]];
     if (found) {
       NSString *s = [clip stringForType:found];
       s = [s stringByReplacingOccurrencesOfString:@"\n" withString:@"␍"];
-      s = [s stringByReplacingOccurrencesOfString:@"\t" withString:@"^I"];
+      s = [s stringByReplacingOccurrencesOfString:@"\t" withString:@"␉"];
       NSRange r = [text_view selectedRange];
       [text_view insertText:s replacementRange:r];
     }

@@ -36,7 +36,6 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   double upper;
   int lineheight;
   int need_allocate;
-  static const char *U240D_utf8;
   static const int h_slider_height = 10;
   static void textbuffer_changed(GtkTextBuffer *buffer);
   void text_view_scroll_mark_onscreen();
@@ -96,9 +95,6 @@ Fl_Cairo_Text_Widget_Driver::~Fl_Cairo_Text_Widget_Driver() {
 }
 
 
-const char *Fl_Cairo_Text_Widget_Driver::U240D_utf8 = "␍"; // U+240D
-
-
 static void mytagf(GtkTextTag *tag, void *data) {
   GtkTextTag **val = (GtkTextTag**)data;
   *val = tag;
@@ -138,7 +134,19 @@ void Fl_Cairo_Text_Widget_Driver::textbuffer_changed(GtkTextBuffer *buffer) {
       if (found) {
         busy = true;
         gtk_text_buffer_delete(buffer, &start, &end);
-        gtk_text_buffer_insert(buffer, &start, U240D_utf8, -1);
+        gtk_text_buffer_insert(buffer, &start, "␍", -1);
+        busy = false;
+      }
+    }
+    found = true;
+    gtk_text_buffer_get_start_iter(buffer, &start);
+    while (found) { // replace all \t by ␉
+      found = gtk_text_iter_forward_search(&start, "\t", GTK_TEXT_SEARCH_TEXT_ONLY,
+                                           &start, &end, NULL);
+      if (found) {
+        busy = true;
+        gtk_text_buffer_delete(buffer, &start, &end);
+        gtk_text_buffer_insert(buffer, &start, "␉", -1);
         busy = false;
       }
     }
@@ -987,7 +995,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_dnd(int event) {
 }
 
 
-// replace ␍ (U+240d) characters in text by \n
+// replace ␍ (U+240d) characters in text by \n  and ␉ characters by \t
 void Fl_Cairo_Text_Widget_Driver::put_back_newlines(char *text) {
   // ␍ or runs of ␍ are found bracketted by U+202c / U+202b
   // we also remove these
@@ -999,11 +1007,12 @@ void Fl_Cairo_Text_Widget_Driver::put_back_newlines(char *text) {
   char *p;
   int lskip;
   long l = strlen(text);
-  while ( l > 0 && (p = strstr(text, U240D_utf8))) { // search for ␍
+  char *save_text = text;
+  while ( l > 0 && (p = strstr(text, "␍"))) { // search for ␍
     lskip = lcr;
     char *q = p + lcr;
     int newlines = 1; // number of successive ␍ characters
-    while (memcmp(q, U240D_utf8, lcr) == 0) { q += lcr; lskip += lcr; newlines++; }
+    while (memcmp(q, "␍", lcr) == 0) { q += lcr; lskip += lcr; newlines++; }
     if (memcmp(q, RLE_utf8, lcr) == 0) { lskip += lcr; } // remove U+202b after
     if (p-3 >= text && memcmp(p-3, PDF_utf8, lcr) == 0) { // remove U+202c before
       p -= lcr;
@@ -1012,6 +1021,16 @@ void Fl_Cairo_Text_Widget_Driver::put_back_newlines(char *text) {
     memset(p, '\n', newlines);
     memmove(p+newlines, p + lskip, l - (p + lskip - text) + 1);
     long offset = p + newlines - text;
+    text += offset;
+    l -= offset;
+  }
+  
+  text = save_text;
+  l = strlen(text);
+  while ( l > 0 && (p = strstr(text, "␉"))) { // search for ␉
+    *p = '\t';
+    memmove(p + 1, p + lcr, l - (p + lcr - text) + 1);
+    long offset = p + 1 - text;
     text += offset;
     l -= offset;
   }
