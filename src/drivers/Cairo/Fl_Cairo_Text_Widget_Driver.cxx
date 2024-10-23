@@ -16,7 +16,6 @@
 
 /* TODO
  - finalize parameters of Fl_Scrollbar and GtkScroller
- - substitute \n by ^J when single-line
  - implement undo/redo
  - lineheight seems to vary with something?
  */
@@ -37,6 +36,7 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   double upper;
   int lineheight;
   int need_allocate;
+  static const char *U240D_utf8;
   static const int h_slider_height = 10;
   static void textbuffer_changed(GtkTextBuffer *buffer);
   void text_view_scroll_mark_onscreen();
@@ -44,6 +44,7 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   void text_view_scroll_mark_h(GtkTextIter *before);
   void scan_all_paragraphs();
   static void scan_single_line(Fl_Cairo_Text_Widget_Driver *o);
+  static void put_back_newlines(char *text);
 public:
   Fl_Cairo_Text_Widget_Driver();
   ~Fl_Cairo_Text_Widget_Driver();
@@ -95,17 +96,21 @@ Fl_Cairo_Text_Widget_Driver::~Fl_Cairo_Text_Widget_Driver() {
 }
 
 
+const char *Fl_Cairo_Text_Widget_Driver::U240D_utf8 = "␍"; // U+240D
+
+
 static void mytagf(GtkTextTag *tag, void *data) {
   GtkTextTag **val = (GtkTextTag**)data;
   *val = tag;
 }
 
 
+// compute the full width of the newly changed single-line text and adjust h_fl_slider to it
 void Fl_Cairo_Text_Widget_Driver::scan_single_line(Fl_Cairo_Text_Widget_Driver *o) {
   Fl::remove_check((Fl_Timeout_Handler)scan_single_line, o);
-  while (o->need_allocate-- > 0) o->draw();
+  while (o->need_allocate > 0) o->draw();
   int val = gtk_adjustment_get_value(o->h_adjust);
-  o->h_fl_slider->scrollvalue(val, o->h_fl_slider->w(), 1, gtk_adjustment_get_upper(o->h_adjust));
+  o->h_fl_slider->scrollvalue(val, o->h_fl_slider->w(), 0, gtk_adjustment_get_upper(o->h_adjust));
 }
 
 
@@ -127,13 +132,13 @@ void Fl_Cairo_Text_Widget_Driver::textbuffer_changed(GtkTextBuffer *buffer) {
     GtkTextIter start, end;
     gboolean found = true;
     gtk_text_buffer_get_start_iter(buffer, &start);
-    while (found) {
+    while (found) { // replace all \n by ␍
       found = gtk_text_iter_forward_search(&start, "\n", GTK_TEXT_SEARCH_TEXT_ONLY,
                                            &start, &end, NULL);
       if (found) {
         busy = true;
         gtk_text_buffer_delete(buffer, &start, &end);
-        gtk_text_buffer_insert(buffer, &start, "␍", -1); // U+240D
+        gtk_text_buffer_insert(buffer, &start, U240D_utf8, -1);
         busy = false;
       }
     }
@@ -286,7 +291,7 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
                              allocation.width, h_slider_height);
       h_fl_slider->parent()->init_sizes();
       gdouble d = gtk_adjustment_get_upper(h_adjust);
-      h_fl_slider->scrollvalue(h_fl_slider->value(), allocation.width, 1, int(d));
+      h_fl_slider->scrollvalue(h_fl_slider->value(), allocation.width, 0, int(d));
     }
     if (need_allocate > 0) need_allocate--;
   }
@@ -481,7 +486,8 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
       gtk_text_buffer_get_iter_at_mark(buffer, &start, gtk_text_buffer_get_insert(buffer));
       gtk_text_buffer_get_iter_at_mark(buffer, &end, gtk_text_buffer_get_selection_bound(buffer));
       gtk_text_buffer_select_range(buffer, &start, &end);
-      const char *buf = gtk_text_buffer_get_text(buffer, &start, &end, false);
+      char *buf = gtk_text_buffer_get_text(buffer, &start, &end, false);
+      if (kind == SINGLE_LINE) put_back_newlines(buf);
       Fl::copy(buf, (int)strlen(buf), 1);
       delete[] buf;
       gtk_text_buffer_delete(buffer, &start, &end);
@@ -550,7 +556,8 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     gtk_text_buffer_get_iter_at_mark(buffer, &start, gtk_text_buffer_get_insert(buffer));
     gtk_text_buffer_get_iter_at_mark(buffer, &end, gtk_text_buffer_get_selection_bound(buffer));
     gtk_text_buffer_select_range(buffer, &start, &end);
-    const char *buf = gtk_text_buffer_get_text(buffer, &start, &end, false);
+    char *buf = gtk_text_buffer_get_text(buffer, &start, &end, false);
+    if (kind == SINGLE_LINE) put_back_newlines(buf);
     Fl::copy(buf, (int)strlen(buf), 1);
     delete[] buf;
     return 1;
@@ -576,7 +583,8 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     gtk_text_buffer_get_iter_at_mark(buffer, &start, gtk_text_buffer_get_insert(buffer));
     gtk_text_buffer_get_iter_at_mark(buffer, &end, gtk_text_buffer_get_selection_bound(buffer));
     gtk_text_buffer_select_range(buffer, &start, &end);
-    const char *buf = gtk_text_buffer_get_text(buffer, &start, &end, false);
+    char *buf = gtk_text_buffer_get_text(buffer, &start, &end, false);
+    if (kind == SINGLE_LINE) put_back_newlines(buf);
     Fl::copy(buf, (int)strlen(buf), 1);
     delete[] buf;
     gtk_text_buffer_delete_selection(buffer, true, !widget->readonly());
@@ -976,4 +984,18 @@ int Fl_Cairo_Text_Widget_Driver::handle_dnd(int event) {
       return 1;
   }
   return 0;
+}
+
+
+void Fl_Cairo_Text_Widget_Driver::put_back_newlines(char *text) {
+  const int lcr = 3; // number of bytes to encode U+240D
+  char *p;
+  long l = strlen(text);
+  while ( l > 0 && (p = strstr(text, U240D_utf8))) {
+    *p = '\n';
+    memmove(p+1, p+lcr, l-(p+lcr-text)+1);
+    long offset = p + 1 - text;
+    text += offset;
+    l -= offset;
+  }
 }
