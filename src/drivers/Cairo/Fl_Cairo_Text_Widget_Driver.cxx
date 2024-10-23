@@ -16,7 +16,6 @@
 
 /* TODO
  - implement undo/redo
- - lineheight seems to vary with something?
  */
 
 class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
@@ -39,7 +38,7 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   static const int h_slider_height = 10;
   static void textbuffer_changed(GtkTextBuffer *buffer);
   void text_view_scroll_mark_onscreen();
-  void compute_lineheight();
+  //void compute_lineheight();
   void text_view_scroll_mark_h(GtkTextIter *before);
   void scan_all_paragraphs();
   static void scan_single_line(Fl_Cairo_Text_Widget_Driver *o);
@@ -267,6 +266,7 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
     if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) gtk_text_buffer_get_start_iter(buffer, &iter);
     else gtk_text_buffer_get_end_iter(buffer, &iter);
     gtk_text_buffer_place_cursor(buffer, &iter);
+    lineheight = widget->textsize() * 1.2;
     draw();
   }
 }
@@ -292,7 +292,7 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
       v_fl_scrollbar->parent()->init_sizes();
       if (need_allocate == 1) upper = gtk_adjustment_get_upper(v_adjust);
       v_fl_scrollbar->value(v_fl_scrollbar->value(), allocation.height, 1, int (upper));
-      if (lineheight) v_fl_scrollbar->linesize(lineheight);
+      v_fl_scrollbar->linesize(lineheight);
     }
     if (h_fl_slider)  {
       h_fl_slider->resize(widget->x() + Fl::box_dx(widget->box()) ,
@@ -325,7 +325,7 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
     //GtkStyleContext *style = gtk_widget_get_style_context(text_view);
     //gtk_render_insertion_cursor(style, dr->cr(), strong.x, strong.y, layout, 0, PANGO_DIRECTION_RTL);
     fl_color(widget->cursor_color()); dr->line_style(FL_SOLID, 2);
-    dr->yxline(strong.x, strong.y, strong.y + (lineheight ? lineheight : int(1.2*widget->textsize())));
+    dr->yxline(strong.x, strong.y, strong.y + lineheight);
   }
   Fl_Surface_Device::pop_current();
   fl_copy_offscreen(widget->x() + Fl::box_dx(widget->box()) +
@@ -374,7 +374,7 @@ void Fl_Cairo_Text_Widget_Driver::scan_all_paragraphs() {
   gtk_adjustment_set_value(v_adjust, 0);
   v_fl_scrollbar->value(0);
   gtk_text_buffer_place_cursor(buffer, &start);
-  compute_lineheight();
+  //compute_lineheight();
   need_allocate = 1;
   draw();
 //printf("upper=%.1f v_fl_scrollbar=%d\n",gtk_adjustment_get_upper(v_adjust), v_fl_scrollbar->value());
@@ -614,7 +614,6 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     }
     gtk_text_buffer_place_cursor(buffer, &after);
     if (v_fl_scrollbar) {
-      if (!lineheight) compute_lineheight();
       text_view_scroll_mark_onscreen();
     }
     if (h_fl_slider) {
@@ -626,7 +625,6 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     if (kind == SINGLE_LINE) return 1;
     GtkTextIter where;
     GdkRectangle strong;
-    if (!lineheight) compute_lineheight();
     gtk_text_buffer_get_iter_at_mark(buffer, &where, gtk_text_buffer_get_insert(buffer));
     if (insert_offset < 0) {
       gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), &where, &strong, NULL);
@@ -692,21 +690,6 @@ void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_h(GtkTextIter *before) {
     gtk_adjustment_set_value(h_adjust, d + charwidth);
     h_fl_slider->value( (int)gtk_adjustment_get_value(h_adjust) );
     if (!need_allocate) need_allocate = 1; // important
-  }
-}
-
-
-void Fl_Cairo_Text_Widget_Driver::compute_lineheight() {
-  if (!lineheight) {
-    GtkTextIter where;
-    GdkRectangle old_strong, new_strong;
-    gtk_text_buffer_get_iter_at_mark(buffer, &where, gtk_text_buffer_get_insert(buffer));
-    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &old_strong, NULL);
-    if (gtk_text_view_forward_display_line(GTK_TEXT_VIEW(text_view), &where)) {
-      gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), &where, &new_strong, NULL);
-      lineheight = new_strong.y - old_strong.y;
-//printf("lineheight=%d\n",lineheight);
-    }
   }
 }
 
@@ -827,7 +810,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
     return 1;
   } else if(event == FL_MOUSEWHEEL) {
     if (v_fl_scrollbar) {
-      int val = v_fl_scrollbar->value() + (lineheight?lineheight:widget->textsize()) * Fl::event_dy();
+      int val = v_fl_scrollbar->value() + lineheight * Fl::event_dy();
       int changed = v_fl_scrollbar->value( v_fl_scrollbar->clamp(val) );
       if (changed) v_fl_scrollbar->do_callback();
     }
