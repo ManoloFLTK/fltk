@@ -15,7 +15,6 @@
 #include <gtk/gtk.h>
 
 /* TODO
- - finalize parameters of Fl_Scrollbar and GtkScroller
  - implement undo/redo
  - lineheight seems to vary with something?
  */
@@ -36,6 +35,7 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   double upper;
   int lineheight;
   int need_allocate;
+  int insert_offset;
   static const int h_slider_height = 10;
   static void textbuffer_changed(GtkTextBuffer *buffer);
   void text_view_scroll_mark_onscreen();
@@ -85,6 +85,7 @@ Fl_Cairo_Text_Widget_Driver::Fl_Cairo_Text_Widget_Driver() : Fl_Text_Widget_Driv
   h_fl_slider = NULL;
   lineheight = 0;
   upper = 0;
+  insert_offset = -1; // means undefined
 }
 
 Fl_Cairo_Text_Widget_Driver::~Fl_Cairo_Text_Widget_Driver() {
@@ -605,6 +606,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     GtkTextIter before, after;
     gtk_text_buffer_get_iter_at_mark(buffer, &before, gtk_text_buffer_get_insert(buffer));
     after = before;
+    insert_offset = -1;
     if (Fl::event_key() == (widget->right_to_left() ? FL_Right : FL_Left)) {
       gtk_text_iter_backward_char(&after);
     } else     {
@@ -622,19 +624,21 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     return 1;
   } else if (Fl::event_key() == FL_Down || Fl::event_key() == FL_Up) {
     if (kind == SINGLE_LINE) return 1;
-    GtkTextIter where, next_line;
+    GtkTextIter where;
     GdkRectangle strong;
     if (!lineheight) compute_lineheight();
     gtk_text_buffer_get_iter_at_mark(buffer, &where, gtk_text_buffer_get_insert(buffer));
-    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
-    strong.y += lineheight * (Fl::event_key() == FL_Down ? +1 : -1);
-    do {
-      gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view),
-                                             &next_line, strong.x-1, strong.y);
-      strong.y += lineheight * 0.2;
-    } while (Fl::event_key() == FL_Down &&
-             !gtk_text_iter_is_end(&next_line) && gtk_text_iter_equal(&where, &next_line));
-    gtk_text_buffer_place_cursor(buffer, &next_line);
+    if (insert_offset < 0) {
+      gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), &where, &strong, NULL);
+      insert_offset = strong.x;
+    }
+    if (Fl::event_key() == FL_Down)
+      gtk_text_view_forward_display_line(GTK_TEXT_VIEW(text_view), &where);
+    else
+      gtk_text_view_backward_display_line(GTK_TEXT_VIEW(text_view), &where);
+    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), &where, &strong, NULL);
+    gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view), &where, insert_offset, strong.y);
+    gtk_text_buffer_place_cursor(buffer, &where);
     // after the cursor moved
     text_view_scroll_mark_onscreen();
     draw();
@@ -656,14 +660,15 @@ void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_onscreen() {
   gtk_text_view_buffer_to_window_coords(GTK_TEXT_VIEW(text_view),
                                         GTK_TEXT_WINDOW_TEXT,
                                         strong.x, strong.y, &strong2.x, &strong2.y);
-  if (strong2.y > widget->h() - lineheight || strong2.y < 0) {
-    if (strong2.y > widget->h() - lineheight && strong.y+ lineheight/2 > upper) {
+  if (strong2.y > allocation.height - lineheight || strong2.y < 0) {
+    if (strong2.y > allocation.height - lineheight && strong.y+ lineheight/2 > upper) {
       upper = strong.y + lineheight/2;
-//printf("upper=%.1f\n",upper);
       gtk_adjustment_set_upper(v_adjust, upper);
     }
-    double d = gtk_adjustment_get_value(v_adjust);
-    gtk_adjustment_set_value(v_adjust, d + lineheight * (strong2.y < 0 ? -1 : +1));
+    int val = gtk_adjustment_get_value(v_adjust);
+    if (strong2.y < 0) val += strong2.y;
+    else val += strong2.y + lineheight - allocation.height;
+    gtk_adjustment_set_value(v_adjust, val);
     v_fl_scrollbar->value( (int)gtk_adjustment_get_value(v_adjust) );
     if (!need_allocate) {
       gtk_widget_size_allocate(scrolled, &allocation);
@@ -769,6 +774,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
       }
     } else {
       gtk_text_buffer_place_cursor(buffer, &where);
+      insert_offset = -1;
     }
     draw();
     return 1;
