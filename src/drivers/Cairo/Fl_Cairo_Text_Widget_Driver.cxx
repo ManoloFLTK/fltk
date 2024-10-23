@@ -987,14 +987,31 @@ int Fl_Cairo_Text_Widget_Driver::handle_dnd(int event) {
 }
 
 
+// replace ␍ (U+240d) characters in text by \n
 void Fl_Cairo_Text_Widget_Driver::put_back_newlines(char *text) {
-  const int lcr = 3; // number of bytes to encode U+240D
+  // ␍ or runs of ␍ are found bracketted by U+202c / U+202b
+  // we also remove these
+  const int lcr = 3; // number of bytes to encode U+240D, U+202c, or U+202b
+  char RLE_utf8[4];
+  fl_utf8encode(0x202b, RLE_utf8); // U+202b = right-to-left embedding (RLE)
+  char PDF_utf8[4];
+  fl_utf8encode(0x202c, PDF_utf8); // U+202c = pop directional formatting (PDF)
   char *p;
+  int lskip;
   long l = strlen(text);
-  while ( l > 0 && (p = strstr(text, U240D_utf8))) {
-    *p = '\n';
-    memmove(p+1, p+lcr, l-(p+lcr-text)+1);
-    long offset = p + 1 - text;
+  while ( l > 0 && (p = strstr(text, U240D_utf8))) { // search for ␍
+    lskip = lcr;
+    char *q = p + lcr;
+    int newlines = 1; // number of successive ␍ characters
+    while (memcmp(q, U240D_utf8, lcr) == 0) { q += lcr; lskip += lcr; newlines++; }
+    if (memcmp(q, RLE_utf8, lcr) == 0) { lskip += lcr; } // remove U+202b after
+    if (p-3 >= text && memcmp(p-3, PDF_utf8, lcr) == 0) { // remove U+202c before
+      p -= lcr;
+      lskip += lcr;
+    }
+    memset(p, '\n', newlines);
+    memmove(p+newlines, p + lskip, l - (p + lskip - text) + 1);
+    long offset = p + newlines - text;
     text += offset;
     l -= offset;
   }
