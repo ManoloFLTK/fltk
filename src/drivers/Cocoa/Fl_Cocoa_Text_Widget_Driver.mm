@@ -426,8 +426,16 @@ void Fl_Cocoa_Text_Widget_Driver::copy() {
     NSRange r = [text_view selectedRange];
     if (!r.length) return;
     NSString *sub = [[text_view string] substringWithRange:r];
-    // When single-line, replace "^J" by newline and "^I" by tab.
-    sub = [sub stringByReplacingOccurrencesOfString:@"^J" withString:@"\n"];
+    // When single-line, replace "␍" by newline and "^I" by tab.
+    // Also remove U+202b and U+202c characters
+    char utf8[4];
+    fl_utf8encode(0x202c, utf8); utf8[3] = 0;
+    NSString *pdf = [NSString stringWithUTF8String:utf8];
+    fl_utf8encode(0x202b, utf8); utf8[3] = 0;
+    NSString *rle = [NSString stringWithUTF8String:utf8];
+    sub = [sub stringByReplacingOccurrencesOfString:pdf withString:@""];
+    sub = [sub stringByReplacingOccurrencesOfString:rle withString:@""];
+    sub = [sub stringByReplacingOccurrencesOfString:@"␍" withString:@"\n"];
     sub = [sub stringByReplacingOccurrencesOfString:@"^I" withString:@"\t"];
     NSPasteboard *clip = [NSPasteboard generalPasteboard];
     [clip declareTypes:[NSArray arrayWithObject:@"public.utf8-plain-text"] owner:nil];
@@ -440,12 +448,12 @@ void Fl_Cocoa_Text_Widget_Driver::paste() {
   if (text_view->driver->kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) {
     [text_view pasteAsPlainText:nil];
   } else {
-    // When single-line, replace newlines by "^J" and tabs by "^I" in pasted text
+    // When single-line, replace newlines by "␍" and tabs by "^I" in pasted text
     NSPasteboard *clip = [NSPasteboard generalPasteboard];
     NSString *found = [clip availableTypeFromArray:[NSArray arrayWithObjects:@"public.utf8-plain-text", @"public.utf16-plain-text", @"com.apple.traditional-mac-plain-text", nil]];
     if (found) {
       NSString *s = [clip stringForType:found];
-      s = [s stringByReplacingOccurrencesOfString:@"\n" withString:@"^J"];
+      s = [s stringByReplacingOccurrencesOfString:@"\n" withString:@"␍"];
       s = [s stringByReplacingOccurrencesOfString:@"\t" withString:@"^I"];
       NSRange r = [text_view selectedRange];
       [text_view insertText:s replacementRange:r];
