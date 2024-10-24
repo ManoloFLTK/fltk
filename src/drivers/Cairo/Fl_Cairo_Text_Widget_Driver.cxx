@@ -352,8 +352,8 @@ void Fl_Cairo_Text_Widget_Driver::scan_all_paragraphs() {
       upper = strong.y + 1;
 //printf("upper=%.1f\n",upper);
       gtk_adjustment_set_upper(v_adjust, upper);
+      gtk_adjustment_set_value(v_adjust, upper);
     }
-    gtk_adjustment_set_value(v_adjust, upper);
   }  while(gtk_text_iter_compare(&current, &end) < 0);
   v_fl_scrollbar->maximum(upper);
   gtk_adjustment_set_value(v_adjust, 0);
@@ -378,7 +378,6 @@ void Fl_Cairo_Text_Widget_Driver::value(const char *t, int len) {
     gtk_text_buffer_get_end_iter(buffer, &end);
     gtk_text_buffer_select_range(buffer, &start, &end);
     replace_selection(t, len);
-    if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) scan_all_paragraphs();
   }
 }
 
@@ -413,6 +412,7 @@ void Fl_Cairo_Text_Widget_Driver::replace_selection(const char *text, int len) {
   if (gtk_text_buffer_get_has_selection(buffer)) {
     gtk_text_buffer_delete_selection(buffer, true, true);
   }
+  bool full_replace = gtk_text_buffer_get_char_count(buffer) == 0;
   if (len > 0) {
     GtkTextIter iter, start, end;
     gtk_text_buffer_get_iter_at_mark(buffer, &iter, gtk_text_buffer_get_insert(buffer));
@@ -429,6 +429,7 @@ void Fl_Cairo_Text_Widget_Driver::replace_selection(const char *text, int len) {
       gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
     }
   }
+  if (full_replace && kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) scan_all_paragraphs();
   widget->redraw();
 }
 
