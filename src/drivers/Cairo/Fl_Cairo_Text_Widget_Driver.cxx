@@ -133,7 +133,7 @@ static void scroll_cb(Fl_Slider *sb, GtkAdjustment *adjust, int *p_need_allocate
   int v = sb->value();
   gtk_adjustment_set_value(adjust, v);
   *p_need_allocate = 1;
-  ((Fl_Widget*)sb->parent())->draw();
+  sb->parent()->redraw();
 }
 
 
@@ -417,7 +417,7 @@ void Fl_Cairo_Text_Widget_Driver::replace_selection(const char *text, int len) {
       gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
     }
   }
-  draw();
+  widget->redraw();
 }
 
 
@@ -538,7 +538,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     gtk_text_buffer_get_end_iter(buffer, &end);
     gtk_text_buffer_move_mark(buffer, gtk_text_buffer_get_insert(buffer), &start);
     gtk_text_buffer_move_mark(buffer, gtk_text_buffer_get_selection_bound(buffer), &end);
-    draw();
+    widget->redraw();
     return 1;
   } else if (Fl::event_key() ==
 #if __APPLE_CC__
@@ -604,7 +604,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     if (h_fl_slider) {
       text_view_scroll_mark_h(&before);
     }
-    draw();
+    widget->redraw();
     return 1;
   } else if (Fl::event_key() == FL_Down || Fl::event_key() == FL_Up) {
     if (kind == SINGLE_LINE) return 1;
@@ -624,7 +624,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     gtk_text_buffer_place_cursor(buffer, &where);
     // after the cursor moved
     text_view_scroll_mark_onscreen();
-    draw();
+    widget->redraw();
     return 1;
   } else if (Fl::event_key() == FL_Enter && kind == MULTIPLE_LINES && !widget->readonly()) {
     replace_selection("\n", 1);
@@ -742,7 +742,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
       gtk_text_buffer_place_cursor(buffer, &where);
       insert_offset = -1;
     }
-    draw();
+    widget->redraw();
     return 1;
   } else if(event == FL_DRAG && widget->selectable()) {
     if (drag_start >= 0) {
@@ -767,7 +767,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
       Fl::event_y() - (widget->y() + Fl::box_dy(widget->box())) + dv);
     gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
     gtk_text_buffer_select_range(buffer, &insert, &where);
-    draw();
+    widget->redraw();
     return 1;
     
   } else if(event == FL_RELEASE) {
@@ -904,7 +904,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_dnd(int event) {
           Fl::event_y() - (widget->y() + Fl::box_dy(widget->box())) + dv);
         if (b) {
           gtk_text_buffer_place_cursor(buffer, &where);
-          draw();
+          widget->redraw();
         }
       }
       return 1;
