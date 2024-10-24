@@ -19,21 +19,23 @@
  */
 
 class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
+private:
   GtkWidget *scrolled;
   GtkWidget *v_bar, *h_bar;
-  Fl_Scrollbar *v_fl_scrollbar;
-  Fl_Slider *h_fl_slider;
   GtkAdjustment *v_adjust, *h_adjust;
   GtkWidget *text_view;
   GtkTextBuffer *buffer;
-  //PangoLayout *layout;
   GtkWidget *window;
   GtkTextTag* font_size_tag;
-  char *text_before_show;
   GtkAllocation allocation;
+  //PangoLayout *layout;
+  Fl_Scrollbar *v_fl_scrollbar;
+  Fl_Slider *h_fl_slider;
+  char *text_before_show;
   double upper;
-  int lineheight;
-  int need_allocate;
+  int lineheight; // approx lineheight which exact value varies somewhat along text
+  int need_allocate; // Number of times gtk_widget_size_allocate() needs be called before
+                     // drawing GTK objects
   int insert_offset; // offset in drawing units from left margin to insertion point
   static const int h_slider_height = 10;
   static void textbuffer_changed(GtkTextBuffer *buffer);
@@ -42,14 +44,12 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   void scan_all_paragraphs();
   static void scan_single_line(Fl_Cairo_Text_Widget_Driver *o);
   static void put_back_newlines(char *text);
-public:
-  Fl_Cairo_Text_Widget_Driver();
-  ~Fl_Cairo_Text_Widget_Driver();
+  int byte_pos_to_char_pos(int pos);
+  int char_pos_to_byte_pos(int pos);
   void show_widget() FL_OVERRIDE;
   void value(const char *t, int len) FL_OVERRIDE;
   void replace(int from, int to, const char *text, int len) FL_OVERRIDE;
   void replace_selection(const char *text, int len); // all changes to text go through this
-  const char *value() FL_OVERRIDE;
   void resize(int x, int y, int w, int h) FL_OVERRIDE;
   void focus() FL_OVERRIDE;
   void unfocus() FL_OVERRIDE;
@@ -62,6 +62,10 @@ public:
   int insert_position() FL_OVERRIDE;
   void insert_position(int pos, int mark) FL_OVERRIDE;
   int mark() FL_OVERRIDE;
+public:
+  Fl_Cairo_Text_Widget_Driver();
+  ~Fl_Cairo_Text_Widget_Driver();
+  const char *value() FL_OVERRIDE;
 };
 
 
@@ -234,7 +238,11 @@ void Fl_Cairo_Text_Widget_Driver::show_widget()  {
     gtk_style_context_add_provider (style_context, GTK_STYLE_PROVIDER(css_provider),
                                     GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
     
-    if (text_before_show) widget->value(text_before_show);
+    if (text_before_show) {
+      widget->value(text_before_show);
+      delete text_before_show;
+      text_before_show = NULL;
+    }
     GtkTextIter iter;
     if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) gtk_text_buffer_get_start_iter(buffer, &iter);
     else gtk_text_buffer_get_end_iter(buffer, &iter);
@@ -280,7 +288,6 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
   Fl_Image_Surface *surface = new Fl_Image_Surface(allocation.width, allocation.height, 1);
   Fl_Surface_Device::push_current(surface);
   Fl_Cairo_Graphics_Driver *dr = (Fl_Cairo_Graphics_Driver*)surface->driver();
-  //gtk_render_background(style, dr->cr(), 0, 0, allocation.width, allocation.height);
   GtkTextIter insert, sel_end;
   bool selection_active = gtk_text_buffer_get_selection_bounds(buffer, &insert, &sel_end);
   if (Fl::focus() != widget) { // temporarily hide selection when widget not focused
@@ -310,7 +317,7 @@ void Fl_Cairo_Text_Widget_Driver::draw()  {
 
 
 const char *Fl_Cairo_Text_Widget_Driver::value() {
-  if (!text_view) return text_before_show ? text_before_show : "";
+  if (!text_view) return strdup(text_before_show ? text_before_show : "");
   else {
     GtkTextIter first, last;
     gtk_text_buffer_get_start_iter(buffer, &first);
@@ -320,6 +327,12 @@ const char *Fl_Cairo_Text_Widget_Driver::value() {
 }
 
 
+/*
+ Called when the text buffer's content is fully changed.
+ Moves across all text, paragraph by paragraph, and compute position of its beginning;
+ sets v_adjust and v_fl_scrollbar parameters accordingly.
+ This makes GTK and FLTK aware of the full size of the widget's formatted text.
+ */
 void Fl_Cairo_Text_Widget_Driver::scan_all_paragraphs() {
   GtkTextIter start, end, current;
   gtk_text_buffer_get_start_iter (buffer, &start);
@@ -341,7 +354,6 @@ void Fl_Cairo_Text_Widget_Driver::scan_all_paragraphs() {
       gtk_adjustment_set_upper(v_adjust, upper);
     }
     gtk_adjustment_set_value(v_adjust, upper);
-    //gtk_widget_size_allocate(scrolled, &allocation);
   }  while(gtk_text_iter_compare(&current, &end) < 0);
   v_fl_scrollbar->maximum(upper);
   gtk_adjustment_set_value(v_adjust, 0);
@@ -635,6 +647,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
 }
 
 
+// Scrolls the view vertically so the insertion cursor is visible
 void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_onscreen() {
   GdkRectangle strong, strong2;
   gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
@@ -660,6 +673,8 @@ void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_onscreen() {
 }
 
 
+// Scrolls the view horizontally after left or right arrow key was pushed
+// so the insertion cursor is visible
 void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_h(GtkTextIter *before) {
   GdkRectangle strong, before_rect;
   gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view), NULL, &strong, NULL);
@@ -809,35 +824,54 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
 
 
 int Fl_Cairo_Text_Widget_Driver::handle_paste() {
-  if (widget->readonly()) { fl_beep(); return 1; }
-  replace_selection(Fl::event_text(), Fl::event_length());
+  if (widget->readonly()) fl_beep();
+  else replace_selection(Fl::event_text(), Fl::event_length());
   return 1;
 }
 
 
-static int byte_pos_to_char_pos(Fl_Cairo_Text_Widget_Driver *dr, int pos) {
-  const char *text = dr->value(), *p = text, *end = text + strlen(text);
+// Given a position in byte units in the text, returns the corresponding
+// position in character units of the character containing said byte.
+int Fl_Cairo_Text_Widget_Driver::byte_pos_to_char_pos(int pos) {
+  const char *text = value(), *p = text, *end = text + strlen(text);
   int len, char_count = 0;
-  while (p - text < pos) {
+  while (true) {
     fl_utf8decode(p , end, &len);
-    char_count++;
     p += len;
+    if (p - text > pos) break;
+    char_count++;
   }
   delete[] text;
   return char_count;
 }
 
 
-static int char_pos_to_byte_pos(Fl_Cairo_Text_Widget_Driver *dr, int char_count) {
-  const char *text = dr->value(), *p = text, *end = text + strlen(text);
-  int len;
-  while (char_count > 0) {
-    fl_utf8decode(p , end, &len);
-    char_count--;
-    p += len;
+// Given a position in character units in the text, returns the corresponding
+// position in byte units.
+int Fl_Cairo_Text_Widget_Driver::char_pos_to_byte_pos(int char_count) {
+  const char *text;
+  if (!text_view) {
+    text = text_before_show;
+    if (!text) return 0;
+    const char *p = text, *end = text + strlen(text);
+    int len;
+    while (char_count > 0) {
+      fl_utf8decode(p , end, &len);
+      char_count--;
+      p += len;
+    }
+    return int(p - text);
+  } else if (!char_count) {
+    return 0;
+  } else {
+    GtkTextIter first, last;
+    gtk_text_buffer_get_start_iter(buffer, &first);
+    gtk_text_buffer_get_iter_at_offset(buffer, &last, char_count);
+    text = gtk_text_buffer_get_text(buffer, &first, &last, true);
+    int l = (int)strlen(text);
+    delete[] text;
+    return l;
   }
-  delete[] text;
-  return int(p - text);
 }
 
 
@@ -846,13 +880,13 @@ int Fl_Cairo_Text_Widget_Driver::insert_position() {
   GtkTextIter iter;
   gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
   int pos = gtk_text_iter_get_offset(&iter);
-  return char_pos_to_byte_pos(this, pos);
+  return char_pos_to_byte_pos(pos);
 }
 
 
 void Fl_Cairo_Text_Widget_Driver::insert_position(int pos, int mark) {
   bool need_selection = (pos != mark);
-  pos = byte_pos_to_char_pos(this, pos);
+  pos = byte_pos_to_char_pos(pos);
   GtkTextMark *gtk_mark = gtk_text_buffer_get_insert(buffer);
   GtkTextIter where;
   gtk_text_iter_set_offset(&where, pos);
@@ -862,7 +896,7 @@ void Fl_Cairo_Text_Widget_Driver::insert_position(int pos, int mark) {
     gtk_text_buffer_move_mark(buffer, gtk_mark, &where);
     return;
   }
-  mark = byte_pos_to_char_pos(this, mark);
+  mark = byte_pos_to_char_pos(mark);
   gtk_text_iter_set_offset(&where, mark);
   gtk_mark = gtk_text_buffer_get_selection_bound(buffer);
   gtk_text_buffer_move_mark(buffer, gtk_mark, &where);
@@ -874,7 +908,7 @@ int Fl_Cairo_Text_Widget_Driver::mark() {
   GtkTextIter iter;
   gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
   int pos = gtk_text_iter_get_offset(&iter);
-  return char_pos_to_byte_pos(this, pos);
+  return char_pos_to_byte_pos(pos);
 }
 
 
@@ -951,7 +985,8 @@ int Fl_Cairo_Text_Widget_Driver::handle_dnd(int event) {
 }
 
 
-// replace ␍ (U+240d) characters in text by \n  and ␉ characters by \t
+// Replace ␍ (U+240d) characters in text by \n  and ␉ characters by \t.
+// Done only when performing a copy operation from a single-line widget.
 void Fl_Cairo_Text_Widget_Driver::put_back_newlines(char *text) {
   // ␍ or runs of ␍ are found bracketted by U+202c / U+202b
   // we also remove these
