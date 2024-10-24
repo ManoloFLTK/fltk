@@ -34,11 +34,10 @@ class Fl_Cairo_Text_Widget_Driver : public Fl_Text_Widget_Driver {
   double upper;
   int lineheight;
   int need_allocate;
-  int insert_offset;
+  int insert_offset; // offset in drawing units from left margin to insertion point
   static const int h_slider_height = 10;
   static void textbuffer_changed(GtkTextBuffer *buffer);
   void text_view_scroll_mark_onscreen();
-  //void compute_lineheight();
   void text_view_scroll_mark_h(GtkTextIter *before);
   void scan_all_paragraphs();
   static void scan_single_line(Fl_Cairo_Text_Widget_Driver *o);
@@ -49,6 +48,7 @@ public:
   void show_widget() FL_OVERRIDE;
   void value(const char *t, int len) FL_OVERRIDE;
   void replace(int from, int to, const char *text, int len) FL_OVERRIDE;
+  void replace_selection(const char *text, int len); // all changes to text go through this
   const char *value() FL_OVERRIDE;
   void resize(int x, int y, int w, int h) FL_OVERRIDE;
   void focus() FL_OVERRIDE;
@@ -124,34 +124,7 @@ void Fl_Cairo_Text_Widget_Driver::textbuffer_changed(GtkTextBuffer *buffer) {
   Fl_Cairo_Text_Widget_Driver *dr;
   sscanf(strval, "%p", &dr);
   free(strval);
-  if (dr->kind == SINGLE_LINE) {
-    GtkTextIter start, end;
-    gboolean found = true;
-    gtk_text_buffer_get_start_iter(buffer, &start);
-    while (found) { // replace all \n by ␍
-      found = gtk_text_iter_forward_search(&start, "\n", GTK_TEXT_SEARCH_TEXT_ONLY,
-                                           &start, &end, NULL);
-      if (found) {
-        busy = true;
-        gtk_text_buffer_delete(buffer, &start, &end);
-        gtk_text_buffer_insert(buffer, &start, "␍", -1);
-        busy = false;
-      }
-    }
-    found = true;
-    gtk_text_buffer_get_start_iter(buffer, &start);
-    while (found) { // replace all \t by ␉
-      found = gtk_text_iter_forward_search(&start, "\t", GTK_TEXT_SEARCH_TEXT_ONLY,
-                                           &start, &end, NULL);
-      if (found) {
-        busy = true;
-        gtk_text_buffer_delete(buffer, &start, &end);
-        gtk_text_buffer_insert(buffer, &start, "␉", -1);
-        busy = false;
-      }
-    }
-    Fl::add_check((Fl_Timeout_Handler)scan_single_line, dr);
-  }
+  if (dr->kind == SINGLE_LINE) Fl::add_check((Fl_Timeout_Handler)scan_single_line, dr);
   dr->need_allocate = 2;
 }
 
@@ -374,7 +347,6 @@ void Fl_Cairo_Text_Widget_Driver::scan_all_paragraphs() {
   gtk_adjustment_set_value(v_adjust, 0);
   v_fl_scrollbar->value(0);
   gtk_text_buffer_place_cursor(buffer, &start);
-  //compute_lineheight();
   need_allocate = 1;
   draw();
 //printf("upper=%.1f v_fl_scrollbar=%d\n",gtk_adjustment_get_upper(v_adjust), v_fl_scrollbar->value());
@@ -389,39 +361,69 @@ void Fl_Cairo_Text_Widget_Driver::value(const char *t, int len) {
     if (text_before_show) delete[] text_before_show;
     text_before_show = new_text;
   } else {
-    gtk_text_buffer_set_text(buffer, t, len);
     GtkTextIter start, end;
-    gtk_text_buffer_get_start_iter (buffer, &start);
-    gtk_text_buffer_get_end_iter (buffer, &end);
-    gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
-    if (text_before_show) {
-      delete[] text_before_show;
-      text_before_show = NULL;
-    }
+    gtk_text_buffer_get_start_iter(buffer, &start);
+    gtk_text_buffer_get_end_iter(buffer, &end);
+    gtk_text_buffer_select_range(buffer, &start, &end);
+    replace_selection(t, len);
     if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) scan_all_paragraphs();
   }
 }
 
 
-void Fl_Cairo_Text_Widget_Driver::replace(int from, int to, const char *text, int len) {
-  insert_position(from, to);
-  if (from != to) gtk_text_buffer_delete_selection(buffer, true, true);
-  if (!len) return;
-  GtkTextIter iter;
-  gtk_text_buffer_get_iter_at_mark(buffer, &iter, gtk_text_buffer_get_insert(buffer));
-  GtkTextIter start, end;
-  gtk_text_buffer_get_start_iter(buffer, &start);
-  gtk_text_buffer_get_end_iter(buffer, &end);
-  bool need_apply_tag = gtk_text_iter_equal(&iter, &start) || gtk_text_iter_equal(&iter, &end);
-  gtk_text_buffer_insert(buffer, &iter, text, len);
-  if (need_apply_tag) {
+static char *substitute_with_cr_ht(const char *text, int &len) {
+  // Replace \n and \t in text by ␍ and ␉. Return modified string
+  int new_len = len + 1000;
+  char *new_text = (char*)malloc(new_len);
+  const char *p = text - 1, *end = text + len;
+  char *q = new_text;
+  while (++p < end) {
+    if (q - new_text + 4 >= new_len) {
+      new_len += 100;
+      new_text = (char*)realloc(new_text, new_len);
+    }
+    if (*p == '\n') {
+      memcpy(q, "␍", 3);
+      q += 3;
+    } else if (*p == '\t') {
+      memcpy(q, "␉", 3);
+      q += 3;
+    } else *q++ = *p;
+  }
+  *q = 0;
+  len = int(q - new_text);
+  return new_text;
+}
+
+
+// ALL changes to the widget's text go through this function
+void Fl_Cairo_Text_Widget_Driver::replace_selection(const char *text, int len) {
+  if (gtk_text_buffer_get_has_selection(buffer)) {
+    gtk_text_buffer_delete_selection(buffer, true, true);
+  }
+  if (len > 0) {
+    GtkTextIter iter, start, end;
+    gtk_text_buffer_get_iter_at_mark(buffer, &iter, gtk_text_buffer_get_insert(buffer));
     gtk_text_buffer_get_start_iter(buffer, &start);
     gtk_text_buffer_get_end_iter(buffer, &end);
-    gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
+    bool need_apply_tag = gtk_text_iter_equal(&iter, &start) || gtk_text_iter_equal(&iter, &end);
+    char *new_text = (char*)text;
+    if (kind == SINGLE_LINE) new_text = substitute_with_cr_ht(text, len);
+    gtk_text_buffer_insert(buffer, &iter, new_text, len);
+    if (kind == SINGLE_LINE) free(new_text);
+    if (need_apply_tag) {
+      gtk_text_buffer_get_start_iter(buffer, &start);
+      gtk_text_buffer_get_end_iter(buffer, &end);
+      gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
+    }
   }
-  if (from != to || len > 0) {
-    draw();
-  }
+  draw();
+}
+
+
+void Fl_Cairo_Text_Widget_Driver::replace(int from, int to, const char *text, int len) {
+  insert_position(from, to);
+  replace_selection(text, len);
 }
 
 
@@ -463,20 +465,8 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
           int insert = insert_position();
           replace(insert, insert - del, NULL, 0);
         } else {
-          gtk_text_buffer_delete_selection(buffer, true, !widget->readonly());
-          GtkTextIter insert, start, end;
-          gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
-          gtk_text_buffer_get_start_iter(buffer, &start);
-          gtk_text_buffer_get_end_iter(buffer, &end);
-          bool need_apply_tag = gtk_text_iter_equal(&insert, &start) || gtk_text_iter_equal(&insert, &end);
-          gtk_text_buffer_insert_at_cursor(buffer, Fl::event_text(), Fl::event_length());
-          if (need_apply_tag) {
-            gtk_text_buffer_get_start_iter(buffer, &start);
-            gtk_text_buffer_get_end_iter(buffer, &end);
-            gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
-          }
+          replace_selection(Fl::event_text(), Fl::event_length());
         }
-        draw();
       }
     }
     /*if (Fl::screen_driver()->has_marked_text() && Fl::compose_state) {
@@ -494,56 +484,52 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
       GtkTextIter start, end; // copy_cut(): Shift-Delete with selection (WP,NP,WOW,GE,KE,OF)
       gtk_text_buffer_get_iter_at_mark(buffer, &start, gtk_text_buffer_get_insert(buffer));
       gtk_text_buffer_get_iter_at_mark(buffer, &end, gtk_text_buffer_get_selection_bound(buffer));
-      gtk_text_buffer_select_range(buffer, &start, &end);
       char *buf = gtk_text_buffer_get_text(buffer, &start, &end, false);
       if (kind == SINGLE_LINE) put_back_newlines(buf);
       Fl::copy(buf, (int)strlen(buf), 1);
       delete[] buf;
-      gtk_text_buffer_delete(buffer, &start, &end);
-      draw();
+      replace_selection(NULL, 0);
       return 1;
     } else if (mods == 0 && ((shift && !selected) || !shift)) {
        // Delete or Shift-Delete no selection (WP,NP,WOW,GE,KE,!OF)
-      GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
       GtkTextIter iter, next;
-      gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
+      gtk_text_buffer_get_iter_at_mark(buffer, &iter, gtk_text_buffer_get_insert(buffer));
       gtk_text_iter_assign(&next, &iter);
       gtk_text_iter_forward_char(&next);
-      gtk_text_buffer_delete(buffer, &iter, &next);
-      draw();
+      gtk_text_buffer_select_range(buffer, &iter, &next);
+      replace_selection(NULL, 0);
       return 1;
     } else if (mods == FL_CTRL) {// kf_delete_word_right()  Ctrl-Delete    (WP,!NP,WOW,GE,KE,!OF)
-      GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
       GtkTextIter iter, next;
-      gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
+      gtk_text_buffer_get_iter_at_mark(buffer, &iter, gtk_text_buffer_get_insert(buffer));
       gtk_text_iter_assign(&next, &iter);
       gtk_text_iter_forward_word_end(&next);
-      gtk_text_buffer_delete(buffer, &iter, &next);
-      draw();
+      gtk_text_buffer_select_range(buffer, &iter, &next);
+      replace_selection(NULL, 0);
       return 1;
     }
   } else if (Fl::event_key() == FL_BackSpace) {
     if (widget->readonly()) { fl_beep(); return 1; }
     if (mods == 0) { // Backspace      (WP,NP,WOW,GE,KE,OF)
       if (gtk_text_buffer_get_has_selection(buffer)) {
-        gtk_text_buffer_delete_selection(buffer, true, true);
+        replace_selection(NULL, 0);
       } else {
-        GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
-        GtkTextIter iter;
-        gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
-        gtk_text_buffer_backspace (buffer, &iter, true, true);
+        GtkTextIter iter, previous;
+        gtk_text_buffer_get_iter_at_mark(buffer, &iter, gtk_text_buffer_get_insert(buffer));
+        gtk_text_iter_assign(&previous, &iter);
+        gtk_text_iter_backward_cursor_position(&previous);
+        gtk_text_buffer_select_range(buffer, &previous, &iter);
+        replace_selection(NULL, 0);
       }
-      draw();
       retval = 1;
     }
     else if (mods == FL_CTRL) {//   kf_delete_word_left()  Ctrl-Backspace (WP,!NP,WOW,GE,KE,!OF)
-      GtkTextMark *mark = gtk_text_buffer_get_insert(buffer);
       GtkTextIter iter, next;
-      gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
+      gtk_text_buffer_get_iter_at_mark(buffer, &iter, gtk_text_buffer_get_insert(buffer));
       gtk_text_iter_assign(&next, &iter);
       gtk_text_iter_backward_word_start(&next);
-      gtk_text_buffer_delete(buffer, &iter, &next);
-      draw();
+      gtk_text_buffer_select_range(buffer, &next, &iter);
+      replace_selection(NULL, 0);
       return 1;
     }
   } else if (Fl::event_key() == 'a' && Fl::event_ctrl() && widget->selectable()) { // select All
@@ -596,8 +582,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     if (kind == SINGLE_LINE) put_back_newlines(buf);
     Fl::copy(buf, (int)strlen(buf), 1);
     delete[] buf;
-    gtk_text_buffer_delete_selection(buffer, true, !widget->readonly());
-    draw();
+    replace_selection(NULL, 0);
     return 1;
   }
   if (retval >= 1) return retval;
@@ -642,10 +627,8 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     draw();
     return 1;
   } else if (Fl::event_key() == FL_Enter && kind == MULTIPLE_LINES && !widget->readonly()) {
-    gtk_text_buffer_delete_selection(buffer, true, true);
-    gtk_text_buffer_insert_at_cursor(buffer, "\n", 1);
+    replace_selection("\n", 1);
     text_view_scroll_mark_onscreen();
-    draw();
     return 1;
   }
   return 0;
@@ -827,23 +810,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_mouse(int event) {
 
 int Fl_Cairo_Text_Widget_Driver::handle_paste() {
   if (widget->readonly()) { fl_beep(); return 1; }
-  GtkTextIter insert, start, end;
-  gtk_text_buffer_delete_selection (buffer, true, true);
-  gtk_text_buffer_get_start_iter(buffer, &start);
-  gtk_text_buffer_get_end_iter(buffer, &end);
-  if (gtk_text_iter_equal(&end, &start)) {
-    value(Fl::event_text(), Fl::event_length());
-    return 1;
-  }
-  gtk_text_buffer_get_iter_at_mark(buffer, &insert, gtk_text_buffer_get_insert(buffer));
-  bool need_apply_tag = gtk_text_iter_equal(&insert, &start) || gtk_text_iter_equal(&insert, &end);
-  gtk_text_buffer_insert_interactive(buffer, &insert, Fl::event_text(), Fl::event_length(), true);
-  if (need_apply_tag) {
-    gtk_text_buffer_get_start_iter(buffer, &start);
-    gtk_text_buffer_get_end_iter(buffer, &end);
-    gtk_text_buffer_apply_tag(buffer, font_size_tag, &start, &end);
-  }
-  draw();
+  replace_selection(Fl::event_text(), Fl::event_length());
   return 1;
 }
 
@@ -969,8 +936,8 @@ int Fl_Cairo_Text_Widget_Driver::handle_dnd(int event) {
             dnd_iter_mark = dnd_iter_position;
             dnd_iter_position = tmp_iter;
           }
-          gtk_text_buffer_delete(buffer, &dnd_iter_mark, &dnd_iter_position);
-        
+          gtk_text_buffer_select_range(buffer, &dnd_iter_mark, &dnd_iter_position);
+          replace_selection(NULL, 0);
         }
       } else if (dnd_save_focus) {
         dnd_save_focus->handle(FL_UNFOCUS);
