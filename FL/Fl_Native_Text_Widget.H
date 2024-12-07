@@ -11,7 +11,7 @@
 
 class Fl_Text_Widget_Driver;
 
-class FL_EXPORT Fl_Native_Text_Widget : public Fl_Native_Widget {
+class FL_EXPORT Fl_Native_Text_Widget : public Fl_Native_Group {
   friend class Fl_Native_Multiline_Text_Widget;
 private:
   Fl_Color cursor_color_;

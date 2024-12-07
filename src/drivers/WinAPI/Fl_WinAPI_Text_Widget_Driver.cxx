@@ -432,7 +432,7 @@ void Fl_WinAPI_Text_Widget_Driver::focus() {
 
 void Fl_WinAPI_Text_Widget_Driver::unfocus() {
   //fprintf(stderr,"unfocus to %s\n",widget->label());fflush(stderr);
-  if (Fl::focus() && !Fl::focus()->as_native_widget()) SetFocus(fl_win32_xid(Fl::focus()->window()));
+  if (Fl::focus() && (!Fl::focus()->as_group() || !Fl::focus()->as_group()->as_native_group())) SetFocus(fl_win32_xid(Fl::focus()->window()));
 }
 
 

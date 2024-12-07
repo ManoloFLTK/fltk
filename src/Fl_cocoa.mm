@@ -696,7 +696,7 @@ void Fl_Cocoa_Screen_Driver::breakMacEventLoop()
   Fl_Cocoa_Window_Driver *dr = (Fl_Cocoa_Window_Driver*)Fl_Window_Driver::driver(w);
   if (!w || w->output() || w->tooltip_window() || w->menu_window()) return NO; // [NATIVE]
   Fl_Widget *focus = Fl::focus();
-  return (!w->parent() || (focus && focus->as_native_widget() && focus->window() == w));
+  return (!w->parent() || (focus && focus->as_group() && focus->as_group()->as_native_group() && focus->window() == w));
 }
 
 - (BOOL)canBecomeMainWindow
@@ -1451,7 +1451,8 @@ static FLWindowDelegate *flwindowdelegate_instance = nil;
     fixup_window_levels();
   }
   if (!w->parent() && Fl_Window_Driver::last_focus_widget() &&
-      Fl_Window_Driver::last_focus_widget()->as_native_widget() &&
+      Fl_Window_Driver::last_focus_widget()->as_group() &&
+      Fl_Window_Driver::last_focus_widget()->as_group()->as_native_group() &&
       Fl_Window_Driver::last_focus_widget()->window()->parent()) { // [NATIVE]
       w->handle(FL_PUSH);
   } else

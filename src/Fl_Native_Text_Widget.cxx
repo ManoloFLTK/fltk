@@ -17,7 +17,7 @@ Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text
 #endif
 
 Fl_Native_Text_Widget::Fl_Native_Text_Widget(int x, int y, int w, int h, const char *l) :
-      Fl_Native_Widget(x,y,w,h,l) {
+      Fl_Native_Group(x,y,w,h,l) {
   end();
   driver_ = Fl_Text_Widget_Driver::newTextWidgetDriver(this);
   font_size_ = FL_NORMAL_SIZE;
@@ -96,7 +96,7 @@ int Fl_Native_Text_Widget::handle(int event) {
     default:
       break;
   }
-  return Fl_Native_Widget::handle(event);
+  return Fl_Native_Group::handle(event);
 }
 
 

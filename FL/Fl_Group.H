@@ -26,6 +26,7 @@
 // Don't #include Fl_Rect.H because this would introduce lots
 // of unnecessary dependencies on Fl_Rect.H
 class Fl_Rect;
+class Fl_Native_Group;
 
 
 /**
@@ -256,6 +257,8 @@ public:
 
   /** This is for forms compatibility only */
   void forms_end();
+  
+  virtual Fl_Native_Group *as_native_group() { return NULL; } // [NATIVE]
 };
 
 // dummy class used to end child groups in constructors for complex
@@ -287,11 +290,11 @@ public:
 };
 
 
-class FL_EXPORT Fl_Native_Widget : public Fl_Group { // [NATIVE]
+class FL_EXPORT Fl_Native_Group : public Fl_Group { // [NATIVE]
 public:
-  Fl_Native_Widget(int x, int y, int w, int h, const char *l = 0) :
+  Fl_Native_Group(int x, int y, int w, int h, const char *l = 0) :
     Fl_Group(x,y,w,h,l) {}
-  Fl_Native_Widget *as_native_widget() FL_OVERRIDE { return this; }
+  Fl_Native_Group *as_native_group() FL_OVERRIDE { return this; }
   virtual void get_focus() {}
   virtual void lost_focus() {}
 };

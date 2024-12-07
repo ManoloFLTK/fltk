@@ -1070,9 +1070,9 @@ fprintf(stderr,"Fl::focus(%s)\n",o?o->label():"nil");fflush(stderr);
       while (w1) { win=w1; w1=win->window(); }*/ // same as win = o->top_window();
       Fl_Window *win;
       Fl_Window_Driver::last_focus_widget_ = o; // [NATIVE]
-      if (o->as_native_widget()) { // [NATIVE]
+      if (o->as_group() && o->as_group()->as_native_group()) { // [NATIVE]
         win = o->window();
-        o->as_native_widget()->get_focus();
+        o->as_group()->as_native_group()->get_focus();
       } else {
         win = o->top_window();
       }
@@ -1089,7 +1089,7 @@ fprintf(stderr,"Fl::focus(%s)\n",o?o->label():"nil");fflush(stderr);
     e_number = FL_UNFOCUS;
     for (; p; p = p->parent()) {
       p->handle(FL_UNFOCUS);
-      if (p->as_native_widget()) p->as_native_widget()->lost_focus(); // [NATIVE]
+      if (p->as_group() && p->as_group()->as_native_group()) p->as_group()->as_native_group()->lost_focus(); // [NATIVE]
       fl_oldfocus = p;
     }
     e_number = old_event;
@@ -1169,7 +1169,7 @@ void fl_fix_focus() {
         Fl::e_keysym > (FL_Button + FL_RIGHT_MOUSE))
       Fl::e_keysym = 0; // make sure widgets don't think a keystroke moved focus
     Fl_Widget *f = Fl::focus();
-    if (!f || !f->as_native_widget()) w = w->top_window(); // [NATIVE]
+    if (!f || !f->as_group() || !f->as_group()->as_native_group()) w = w->top_window(); // [NATIVE]
     if (Fl::modal()) w = Fl::modal();
     if (!w->contains(f))
       if (!w->take_focus()) Fl::focus(w);
