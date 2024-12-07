@@ -48,6 +48,7 @@ set(SIMPLE_SOURCES
   menubar-add
   nativefilechooser-simple
   nativefilechooser-simple-app
+  native-text-widget
   progress-simple
   shapedwindow
   simple-terminal
