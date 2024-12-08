@@ -48,7 +48,6 @@ set(SIMPLE_SOURCES
   menubar-add
   nativefilechooser-simple
   nativefilechooser-simple-app
-  native-text-widget
   progress-simple
   shapedwindow
   simple-terminal
@@ -140,6 +139,11 @@ endforeach(src)
 foreach(src ${CAIRO_SOURCES})
   fl_create_example(${src} ${src}.cxx fltk::fltk)
 endforeach(src)
+
+############################################################
+# create example program requiring fltk::native
+############################################################
+fl_create_example(native-text-widget native-text-widget.cxx "fltk::native")
 
 ############################################################
 # create example programs with OpenGL3 + GLEW
