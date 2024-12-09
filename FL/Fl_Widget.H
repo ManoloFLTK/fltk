@@ -1246,7 +1246,7 @@ public:
   /** Returns non zero if MAC_USE_ACCENTS_MENU flag is set, 0 otherwise.
    */
   int use_accents_menu() { return flags() & MAC_USE_ACCENTS_MENU; }
-    
+
   /** For back compatibility only.
       \deprecated Use selection_color() instead.
   */
