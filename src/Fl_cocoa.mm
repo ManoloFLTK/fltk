@@ -693,7 +693,6 @@ void Fl_Cocoa_Screen_Driver::breakMacEventLoop()
   if (Fl::modal_ && (Fl::modal_ != w))
     return NO;  // prevent the caption to be redrawn as active on click
                 //  when another modal window is currently the key win
-  Fl_Cocoa_Window_Driver *dr = (Fl_Cocoa_Window_Driver*)Fl_Window_Driver::driver(w);
   if (!w || w->output() || w->tooltip_window() || w->menu_window()) return NO; // [NATIVE]
   Fl_Widget *focus = Fl::focus();
   return (!w->parent() || (focus && focus->as_group() && focus->as_group()->as_native_group() && focus->window() == w));
