@@ -48,6 +48,7 @@ private:
   void scan_all_paragraphs_();
   static void scan_single_line_(Fl_Cairo_Text_Widget_Driver *o);
   static void put_back_newlines_(char *text);
+  static void delayed_cursor_at_end_(Fl_Cairo_Text_Widget_Driver *o);
   int char_pos_to_byte_pos_(int pos);
   int apply_undo_();
   void set_style_();
@@ -534,6 +535,14 @@ static char *substitute_with_cr_ht(const char *text, int &len) {
 }
 
 
+void Fl_Cairo_Text_Widget_Driver::delayed_cursor_at_end_(Fl_Cairo_Text_Widget_Driver *o) {
+  Fl::remove_check((Fl_Timeout_Handler)delayed_cursor_at_end_, o);
+  GtkTextIter end;
+  gtk_text_buffer_get_end_iter(o->buffer_, &end);
+  gtk_text_buffer_select_range(o->buffer_, &end, &end);
+}
+
+
 // ALL changes to the widget's text go through this function
 void Fl_Cairo_Text_Widget_Driver::replace_selection(const char *text, int len) {
   GtkTextIter start, end, first;
@@ -588,6 +597,9 @@ void Fl_Cairo_Text_Widget_Driver::replace_selection(const char *text, int len) {
       gtk_text_buffer_get_start_iter(buffer_, &start);
       gtk_text_buffer_get_end_iter(buffer_, &end);
       gtk_text_buffer_apply_tag(buffer_, font_size_tag_, &start, &end);
+    }
+    if (full_replace) { // for some reason, cursor positioning at end of text needs be delayed
+      Fl::add_check((Fl_Timeout_Handler)delayed_cursor_at_end_, this);
     }
     if (char_pos == undo_->undoat_chars) {
       undo_->undoinsert += len;
