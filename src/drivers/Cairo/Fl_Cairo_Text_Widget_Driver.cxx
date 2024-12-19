@@ -43,7 +43,7 @@ private:
   int insert_offset_; // offset in drawing units from left margin to insertion point
   static const int slider_thickness_ = 10;
   static void textbuffer_changed_(GtkTextBuffer *buffer_);
-  void text_view_scroll_mark_onscreen_();
+  void text_view_scroll_mark_onscreen_(bool relative_to_mark = false);
   void text_view_scroll_mark_h_(GtkTextIter *before);
   void scan_all_paragraphs_();
   static void scan_single_line_(Fl_Cairo_Text_Widget_Driver *o);
@@ -747,41 +747,55 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
   
   if (Fl::event_key() == FL_Right || Fl::event_key() == FL_Left) {
     GtkTextIter before, after;
-    gtk_text_buffer_get_selection_bounds(buffer_, &before, NULL);
-    after = before;
-    insert_offset_ = -1;
-    if (Fl::event_key() == (widget->right_to_left() ? FL_Right : FL_Left)) {
-      gtk_text_iter_backward_cursor_position(&after);
-    } else     {
-      gtk_text_iter_forward_cursor_position(&after);
-    }
-    gtk_text_buffer_place_cursor(buffer_, &after);
-    if (v_fl_scrollbar_) {
-      text_view_scroll_mark_onscreen_();
-    }
-    if (h_fl_slider_) {
-      text_view_scroll_mark_h_(&before);
+    gtk_text_buffer_get_selection_bounds(buffer_, &before, &after);
+    if (Fl::event_state() == FL_SHIFT) {
+      if (Fl::event_key() == (widget->right_to_left() ? FL_Right : FL_Left)) {
+        gtk_text_iter_backward_char(&before);
+      } else gtk_text_iter_forward_char(&after);
+      gtk_text_buffer_select_range(buffer_, &before, &after);
+    } else {
+      after = before;
+      insert_offset_ = -1;
+      if (Fl::event_key() == (widget->right_to_left() ? FL_Right : FL_Left)) {
+        gtk_text_iter_backward_cursor_position(&after);
+      } else     {
+        gtk_text_iter_forward_cursor_position(&after);
+      }
+      gtk_text_buffer_place_cursor(buffer_, &after);
+      if (v_fl_scrollbar_) {
+        text_view_scroll_mark_onscreen_();
+      }
+      if (h_fl_slider_) {
+        text_view_scroll_mark_h_(&before);
+      }
     }
     widget->redraw();
     return 1;
   } else if (Fl::event_key() == FL_Down || Fl::event_key() == FL_Up) {
     if (kind == SINGLE_LINE) return 1;
-    GtkTextIter where;
+    GtkTextIter where, last, new_where;
     GdkRectangle strong;
-    gtk_text_buffer_get_selection_bounds(buffer_, &where, NULL);
+    gtk_text_buffer_get_selection_bounds(buffer_, &where, &last);
+    if (Fl::event_state() == FL_SHIFT && Fl::event_key() == FL_Down) new_where = last;
+    else new_where = where;
     if (insert_offset_ < 0) {
-      gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view_), &where, &strong, NULL);
+      gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view_), &new_where, &strong, NULL);
       insert_offset_ = strong.x;
     }
     if (Fl::event_key() == FL_Down)
-      gtk_text_view_forward_display_line(GTK_TEXT_VIEW(text_view_), &where);
+      gtk_text_view_forward_display_line(GTK_TEXT_VIEW(text_view_), &new_where);
     else
-      gtk_text_view_backward_display_line(GTK_TEXT_VIEW(text_view_), &where);
-    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view_), &where, &strong, NULL);
-    gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view_), &where, insert_offset_, strong.y);
-    gtk_text_buffer_place_cursor(buffer_, &where);
-    // after the cursor moved
-    text_view_scroll_mark_onscreen_();
+      gtk_text_view_backward_display_line(GTK_TEXT_VIEW(text_view_), &new_where);
+    gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view_), &new_where, &strong, NULL);
+    gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view_), &new_where, insert_offset_, strong.y);
+    bool relative_to_mark = false;
+    if (Fl::event_state() == FL_SHIFT) {
+      if (Fl::event_key() == FL_Down) {
+        gtk_text_buffer_select_range(buffer_, &where, &new_where);
+        relative_to_mark = true;
+      } else gtk_text_buffer_select_range(buffer_, &new_where, &last);
+    } else gtk_text_buffer_place_cursor(buffer_, &where);
+    text_view_scroll_mark_onscreen_(relative_to_mark);
     widget->redraw();
     return 1;
   } else if ((Fl::event_key() == FL_Enter || Fl::event_key() == FL_KP_Enter) &&
@@ -794,15 +808,39 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
       //insert_position(size(), 0); //TODO useful?
       maybe_do_callback(FL_REASON_ENTER_KEY);
     }
+  } else if (Fl::event_key() == FL_Home || Fl::event_key() == FL_End) {
+    if (v_fl_scrollbar_) {
+      if (Fl::event_state() == FL_SHIFT) {
+        GtkTextIter cursor, mark, from, first, last;
+        gtk_text_buffer_get_selection_bounds(buffer_, &cursor, &mark);
+        gtk_text_buffer_get_start_iter(buffer_, &first);
+        gtk_text_buffer_get_iter_at_offset (buffer_, &last, -1);
+        if (Fl::event_key() == FL_Home) {
+          from = (gtk_text_iter_compare(&cursor, &mark) > 0 ? cursor : mark);
+          gtk_text_buffer_select_range(buffer_, &first, &from);
+        } else {
+          from = (gtk_text_iter_compare(&cursor, &mark) > 0 ? mark : cursor);
+          gtk_text_buffer_select_range(buffer_, &from, &last);
+        }
+      }
+      int changed = v_fl_scrollbar_->value( Fl::event_key() == FL_Home ? 0 :
+                                           v_fl_scrollbar_->maximum() );
+      if (changed) v_fl_scrollbar_->do_callback();
+    }
+    return 1;
   }
   return 0;
 }
 
 
 // Scrolls the view vertically so the insertion cursor is visible
-void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_onscreen_() {
+void Fl_Cairo_Text_Widget_Driver::text_view_scroll_mark_onscreen_(bool relative_to_mark) {
+  GtkTextIter cursor, mark;
+  gtk_text_buffer_get_selection_bounds(buffer_, &cursor, &mark);
   GdkRectangle strong, strong2;
-  gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view_), NULL, &strong, NULL);
+  gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view_),
+                                     (relative_to_mark ? &mark : &cursor),
+                                     &strong, NULL);
   gtk_text_view_buffer_to_window_coords(GTK_TEXT_VIEW(text_view_),
                                         GTK_TEXT_WINDOW_TEXT,
                                         strong.x, strong.y, &strong2.x, &strong2.y);
