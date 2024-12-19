@@ -760,7 +760,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
   if (Fl::event_key() == FL_Right || Fl::event_key() == FL_Left) {
     GtkTextIter before, after;
     gtk_text_buffer_get_selection_bounds(buffer_, &before, &after);
-    if (Fl::event_state() == FL_SHIFT) {
+    if (Fl::event_state() & FL_SHIFT) {
       if (Fl::event_key() == (widget->right_to_left() ? FL_Right : FL_Left)) {
         gtk_text_iter_backward_char(&before);
       } else gtk_text_iter_forward_char(&after);
@@ -788,7 +788,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     GtkTextIter where, last, new_where;
     GdkRectangle strong;
     gtk_text_buffer_get_selection_bounds(buffer_, &where, &last);
-    if (Fl::event_state() == FL_SHIFT && Fl::event_key() == FL_Down) new_where = last;
+    if ((Fl::event_state() & FL_SHIFT) && Fl::event_key() == FL_Down) new_where = last;
     else new_where = where;
     if (insert_offset_ < 0) {
       gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view_), &new_where, &strong, NULL);
@@ -801,12 +801,12 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view_), &new_where, &strong, NULL);
     gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view_), &new_where, insert_offset_, strong.y);
     bool relative_to_mark = false;
-    if (Fl::event_state() == FL_SHIFT) {
+    if (Fl::event_state() & FL_SHIFT) {
       if (Fl::event_key() == FL_Down) {
         gtk_text_buffer_select_range(buffer_, &where, &new_where);
         relative_to_mark = true;
       } else gtk_text_buffer_select_range(buffer_, &new_where, &last);
-    } else gtk_text_buffer_place_cursor(buffer_, &where);
+    } else gtk_text_buffer_place_cursor(buffer_, &new_where);
     text_view_scroll_mark_onscreen_(relative_to_mark);
     widget->redraw();
     return 1;
@@ -822,7 +822,7 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
     }
   } else if (Fl::event_key() == FL_Home || Fl::event_key() == FL_End) {
     if (v_fl_scrollbar_) {
-      if (Fl::event_state() == FL_SHIFT) {
+      if (Fl::event_state() & FL_SHIFT) {
         GtkTextIter cursor, mark, from, first, last;
         gtk_text_buffer_get_selection_bounds(buffer_, &cursor, &mark);
         gtk_text_buffer_get_start_iter(buffer_, &first);
