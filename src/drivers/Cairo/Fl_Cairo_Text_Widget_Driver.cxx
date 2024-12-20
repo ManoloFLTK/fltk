@@ -759,11 +759,12 @@ int Fl_Cairo_Text_Widget_Driver::handle_keyboard() {
   
   if (Fl::event_key() == FL_Right || Fl::event_key() == FL_Left) {
     GtkTextIter before, after;
-    gtk_text_buffer_get_selection_bounds(buffer_, &before, &after);
+    gtk_text_buffer_get_iter_at_mark(buffer_, &before, gtk_text_buffer_get_insert(buffer_));
     if (Fl::event_state() & FL_SHIFT) {
+      gtk_text_buffer_get_iter_at_mark(buffer_, &after, gtk_text_buffer_get_selection_bound(buffer_));
       if (Fl::event_key() == (widget->right_to_left() ? FL_Right : FL_Left)) {
-        gtk_text_iter_backward_char(&before);
-      } else gtk_text_iter_forward_char(&after);
+        gtk_text_iter_backward_cursor_position(&after);
+      } else gtk_text_iter_forward_cursor_position(&after);
       gtk_text_buffer_select_range(buffer_, &before, &after);
     } else {
       after = before;
