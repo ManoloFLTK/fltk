@@ -7,10 +7,127 @@
 #include <FL/Fl_Window.H>
 #include "../src/Fl_Text_Widget_Driver.H"
 
+// Eliminate platforms implementing Fl_Native_Text_Widget with a native text widget
 #if !(defined(__APPLE__) && (!defined(FLTK_USE_X11) || !FLTK_USE_X11)) && \
     !defined(FLTK_USE_CAIRO) && !defined(_WIN32)
+
+#include <FL/Fl_Input.H>
+#include <FL/Fl_Multiline_Input.H>
+
+// Class Fl_Backup_Text_Widget_Driver gives a default implementation of
+// Fl_Text_Widget_Driver for platforms that don't provide a platform-native text widget.
+// In this implementation, Fl_Text_Widget_Driver is an Fl_Group
+// containing an Fl_Input or Fl_Multiline_Input, and focus is managed
+// normally by FLTK.
+class Fl_Backup_Text_Widget_Driver : public Fl_Text_Widget_Driver {
+private:
+  Fl_Input *input_;
+public:
+  Fl_Backup_Text_Widget_Driver() { input_ = NULL; }
+  ~Fl_Backup_Text_Widget_Driver() { if (input_) delete input_; }
+  void show_widget() FL_OVERRIDE {
+    if (!input_) {
+      widget->begin();
+      if (kind == SINGLE_LINE) input_ = new Fl_Input(widget->x()+Fl::box_dx(widget->box()),
+                                                    widget->y()+Fl::box_dy(widget->box()),
+                                                    widget->w()-Fl::box_dw(widget->box()),
+                                                    widget->h()-Fl::box_dh(widget->box()),
+                                                    NULL);
+      else input_ = new Fl_Multiline_Input(widget->x()+Fl::box_dx(widget->box()),
+                                          widget->y()+Fl::box_dy(widget->box()),
+                                          widget->w()-Fl::box_dw(widget->box()),
+                                          widget->h()-Fl::box_dh(widget->box()),
+                                          NULL);
+      input_->textfont(widget->textfont());
+      input_->textsize(widget->textsize());
+      input_->textcolor(widget->textcolor());
+      input_->color(widget->color());
+      input_->wrap(widget->wrap());
+      input_->box(FL_FLAT_BOX);
+      widget->end();
+    }
+  }
+  Fl_Native_Group *as_native_group() FL_OVERRIDE { return NULL; }
+  void value(const char *t, int len) FL_OVERRIDE {
+    if (!input_) show_widget();
+    input_->value(t, len);
+  }
+  const char *value() FL_OVERRIDE {
+    return input_ ? input_->value() : "";
+  }
+  unsigned index(int i) const FL_OVERRIDE {
+    return input_ ? input_->index(i) : 0;
+  }
+  void replace(int from, int to, const char *text, int len) FL_OVERRIDE {
+    if (!input_) show_widget();
+    input_->replace(from, to, text, len);
+  }
+  void replace_selection(const char *text, int len) FL_OVERRIDE {
+    if (!input_) show_widget();
+    input_->replace(insert_position(), mark(), text, len);
+  }
+  int insert_position() FL_OVERRIDE {
+    return input_ ? input_->insert_position() : 0;
+  }
+  void insert_position(int pos, int mark) FL_OVERRIDE {
+    if (input_) input_->insert_position(pos, mark);
+  }
+  int mark() FL_OVERRIDE {
+    return input_ ? input_->mark() : 0;
+  }
+  int handle_focus() FL_OVERRIDE {
+    return widget->Fl_Native_Group::handle(FL_FOCUS);
+  }
+  int handle_dnd(int event) FL_OVERRIDE {
+    return input_->handle(event);
+  }
+  void select_all() FL_OVERRIDE {
+    if (input_) input_->insert_position(0, input_->size());
+  }
+  void paste() FL_OVERRIDE {
+    if (!input_) show_widget();
+    Fl::paste(*input_, 1);
+  }
+  void copy() FL_OVERRIDE {
+    if (!input_) return;
+    int i = input_->insert_position();
+    int m = input_->mark();
+    if (i > m) { int tmp = i; i = m; m = tmp; }
+    if (i < m) {
+      const char *val = input_->value();
+      Fl::copy(val + i, m-i, 1);
+    }
+  }
+  int undo() FL_OVERRIDE {
+    return input_ ? input_->undo() : 0;
+  }
+  int redo() FL_OVERRIDE {
+    return input_ ? input_->redo() : 0;
+  }
+  bool can_undo() const FL_OVERRIDE {
+    return input_ ? input_->can_undo() : false;
+  }
+  bool can_redo() const FL_OVERRIDE {
+    return input_ ? input_->can_redo() : false;
+  }
+  void textcolor() FL_OVERRIDE {
+    if (input_) {
+      input_->textcolor(widget->textcolor());
+      input_->redraw();
+    }
+  }
+  void textfontandsize() FL_OVERRIDE {
+    if (input_) {
+      input_->textfont(widget->textfont());
+      input_->textsize(widget->textsize());
+      input_->redraw();
+    }
+  }
+};
+
+
 Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text_Widget *n) {
-  Fl_Text_Widget_Driver *retval = new Fl_Text_Widget_Driver();
+  Fl_Backup_Text_Widget_Driver *retval = new Fl_Backup_Text_Widget_Driver();
   retval->widget = n;
   return retval;
 }
@@ -40,6 +157,11 @@ Fl_Native_Text_Widget::~Fl_Native_Text_Widget() {
 
 void Fl_Native_Text_Widget::get_focus() {
   driver_->focus();
+}
+
+
+Fl_Native_Group *Fl_Native_Text_Widget::as_native_group() {
+  return driver_->as_native_group();
 }
 
 
@@ -79,7 +201,7 @@ int Fl_Native_Text_Widget::handle(int event) {
       if (driver_->handle_mouse(event)) return 1;
       break;
     case FL_FOCUS:
-      if (active() && !readonly()) return 1;
+      if (active() && !readonly()) return driver_->handle_focus();
       break;
     case FL_UNFOCUS:
       return 1;

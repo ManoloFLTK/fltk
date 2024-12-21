@@ -45,29 +45,29 @@ void quit_cb(Fl_Widget *w) {
 
 
 void select_all_cb(Fl_Widget *) {
-  if (Fl::focus() == multiple) multiple->select_all();
-  else if (Fl::focus() == single) single->select_all();
+  if (multiple->contains(Fl::focus())) multiple->select_all();
+  else if (single->contains(Fl::focus())) single->select_all();
 }
 
 
 void copy_cb(Fl_Widget *) {
-  if (Fl::focus() == multiple) multiple->copy();
-  else if (Fl::focus() == single) single->copy();
+  if (multiple->contains(Fl::focus())) multiple->copy();
+  else if (single->contains(Fl::focus())) single->copy();
   else if (Fl::focus() == input) input->copy(1);
 }
 
 
 void paste_cb(Fl_Widget *) {
-  if (Fl::focus() == multiple) multiple->paste();
-  else if (Fl::focus() == single) single->paste();
-  else if (Fl::focus() == single2) single2->paste();
+  if (multiple->contains(Fl::focus())) multiple->paste();
+  else if (single->contains(Fl::focus())) single->paste();
+  else if (single2->contains(Fl::focus())) single2->paste();
   else if (Fl::focus() == input) Fl::paste(*input, 1);
 }
 
 
 void cut_cb(Fl_Widget *, Fl_Native_Multiline_Text_Widget *box) {
-  if (Fl::focus() == multiple) multiple->cut();
-  else if (Fl::focus() == single) single->cut();
+  if (multiple->contains(Fl::focus())) multiple->cut();
+  else if (single->contains(Fl::focus())) single->cut();
   else if (Fl::focus() == input) {
     input->copy(1);
     input->cut();
@@ -76,15 +76,15 @@ void cut_cb(Fl_Widget *, Fl_Native_Multiline_Text_Widget *box) {
 
 
 void undo_cb(Fl_Widget *) {
-  if (Fl::focus() == multiple) multiple->undo();
-  else if (Fl::focus() == single) single->undo();
+  if (multiple->contains(Fl::focus())) multiple->undo();
+  else if (single->contains(Fl::focus())) single->undo();
   else if (Fl::focus() == input) input->undo();
 }
 
 
 void redo_cb(Fl_Widget *) {
-  if (Fl::focus() == multiple) multiple->redo();
-  else if (Fl::focus() == single) single->redo();
+  if (multiple->contains(Fl::focus())) multiple->redo();
+  else if (single->contains(Fl::focus())) single->redo();
   else if (Fl::focus() == input) input->redo();
 }
 
