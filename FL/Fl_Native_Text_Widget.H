@@ -67,6 +67,7 @@ public:
   bool can_undo() const;
   bool can_redo() const;
   bool wrap() { return wrap_; }
+  Fl_Native_Group *as_native_group() FL_OVERRIDE;
 };
 
 

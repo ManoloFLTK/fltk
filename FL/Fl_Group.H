@@ -294,7 +294,6 @@ class FL_EXPORT Fl_Native_Group : public Fl_Group { // [NATIVE]
 public:
   Fl_Native_Group(int x, int y, int w, int h, const char *l = 0) :
     Fl_Group(x,y,w,h,l) {}
-  Fl_Native_Group *as_native_group() FL_OVERRIDE { return this; }
   virtual void get_focus() {}
   virtual void lost_focus() {}
 };
