@@ -616,14 +616,14 @@ endif()
 # prepare things for the fltk_native library
 #######################################################################
 
-set(NATIVECPPFILES Fl_Native_Text_Widget.cxx)
+set(NATIVECPPFILES Fl_Native_Input.cxx)
 if(FLTK_USE_CAIRO)
   pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
-  list(APPEND NATIVECPPFILES drivers/Cairo/Fl_Cairo_Text_Widget_Driver.cxx)
+  list(APPEND NATIVECPPFILES drivers/Cairo/Fl_Cairo_Native_Input_Driver.cxx)
 elseif(WIN32)
-  list(APPEND NATIVECPPFILES drivers/WinAPI/Fl_WinAPI_Text_Widget_Driver.cxx)
+  list(APPEND NATIVECPPFILES drivers/WinAPI/Fl_WinAPI_Native_Input_Driver.cxx)
 elseif(APPLE)
-  list(APPEND NATIVECPPFILES drivers/Cocoa/Fl_Cocoa_Text_Widget_Driver.mm)
+  list(APPEND NATIVECPPFILES drivers/Cocoa/Fl_Cocoa_Native_Input_Driver.mm)
 endif()
 
 fl_add_library(fltk_native STATIC "${NATIVECPPFILES}")

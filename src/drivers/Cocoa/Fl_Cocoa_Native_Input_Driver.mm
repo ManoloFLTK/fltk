@@ -1,10 +1,10 @@
 //
-//  Fl_Cocoa_Text_Widget_Driver.mm
+//  Fl_Cocoa_Native_Input_Driver.mm
 //
 
-#include "../../Fl_Text_Widget_Driver.H"
+#include "../../Fl_Native_Input_Driver.H"
 #include <FL/platform.H> // for fl_mac_xid
-#include <FL/Fl_Native_Text_Widget.H>
+#include <FL/Fl_Native_Input.H>
 #include "../Quartz/Fl_Quartz_Graphics_Driver.H"
 #include "Fl_Cocoa_Window_Driver.H"
 #include "../../Fl_Screen_Driver.H"
@@ -13,13 +13,13 @@
 
 @class FLNativeTextView;
 
-class Fl_Cocoa_Text_Widget_Driver : public Fl_Text_Widget_Driver {
+class Fl_Cocoa_Native_Input_Driver : public Fl_Native_Input_Driver {
 public:
   FLNativeTextView *text_view;
   NSScrollView *scroll_view;
   NSString *text_before_show;
-  Fl_Cocoa_Text_Widget_Driver();
-  ~Fl_Cocoa_Text_Widget_Driver();
+  Fl_Cocoa_Native_Input_Driver();
+  ~Fl_Cocoa_Native_Input_Driver();
   void show_widget() FL_OVERRIDE;
   void hide_widget() FL_OVERRIDE;
   void resize(int x, int y, int w, int h) FL_OVERRIDE;
@@ -52,7 +52,7 @@ public:
 
 @interface FLNativeTextView : NSTextView {
   @public
-  Fl_Cocoa_Text_Widget_Driver *driver;
+  Fl_Cocoa_Native_Input_Driver *driver;
 }
 - (BOOL)performDragOperation:(id <NSDraggingInfo>)sender;
 - (void)doCommandBySelector:(SEL)aSelector;
@@ -67,7 +67,7 @@ public:
 }
 
 - (BOOL)performDragOperation:(id <NSDraggingInfo>)sender {
-  if (driver->kind == Fl_Text_Widget_Driver::SINGLE_LINE) {
+  if (driver->kind == Fl_Native_Input_Driver::SINGLE_LINE) {
     NSPasteboard *pboard = [sender draggingPasteboard];
     NSString *s = nil;
     if ([[pboard types] containsObject:NSPasteboardTypeFileURL]) {
@@ -100,7 +100,7 @@ public:
 
 - (void)doCommandBySelector:(SEL)aSelector {
   NSString *s = [[NSApp currentEvent] characters];
-  if (aSelector == @selector(insertNewline:) && driver->kind == Fl_Text_Widget_Driver::SINGLE_LINE) {
+  if (aSelector == @selector(insertNewline:) && driver->kind == Fl_Native_Input_Driver::SINGLE_LINE) {
     if (driver->widget->when() & FL_WHEN_ENTER_KEY) {
       driver->maybe_do_callback(FL_REASON_ENTER_KEY);
     }
@@ -139,7 +139,7 @@ public:
 @implementation FLTextDelegate
 - (void)textDidChange:(NSNotification *)notification {
   FLNativeTextView *text_view = (FLNativeTextView*)[notification object];
-  if (text_view->driver->kind == Fl_Text_Widget_Driver::SINGLE_LINE) {
+  if (text_view->driver->kind == Fl_Native_Input_Driver::SINGLE_LINE) {
     NSLayoutManager *lom = [text_view layoutManager];
     NSTextContainer *container = [text_view textContainer];
     CGRect big = [text_view frame];
@@ -170,7 +170,7 @@ public:
 @end
 
 
-void Fl_Cocoa_Text_Widget_Driver::full_text_size() {
+void Fl_Cocoa_Native_Input_Driver::full_text_size() {
   NSString *content = [text_view string];
   if ([content length] == 0) return;
   if (widget->right_to_left()) {
@@ -204,21 +204,21 @@ void Fl_Cocoa_Text_Widget_Driver::full_text_size() {
 }
 
 
-Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text_Widget *n) {
-  Fl_Text_Widget_Driver *retval = (Fl_Text_Widget_Driver*)new Fl_Cocoa_Text_Widget_Driver();
+Fl_Native_Input_Driver *Fl_Native_Input_Driver::newTextWidgetDriver(Fl_Native_Input *n) {
+  Fl_Native_Input_Driver *retval = (Fl_Native_Input_Driver*)new Fl_Cocoa_Native_Input_Driver();
   retval->widget = n;
   return retval;
 }
 
 
-Fl_Cocoa_Text_Widget_Driver::Fl_Cocoa_Text_Widget_Driver() : Fl_Text_Widget_Driver() {
+Fl_Cocoa_Native_Input_Driver::Fl_Cocoa_Native_Input_Driver() : Fl_Native_Input_Driver() {
   scroll_view = nil;
   text_view = nil;
   text_before_show = nil;
 }
 
 
-Fl_Cocoa_Text_Widget_Driver::~Fl_Cocoa_Text_Widget_Driver() {
+Fl_Cocoa_Native_Input_Driver::~Fl_Cocoa_Native_Input_Driver() {
   [text_before_show release];
   if (text_view) {
     FLTextDelegate *delegate = [text_view delegate];
@@ -238,7 +238,7 @@ static void delayed_scroll_to_visible(id text_view) {
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::resize(int x, int y, int w, int h) {
+void Fl_Cocoa_Native_Input_Driver::resize(int x, int y, int w, int h) {
   CGRect fr = CGRectMake(x, widget->window()->h()-(y+h), w, h);
   fr = NSInsetRect(fr, Fl::box_dx(widget->box()), Fl::box_dy(widget->box()));
   int ns = widget->top_window()->screen_num();
@@ -263,7 +263,7 @@ void Fl_Cocoa_Text_Widget_Driver::resize(int x, int y, int w, int h) {
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::show_widget() {
+void Fl_Cocoa_Native_Input_Driver::show_widget() {
   NSWindow *flwin = (NSWindow*)fl_mac_xid(widget->window());
   if (!flwin) return;
   if (!scroll_view) {
@@ -297,9 +297,9 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
       [flwin makeFirstResponder:text_view];
       [text_view setAllowsUndo:YES];
     }
-    [scroll_view setHasVerticalScroller:(kind == Fl_Text_Widget_Driver::MULTIPLE_LINES)];
+    [scroll_view setHasVerticalScroller:(kind == Fl_Native_Input_Driver::MULTIPLE_LINES)];
     [scroll_view setHasHorizontalScroller:
-     (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES && !widget->wrap())];
+     (kind == Fl_Native_Input_Driver::MULTIPLE_LINES && !widget->wrap())];
     if ([scroll_view hasVerticalScroller] || [scroll_view hasHorizontalScroller]) {
       [scroll_view setScrollerStyle:NSScrollerStyleOverlay];
     }
@@ -317,7 +317,7 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
     }
     [text_view didChangeText];
   } else if ([scroll_view isHidden]) {
-    if (kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) {
+    if (kind == Fl_Native_Input_Driver::MULTIPLE_LINES) {
       NSRange save_range = [text_view selectedRange];
       [text_view setSelectedRange:NSMakeRange(0, 100000000)];
       if (widget->right_to_left()) {
@@ -339,14 +339,14 @@ void Fl_Cocoa_Text_Widget_Driver::show_widget() {
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::hide_widget() {
+void Fl_Cocoa_Native_Input_Driver::hide_widget() {
   [scroll_view setHidden:YES];
   if (!widget->readonly() && (widget->when() & FL_WHEN_RELEASE))
     maybe_do_callback(FL_REASON_LOST_FOCUS);
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::textfontandsize() {
+void Fl_Cocoa_Native_Input_Driver::textfontandsize() {
   if (!text_view) return;
   extern Fl_Fontdesc* fl_fonts;
   if (!fl_fonts) fl_fonts = Fl_Graphics_Driver::default_driver().calc_fl_fonts();
@@ -359,7 +359,7 @@ void Fl_Cocoa_Text_Widget_Driver::textfontandsize() {
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::textcolor() {
+void Fl_Cocoa_Native_Input_Driver::textcolor() {
   if (!text_view) return;
   uchar r, g, b;
   Fl::get_color(widget->active() ? widget->textcolor() : fl_inactive(widget->textcolor()), r, g, b);
@@ -367,12 +367,12 @@ void Fl_Cocoa_Text_Widget_Driver::textcolor() {
 }
 
 
-const char *Fl_Cocoa_Text_Widget_Driver::value() {
+const char *Fl_Cocoa_Native_Input_Driver::value() {
   return text_view ? [[text_view string] UTF8String] : [text_before_show UTF8String];
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::value(const char *t, int len) {
+void Fl_Cocoa_Native_Input_Driver::value(const char *t, int len) {
   if (!t) t = "";
   [text_before_show release];
   text_before_show = [[NSString alloc] initWithBytes:t length:len encoding:NSUTF8StringEncoding];
@@ -388,7 +388,7 @@ void Fl_Cocoa_Text_Widget_Driver::value(const char *t, int len) {
 }
 
 
-int Fl_Cocoa_Text_Widget_Driver::insert_position() {
+int Fl_Cocoa_Native_Input_Driver::insert_position() {
   NSRange r = [text_view selectedRange];
   return [[[text_view string] substringToIndex:r.location] lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
 }
@@ -416,24 +416,24 @@ static NSRange position_to_range(NSTextView *text_view, int pos, int mark) {
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::insert_position(int pos, int mark) {
+void Fl_Cocoa_Native_Input_Driver::insert_position(int pos, int mark) {
   NSRange r = position_to_range(text_view, pos, mark);
   [text_view setSelectedRange:r];
   [text_view scrollRangeToVisible:r];
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::readonly(bool on_off) {
+void Fl_Cocoa_Native_Input_Driver::readonly(bool on_off) {
   [text_view setEditable:!on_off];
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::selectable(bool on_off) {
+void Fl_Cocoa_Native_Input_Driver::selectable(bool on_off) {
   [text_view setSelectable:on_off];
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::replace(int from, int to, const char *text, int len) {
+void Fl_Cocoa_Native_Input_Driver::replace(int from, int to, const char *text, int len) {
   NSRange r = position_to_range(text_view, from, to);
   if (len == 0 && text) len = strlen(text);
   NSString *s;
@@ -446,7 +446,7 @@ void Fl_Cocoa_Text_Widget_Driver::replace(int from, int to, const char *text, in
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::replace_selection(const char *text, int len) {
+void Fl_Cocoa_Native_Input_Driver::replace_selection(const char *text, int len) {
   NSString *s;
   if (len) s = [[[NSString alloc] initWithBytes:text length:len encoding:NSUTF8StringEncoding] autorelease];
   else s = [NSString string];
@@ -454,44 +454,44 @@ void Fl_Cocoa_Text_Widget_Driver::replace_selection(const char *text, int len) {
 }
 
 
-int Fl_Cocoa_Text_Widget_Driver::mark() {
+int Fl_Cocoa_Native_Input_Driver::mark() {
   NSRange r = [text_view selectedRange];
   return [[[text_view string] substringToIndex:r.location + r.length] lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
 }
 
 
-unsigned Fl_Cocoa_Text_Widget_Driver::index(int i) const {
+unsigned Fl_Cocoa_Native_Input_Driver::index(int i) const {
   const char *s = [[text_view string] UTF8String];
   int len = strlen(s);
   return (i >= 0 && i < len ? fl_utf8decode(s + i, s + len, &len) : 0);
 }
 
 
-int Fl_Cocoa_Text_Widget_Driver::undo() {
+int Fl_Cocoa_Native_Input_Driver::undo() {
   if (![[text_view undoManager] canUndo]) return 0;
   [[text_view undoManager] undo];
   return 1;
 }
 
 
-int Fl_Cocoa_Text_Widget_Driver::redo() {
+int Fl_Cocoa_Native_Input_Driver::redo() {
   if (![[text_view undoManager] canRedo]) return 0;
   [[text_view undoManager] redo];
   return 1;
 }
 
 
-bool Fl_Cocoa_Text_Widget_Driver::can_undo() const {
+bool Fl_Cocoa_Native_Input_Driver::can_undo() const {
   return [[text_view undoManager] canUndo];
 }
 
 
-bool Fl_Cocoa_Text_Widget_Driver::can_redo() const {
+bool Fl_Cocoa_Native_Input_Driver::can_redo() const {
   return [[text_view undoManager] canRedo];
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::focus() {
+void Fl_Cocoa_Native_Input_Driver::focus() {
   if (!widget->readonly()) {
 //printf("focus() %s\n",widget->label());
     NSWindow *xid = [text_view window];
@@ -505,7 +505,7 @@ void Fl_Cocoa_Text_Widget_Driver::focus() {
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::unfocus() {
+void Fl_Cocoa_Native_Input_Driver::unfocus() {
   NSWindow *xid = [text_view window];
   if ([xid firstResponder] == text_view) {
 //printf("unfocus() %s\n",widget->label());
@@ -514,13 +514,13 @@ void Fl_Cocoa_Text_Widget_Driver::unfocus() {
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::select_all() {
+void Fl_Cocoa_Native_Input_Driver::select_all() {
   [text_view setSelectedRange:NSMakeRange(0, 10000000)];
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::copy() {
-  if (text_view->driver->kind == Fl_Text_Widget_Driver::MULTIPLE_LINES) {
+void Fl_Cocoa_Native_Input_Driver::copy() {
+  if (text_view->driver->kind == Fl_Native_Input_Driver::MULTIPLE_LINES) {
     [text_view writeSelectionToPasteboard:[NSPasteboard generalPasteboard]
                               types:[text_view writablePasteboardTypes]];
   } else {
@@ -544,8 +544,8 @@ void Fl_Cocoa_Text_Widget_Driver::copy() {
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::paste() {
-  if (text_view->driver->kind == Fl_Text_Widget_Driver::SINGLE_LINE) {
+void Fl_Cocoa_Native_Input_Driver::paste() {
+  if (text_view->driver->kind == Fl_Native_Input_Driver::SINGLE_LINE) {
     // When single-line, replace newlines by "␍" and tabs by "␉" in pasted text
     NSPasteboard *clip = [NSPasteboard generalPasteboard];
     NSString *found = [clip availableTypeFromArray:[NSArray arrayWithObjects:@"public.utf8-plain-text", @"public.utf16-plain-text", @"com.apple.traditional-mac-plain-text", nil]];
@@ -559,7 +559,7 @@ void Fl_Cocoa_Text_Widget_Driver::paste() {
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::right_to_left() {
+void Fl_Cocoa_Native_Input_Driver::right_to_left() {
   if (scroll_view) {
     widget->hide();
     widget->show();
@@ -568,7 +568,7 @@ void Fl_Cocoa_Text_Widget_Driver::right_to_left() {
 }
 
 
-void Fl_Cocoa_Text_Widget_Driver::draw() {
+void Fl_Cocoa_Native_Input_Driver::draw() {
   if (Fl_Surface_Device::surface() != Fl_Display_Device::display_device()) {
     Fl_Window *win = widget->window();
     NSWindow *nswin = (NSWindow*)fl_mac_xid(win);

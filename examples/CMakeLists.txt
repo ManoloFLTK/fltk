@@ -143,7 +143,7 @@ endforeach(src)
 ############################################################
 # create example program requiring fltk::native
 ############################################################
-fl_create_example(native-text-widget native-text-widget.cxx "fltk::native")
+fl_create_example(native-input native-input.cxx "fltk::native")
 
 ############################################################
 # create example programs with OpenGL3 + GLEW

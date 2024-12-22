@@ -1,21 +1,21 @@
 //
-//  Fl_Text_Widget_Driver.H
+//  Fl_Native_Input_Driver.H
 //
 //
 
-#ifndef Fl_Text_Widget_Driver_h
-#define Fl_Text_Widget_Driver_h
+#ifndef FL_NATIVE_INPUT_DRIVER_H
+#define FL_NATIVE_INPUT_DRIVER_H
 
-#include <FL/Fl_Native_Text_Widget.H>
+#include <FL/Fl_Native_Input.H>
 #include <limits.h>
 #include <FL/Fl_Export.H>
 
-class Fl_Text_Widget_Driver {
+class Fl_Native_Input_Driver {
 public:
   enum kind_enum {SINGLE_LINE, MULTIPLE_LINES} kind;
-  static Fl_Text_Widget_Driver *newTextWidgetDriver(Fl_Native_Text_Widget*);
-  Fl_Native_Text_Widget *widget;
-  virtual ~Fl_Text_Widget_Driver() {}
+  static Fl_Native_Input_Driver *newTextWidgetDriver(Fl_Native_Input*);
+  Fl_Native_Input *widget;
+  virtual ~Fl_Native_Input_Driver() {}
   virtual Fl_Native_Group *as_native_group() { return widget; }
   virtual void show_widget() {}
   virtual void hide_widget() {}
@@ -56,4 +56,4 @@ public:
   int byte_pos_to_char_pos(int pos);
 };
 
-#endif /* Fl_Text_Widget_Driver_h */
+#endif /* FL_NATIVE_INPUT_DRIVER_H */

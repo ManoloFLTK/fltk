@@ -1,18 +1,17 @@
 //
-//  Fl_Native_Text_Widget.H
-//
+//  Fl_Native_Input.H
 //
 
-#ifndef FL_NATIVE_TEXT_WIDGET_H
-#define FL_NATIVE_TEXT_WIDGET_H
+#ifndef FL_NATIVE_INPUT_H
+#define FL_NATIVE_INPUT_H
 
 #include <FL/Fl_Group.H>
 
 
-class Fl_Text_Widget_Driver;
+class Fl_Native_Input_Driver;
 
-class FL_EXPORT Fl_Native_Text_Widget : public Fl_Native_Group {
-  friend class Fl_Native_Multiline_Text_Widget;
+class FL_EXPORT Fl_Native_Input : public Fl_Native_Group {
+  friend class Fl_Native_Multiline_Input;
 private:
   Fl_Color cursor_color_;
   Fl_Font font_;
@@ -22,10 +21,10 @@ private:
   bool is_selectable_;
   bool rtl_;
   bool wrap_;
-  Fl_Text_Widget_Driver *driver_;
+  Fl_Native_Input_Driver *driver_;
 public:
-  Fl_Native_Text_Widget(int x, int y, int w, int h, const char *l = 0);
-  ~Fl_Native_Text_Widget();
+  Fl_Native_Input(int x, int y, int w, int h, const char *l = 0);
+  ~Fl_Native_Input();
   void get_focus() FL_OVERRIDE;
   void lost_focus() FL_OVERRIDE;
   void append(const char *t, int length = -1);
@@ -71,10 +70,10 @@ public:
 };
 
 
-class FL_EXPORT Fl_Native_Multiline_Text_Widget : public Fl_Native_Text_Widget {
+class FL_EXPORT Fl_Native_Multiline_Input : public Fl_Native_Input {
 public:
-  Fl_Native_Multiline_Text_Widget(int x, int y, int w, int h, const char *l = 0);
+  Fl_Native_Multiline_Input(int x, int y, int w, int h, const char *l = 0);
   void wrap(bool value) { wrap_ = value; }
 };
 
-#endif /* FL_NATIVE_TEXT_WIDGET_H */
+#endif /* FL_NATIVE_INPUT_H */

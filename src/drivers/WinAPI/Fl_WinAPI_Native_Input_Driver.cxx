@@ -1,10 +1,10 @@
 //
-//  Fl_WinAPI_Text_Widget_Driver.cxx
+//  Fl_WinAPI_Native_Input_Driver.cxx
 //
 
-#include "../../Fl_Text_Widget_Driver.H"
+#include "../../Fl_Native_Input_Driver.H"
 #include <FL/platform.H> // for fl_win32_xid
-#include <FL/Fl_Native_Text_Widget.H>
+#include <FL/Fl_Native_Input.H>
 #include <FL/Fl_Window.H>
 #include "../../Fl_Screen_Driver.H"
 #include "../../Fl_Window_Driver.H"
@@ -19,13 +19,13 @@
 #include <windows.h>
 
 
-class Fl_WinAPI_Text_Widget_Driver : public Fl_Text_Widget_Driver {
+class Fl_WinAPI_Native_Input_Driver : public Fl_Native_Input_Driver {
 private:
   char *text_before_show_;
   int char_pos_to_byte_pos_(int char_count);
 public:
-  Fl_WinAPI_Text_Widget_Driver();
-  ~Fl_WinAPI_Text_Widget_Driver();
+  Fl_WinAPI_Native_Input_Driver();
+  ~Fl_WinAPI_Native_Input_Driver();
   HWND edit_win;
   HBRUSH brush;
   static WNDPROC fltk_wnd_proc;
@@ -62,32 +62,32 @@ public:
 };
 
 
-Fl_Text_Widget_Driver *Fl_Text_Widget_Driver::newTextWidgetDriver(Fl_Native_Text_Widget *n) {
-  Fl_Text_Widget_Driver *retval = (Fl_Text_Widget_Driver*)new Fl_WinAPI_Text_Widget_Driver();
+Fl_Native_Input_Driver *Fl_Native_Input_Driver::newTextWidgetDriver(Fl_Native_Input *n) {
+  Fl_Native_Input_Driver *retval = (Fl_Native_Input_Driver*)new Fl_WinAPI_Native_Input_Driver();
   retval->widget = n;
   return retval;
 }
 
 
-WNDPROC Fl_WinAPI_Text_Widget_Driver::fltk_wnd_proc = NULL;
-WNDPROC Fl_WinAPI_Text_Widget_Driver::win32_edit_wnd_proc = NULL;
+WNDPROC Fl_WinAPI_Native_Input_Driver::fltk_wnd_proc = NULL;
+WNDPROC Fl_WinAPI_Native_Input_Driver::win32_edit_wnd_proc = NULL;
 
 
-Fl_WinAPI_Text_Widget_Driver::Fl_WinAPI_Text_Widget_Driver() : Fl_Text_Widget_Driver() {
+Fl_WinAPI_Native_Input_Driver::Fl_WinAPI_Native_Input_Driver() : Fl_Native_Input_Driver() {
   text_before_show_ = NULL;
   edit_win = NULL;
   brush = NULL;
 }
 
 
-Fl_WinAPI_Text_Widget_Driver::~Fl_WinAPI_Text_Widget_Driver() {
+Fl_WinAPI_Native_Input_Driver::~Fl_WinAPI_Native_Input_Driver() {
   delete[] text_before_show_;
   if (edit_win) DestroyWindow(edit_win);
   if (brush) DeleteObject(brush);
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::resize(int x, int y, int w, int h) {
+void Fl_WinAPI_Native_Input_Driver::resize(int x, int y, int w, int h) {
   int nscreen = Fl_Window_Driver::driver(widget->top_window())->screen_num();
   float s = Fl::screen_driver()->scale(nscreen);
   int xp = widget->x() + Fl::box_dx(widget->box());
@@ -106,8 +106,8 @@ void Fl_WinAPI_Text_Widget_Driver::resize(int x, int y, int w, int h) {
 
 static LRESULT CALLBACK fltk_wnd_proc_plus_focus(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   if (uMsg == WM_CTLCOLOREDIT) {
-    Fl_WinAPI_Text_Widget_Driver *dr =
-      (Fl_WinAPI_Text_Widget_Driver*)GetWindowLongPtrW((HWND)lParam, GWLP_USERDATA);
+    Fl_WinAPI_Native_Input_Driver *dr =
+      (Fl_WinAPI_Native_Input_Driver*)GetWindowLongPtrW((HWND)lParam, GWLP_USERDATA);
     if (dr) {
       uchar r,g,b;
       Fl::get_color(dr->widget->active() ? dr->widget->textcolor() : fl_inactive(dr->widget->textcolor()), r, g, b);
@@ -121,7 +121,7 @@ static LRESULT CALLBACK fltk_wnd_proc_plus_focus(HWND hWnd, UINT uMsg, WPARAM wP
     }
   }
   if (uMsg == WM_COMMAND && (HIWORD(wParam) == EN_SETFOCUS || HIWORD(wParam) == EN_UPDATE)) {
-    Fl_WinAPI_Text_Widget_Driver *dr = (Fl_WinAPI_Text_Widget_Driver*)GetWindowLongPtrW((HWND)lParam, GWLP_USERDATA);
+    Fl_WinAPI_Native_Input_Driver *dr = (Fl_WinAPI_Native_Input_Driver*)GetWindowLongPtrW((HWND)lParam, GWLP_USERDATA);
     if (HIWORD(wParam) == EN_SETFOCUS) {
       if (dr->widget->active()) {
         dr->widget->take_focus();
@@ -143,7 +143,7 @@ static LRESULT CALLBACK fltk_wnd_proc_plus_focus(HWND hWnd, UINT uMsg, WPARAM wP
       }
     }
   }
-  return CallWindowProcW(Fl_WinAPI_Text_Widget_Driver::fltk_wnd_proc, hWnd, uMsg, wParam, lParam);
+  return CallWindowProcW(Fl_WinAPI_Native_Input_Driver::fltk_wnd_proc, hWnd, uMsg, wParam, lParam);
 }
 
 
@@ -160,18 +160,18 @@ static LRESULT CALLBACK fltk_edit_wnd_proc(HWND hWnd, UINT uMsg, WPARAM wParam, 
     }
   }
   if ( use_edit_proc ) { // standard processing of most messages by an EDIT window
-    return CallWindowProcW(Fl_WinAPI_Text_Widget_Driver::win32_edit_wnd_proc,
+    return CallWindowProcW(Fl_WinAPI_Native_Input_Driver::win32_edit_wnd_proc,
                            hWnd, uMsg, wParam, lParam);
   }
   // apply FLTK's handling to remaining messages to catch shortcuts
-  Fl_WinAPI_Text_Widget_Driver *dr =
-    (Fl_WinAPI_Text_Widget_Driver*)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
+  Fl_WinAPI_Native_Input_Driver *dr =
+    (Fl_WinAPI_Native_Input_Driver*)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
   HWND xid = fl_win32_xid(dr->widget->window());
-  return CallWindowProcW(Fl_WinAPI_Text_Widget_Driver::fltk_wnd_proc, xid, uMsg, wParam, lParam);
+  return CallWindowProcW(Fl_WinAPI_Native_Input_Driver::fltk_wnd_proc, xid, uMsg, wParam, lParam);
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::show_widget() {
+void Fl_WinAPI_Native_Input_Driver::show_widget() {
   HWND flwin = (HWND)fl_win32_xid(widget->window());
   if (!flwin) return;
   if (!edit_win) {
@@ -214,7 +214,7 @@ void Fl_WinAPI_Text_Widget_Driver::show_widget() {
       if (!win32_edit_wnd_proc) win32_edit_wnd_proc = current_wnd_proc;
       SetWindowLongPtrW(edit_win, GWLP_WNDPROC, (LONG_PTR)fltk_edit_wnd_proc);
     }
-    // Attach the Fl_WinAPI_Text_Widget_Driver pter to the EDIT window as user-data.
+    // Attach the Fl_WinAPI_Native_Input_Driver pter to the EDIT window as user-data.
     SetWindowLongPtrW(edit_win, GWLP_USERDATA, (LONG_PTR)this);
 //fprintf(stderr,"CreateWindowExW=%p WinAPIdriver=%p\n",edit_win,this); fflush(stderr);
 
@@ -230,14 +230,14 @@ void Fl_WinAPI_Text_Widget_Driver::show_widget() {
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::hide_widget() {
+void Fl_WinAPI_Native_Input_Driver::hide_widget() {
   ShowWindow(edit_win, SW_HIDE);
   if (!widget->readonly() && (widget->when() & FL_WHEN_RELEASE))
     maybe_do_callback(FL_REASON_LOST_FOCUS);
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::textfontandsize() {
+void Fl_WinAPI_Native_Input_Driver::textfontandsize() {
   if (!edit_win) return;
   fl_font(widget->textfont(), widget->textsize());
   Fl_GDI_Font_Descriptor *desc = (Fl_GDI_Font_Descriptor*)fl_graphics_driver->font_descriptor();
@@ -245,7 +245,7 @@ void Fl_WinAPI_Text_Widget_Driver::textfontandsize() {
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::textcolor()  {
+void Fl_WinAPI_Native_Input_Driver::textcolor()  {
   if (edit_win) {
     ShowWindow(edit_win, SW_HIDE);
     ShowWindow(edit_win, SW_SHOW);
@@ -267,7 +267,7 @@ static char *wchar_to_utf8(const wchar_t *wstr, char *&utf8) {
 }
 
 
-const char *Fl_WinAPI_Text_Widget_Driver::value() {
+const char *Fl_WinAPI_Native_Input_Driver::value() {
   if (!edit_win) return text_before_show_;
   if (kind == SINGLE_LINE) {
     int l = GetWindowTextLengthW(edit_win);
@@ -302,7 +302,7 @@ static wchar_t *utf8_to_wchar(const char *utf8, wchar_t *&wbuf, int lg = -1) {
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::value(const char *t, int len) {
+void Fl_WinAPI_Native_Input_Driver::value(const char *t, int len) {
   if (!t) t = "";
   if (len < 0) len = strlen(t);
   if (text_before_show_ != t)  {
@@ -342,7 +342,7 @@ void Fl_WinAPI_Text_Widget_Driver::value(const char *t, int len) {
 
 // Given a position in character units in the text, returns the corresponding
 // position in byte units.
-int Fl_WinAPI_Text_Widget_Driver::char_pos_to_byte_pos_(int char_count) {
+int Fl_WinAPI_Native_Input_Driver::char_pos_to_byte_pos_(int char_count) {
   const char *text;
   if (!edit_win) {
     text = text_before_show_;
@@ -368,14 +368,14 @@ int Fl_WinAPI_Text_Widget_Driver::char_pos_to_byte_pos_(int char_count) {
 }
 
 
-int Fl_WinAPI_Text_Widget_Driver::insert_position() {
+int Fl_WinAPI_Native_Input_Driver::insert_position() {
   DWORD from;
   SendMessageW(edit_win, EM_GETSEL, (WPARAM)&from, (LPARAM)NULL);
   return char_pos_to_byte_pos_(from);
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::insert_position(int pos, int mark) {
+void Fl_WinAPI_Native_Input_Driver::insert_position(int pos, int mark) {
   bool need_selection = (pos != mark && widget->selectable());
   pos = byte_pos_to_char_pos(pos);
   if (need_selection) mark = byte_pos_to_char_pos(mark);
@@ -384,35 +384,35 @@ void Fl_WinAPI_Text_Widget_Driver::insert_position(int pos, int mark) {
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::readonly(bool on_off) {
+void Fl_WinAPI_Native_Input_Driver::readonly(bool on_off) {
   SendMessageW(edit_win, EM_SETREADONLY, (WPARAM)on_off, (LPARAM)0);
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::selectable(bool on_off) {
+void Fl_WinAPI_Native_Input_Driver::selectable(bool on_off) {
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::replace(int from, int to, const char *text, int len) {
+void Fl_WinAPI_Native_Input_Driver::replace(int from, int to, const char *text, int len) {
   insert_position(from, to);
   replace_selection(text, len);
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::replace_selection(const char *text, int len) {
+void Fl_WinAPI_Native_Input_Driver::replace_selection(const char *text, int len) {
   utf8_to_wchar(text, wbuf_, len);
   SendMessageW(edit_win, EM_REPLACESEL, (WPARAM)TRUE, (LPARAM)wbuf_);
 }
 
 
-int Fl_WinAPI_Text_Widget_Driver::mark() {
+int Fl_WinAPI_Native_Input_Driver::mark() {
   DWORD to;
   SendMessageW(edit_win, EM_GETSEL, (WPARAM)NULL, (LPARAM)&to);
   return char_pos_to_byte_pos_(to);
 }
 
 
-unsigned Fl_WinAPI_Text_Widget_Driver::index(int i) const {
+unsigned Fl_WinAPI_Native_Input_Driver::index(int i) const {
   const char *s = widget->value();
   int len = (int)strlen(s);
   unsigned r = (i >= 0 && i < len ? fl_utf8decode(s + i, s + len, &len) : 0);
@@ -420,29 +420,29 @@ unsigned Fl_WinAPI_Text_Widget_Driver::index(int i) const {
 }
 
 
-int Fl_WinAPI_Text_Widget_Driver::undo() {
+int Fl_WinAPI_Native_Input_Driver::undo() {
   if (!can_undo()) return 0;
   SendMessageW(edit_win, EM_UNDO, (WPARAM)0, (LPARAM)0);
   return 1;
 }
 
 
-int Fl_WinAPI_Text_Widget_Driver::redo() {
+int Fl_WinAPI_Native_Input_Driver::redo() {
   return 0;
 }
 
 
-bool Fl_WinAPI_Text_Widget_Driver::can_undo() const {
+bool Fl_WinAPI_Native_Input_Driver::can_undo() const {
   return (SendMessageW(edit_win, EM_CANUNDO, (WPARAM)0, (LPARAM)0) != 0);
 }
 
 
-bool Fl_WinAPI_Text_Widget_Driver::can_redo() const {
+bool Fl_WinAPI_Native_Input_Driver::can_redo() const {
   return 0;
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::focus() {
+void Fl_WinAPI_Native_Input_Driver::focus() {
   //fprintf(stderr,"focus to %s\n",widget->label());fflush(stderr);
   if (!widget->readonly()) {
     SetFocus(edit_win);
@@ -450,30 +450,30 @@ void Fl_WinAPI_Text_Widget_Driver::focus() {
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::unfocus() {
+void Fl_WinAPI_Native_Input_Driver::unfocus() {
   //fprintf(stderr,"unfocus to %s\n",widget->label());fflush(stderr);
   if (Fl::focus() && (!Fl::focus()->as_group() || !Fl::focus()->as_group()->as_native_group())) SetFocus(fl_win32_xid(Fl::focus()->window()));
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::select_all() {
+void Fl_WinAPI_Native_Input_Driver::select_all() {
   if (!widget->selectable()) fl_beep();
   else SendMessageW(edit_win, EM_SETSEL, (WPARAM)0, (LPARAM)100000000);
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::copy() {
+void Fl_WinAPI_Native_Input_Driver::copy() {
   SendMessageW(edit_win, WM_COPY, (WPARAM)0, (LPARAM)0);
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::paste() {
+void Fl_WinAPI_Native_Input_Driver::paste() {
     if (widget->readonly()) fl_beep();
     else SendMessageW(edit_win, WM_PASTE, (WPARAM)0, (LPARAM)0);
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::right_to_left() {
+void Fl_WinAPI_Native_Input_Driver::right_to_left() {
   if (edit_win) {
     char *content = strdup(value());
     DestroyWindow(edit_win);
@@ -485,7 +485,7 @@ void Fl_WinAPI_Text_Widget_Driver::right_to_left() {
 }
 
 
-void Fl_WinAPI_Text_Widget_Driver::draw() {
+void Fl_WinAPI_Native_Input_Driver::draw() {
   if (Fl_Surface_Device::surface() != Fl_Display_Device::display_device()) {
     Fl_Surface_Device::push_current(Fl_Display_Device::display_device());
     Fl_WinAPI_Screen_Driver *dr = (Fl_WinAPI_Screen_Driver *)Fl::screen_driver();
@@ -512,7 +512,7 @@ void Fl_WinAPI_Text_Widget_Driver::draw() {
 
 static Fl_Widget *dnd_save_focus;
 
-int Fl_WinAPI_Text_Widget_Driver::handle_dnd(int event) {
+int Fl_WinAPI_Native_Input_Driver::handle_dnd(int event) {
   switch (event) {
     case FL_DND_ENTER:
       Fl::belowmouse(widget); // send the leave events first
@@ -569,7 +569,7 @@ int Fl_WinAPI_Text_Widget_Driver::handle_dnd(int event) {
 }
 
 
-int Fl_WinAPI_Text_Widget_Driver::handle_paste() {
+int Fl_WinAPI_Native_Input_Driver::handle_paste() {
   if (widget->readonly()) fl_beep();
   else replace_selection(Fl::event_text(), Fl::event_length());
   return 1;

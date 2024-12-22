@@ -1,6 +1,6 @@
 #include <FL/Fl.H>
 #include <FL/Fl_Double_Window.H>
-#include <FL/Fl_Native_Text_Widget.H>
+#include <FL/Fl_Native_Input.H>
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Sys_Menu_Bar.H>
 #include <FL/Fl_Native_File_Chooser.H>
@@ -8,13 +8,13 @@
 
 #include <stdio.h>
 
-Fl_Native_Multiline_Text_Widget *multiple;
-Fl_Native_Text_Widget *single, *single2 = NULL;
+Fl_Native_Multiline_Input *multiple;
+Fl_Native_Input *single, *single2 = NULL;
 Fl_Input *input;
 Fl_Sys_Menu_Bar *menubar;
 
 
-void load_file(Fl_Native_Multiline_Text_Widget *widget, const char *fname)
+void load_file(Fl_Native_Multiline_Input *widget, const char *fname)
 {
   FILE *in = fopen(fname, "r");
   if (in) {
@@ -30,7 +30,7 @@ void load_file(Fl_Native_Multiline_Text_Widget *widget, const char *fname)
 }
 
 
-void open_cb(Fl_Widget *, Fl_Native_Multiline_Text_Widget *box) {
+void open_cb(Fl_Widget *, Fl_Native_Multiline_Input *box) {
   Fl_Native_File_Chooser fnfc;
   fnfc.title("Select text file");
   fnfc.type(Fl_Native_File_Chooser::BROWSE_FILE);
@@ -65,7 +65,7 @@ void paste_cb(Fl_Widget *) {
 }
 
 
-void cut_cb(Fl_Widget *, Fl_Native_Multiline_Text_Widget *box) {
+void cut_cb(Fl_Widget *) {
   if (multiple->contains(Fl::focus())) multiple->cut();
   else if (single->contains(Fl::focus())) single->cut();
   else if (Fl::focus() == input) {
@@ -98,7 +98,7 @@ void toggle_rtl_cb(Fl_Widget *) {
 }
 
 
-void toggle_inactive(Fl_Menu_ *menu, Fl_Native_Text_Widget *wid) {
+void toggle_inactive(Fl_Menu_ *menu, Fl_Native_Input *wid) {
   if (menu->mvalue()->value()) wid->deactivate();
   else wid->activate();
 }
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
 #define SUBWIN 0//1
   bool readonly = false;
   bool selectable = true;
-  Fl_Native_Multiline_Text_Widget *box = new Fl_Native_Multiline_Text_Widget(20, 30+offset_for_menubar, 450, 100, "Fl_Native_Multiline_Text_Widget");
+  Fl_Native_Multiline_Input *box = new Fl_Native_Multiline_Input(20, 30+offset_for_menubar, 450, 100, "Fl_Native_Multiline_Input");
   multiple = box;
   Fl_Menu_Item *table = (Fl_Menu_Item*)menubar->menu();
   (table+1)->user_data(box);
@@ -210,13 +210,13 @@ int main(int argc, char **argv) {
   Fl_Window *subwin = new Fl_Double_Window(20, box->y()+box->h()+20, 450, 50+40,"subwin");
   subwin->color(FL_YELLOW);
 #endif
-  Fl_Native_Text_Widget *box2 = new Fl_Native_Text_Widget(
+  Fl_Native_Input *box2 = new Fl_Native_Input(
 #if SUBWIN
       0, 0,
 #else
       20, box->y()+box->h()+20,
 #endif
-      450, 35, "Fl_Native_Text_Widget");
+      450, 35, "Fl_Native_Input");
   single = box2;
   item = (Fl_Menu_Item*)menubar->find_item("Edit/Inactive S");
   item->user_data(single);
