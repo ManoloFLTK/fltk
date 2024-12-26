@@ -39,8 +39,7 @@ public:
   int redo() FL_OVERRIDE;
   bool can_undo() const FL_OVERRIDE;
   bool can_redo() const FL_OVERRIDE;
-  void focus() FL_OVERRIDE;
-  void unfocus() FL_OVERRIDE;
+  int handle_focus(int event) FL_OVERRIDE;
   void select_all() FL_OVERRIDE;
   void copy() FL_OVERRIDE;
   void paste() FL_OVERRIDE;
@@ -491,26 +490,24 @@ bool Fl_Cocoa_Native_Input_Driver::can_redo() const {
 }
 
 
-void Fl_Cocoa_Native_Input_Driver::focus() {
-  if (!widget->readonly()) {
-//printf("focus() %s\n",widget->label());
+int Fl_Cocoa_Native_Input_Driver::handle_focus(int event) {
+  if (event == FL_FOCUS) {
     NSWindow *xid = [text_view window];
+    //printf("focus() %s\n",widget->label());
     if ([xid parentWindow] && [NSApp keyWindow] != xid)
       [xid makeKeyWindow];
     if ([xid firstResponder] != text_view) {
       [xid makeFirstResponder:text_view];
       [text_view scrollRangeToVisible:[text_view selectedRange]];
     }
+  } else if (event == FL_UNFOCUS) {
+    NSWindow *xid = [text_view window];
+    if ([xid firstResponder] == text_view) {
+      //printf("unfocus() %s\n",widget->label());
+      [xid makeFirstResponder:[xid contentView]];
+    }
   }
-}
-
-
-void Fl_Cocoa_Native_Input_Driver::unfocus() {
-  NSWindow *xid = [text_view window];
-  if ([xid firstResponder] == text_view) {
-//printf("unfocus() %s\n",widget->label());
-    [xid makeFirstResponder:[xid contentView]];
-  }
+  return 1;
 }
 
 

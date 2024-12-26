@@ -50,7 +50,7 @@ public:
       widget->end();
     }
   }
-  Fl_Native_Group *as_native_group() FL_OVERRIDE { return NULL; }
+  bool is_native_group() FL_OVERRIDE { return false; }
   void value(const char *t, int len) FL_OVERRIDE {
     if (!input_) show_widget();
     input_->value(t, len);
@@ -78,8 +78,8 @@ public:
   int mark() FL_OVERRIDE {
     return input_ ? input_->mark() : 0;
   }
-  int handle_focus() FL_OVERRIDE {
-    return widget->Fl_Native_Group::handle(FL_FOCUS);
+  int handle_focus(int event) FL_OVERRIDE {
+    return widget->Fl_Group::handle(event);
   }
   int handle_dnd(int event) FL_OVERRIDE {
     return input_->handle(event);
@@ -140,8 +140,7 @@ Fl_Native_Input_Driver *Fl_Native_Input_Driver::newTextWidgetDriver(Fl_Native_In
 //
 
 
-Fl_Native_Input::Fl_Native_Input(int x, int y, int w, int h, const char *l) :
-      Fl_Native_Group(x,y,w,h,l) {
+Fl_Native_Input::Fl_Native_Input(int x, int y, int w, int h, const char *l) : Fl_Group(x,y,w,h,l) {
   end();
   driver_ = Fl_Native_Input_Driver::newTextWidgetDriver(this);
   font_size_ = FL_NORMAL_SIZE;
@@ -162,20 +161,8 @@ Fl_Native_Input::~Fl_Native_Input() {
 };
 
 
-void Fl_Native_Input::get_focus() {
-  driver_->focus();
-}
-
-
-Fl_Native_Group *Fl_Native_Input::as_native_group() {
-  return driver_->as_native_group();
-}
-
-
-void Fl_Native_Input::lost_focus() {
-  driver_->unfocus();
-  if (!readonly() && (when() & FL_WHEN_RELEASE))
-    driver_->maybe_do_callback(FL_REASON_LOST_FOCUS);
+bool Fl_Native_Input::is_native_group() {
+  return driver_->is_native_group();
 }
 
 
@@ -208,10 +195,14 @@ int Fl_Native_Input::handle(int event) {
       if (driver_->handle_mouse(event)) return 1;
       break;
     case FL_FOCUS:
-      if (active() && !readonly()) return driver_->handle_focus();
+      if (active() && !readonly()) return driver_->handle_focus(FL_FOCUS);
       break;
-    case FL_UNFOCUS:
-      return 1;
+    case FL_UNFOCUS: {
+      int r = driver_->handle_focus(FL_UNFOCUS);
+      if (!readonly() && (when() & FL_WHEN_RELEASE))
+        driver_->maybe_do_callback(FL_REASON_LOST_FOCUS);
+      return r;
+      }
     case FL_KEYBOARD:
       if (Fl::e_keysym == FL_Tab) return 0;
       return driver_->handle_keyboard();
@@ -229,7 +220,7 @@ int Fl_Native_Input::handle(int event) {
    default:
       break;
   }
-  return Fl_Native_Group::handle(event);
+  return Fl_Group::handle(event);
 }
 
 
@@ -411,7 +402,7 @@ Fl_Native_Multiline_Input::Fl_Native_Multiline_Input(int x, int y, int w, int h,
 
 
 void Fl_Native_Input_Driver::deactivate() {
-  if (Fl::focus() == widget) unfocus();
+  if (Fl::focus() == widget) handle_focus(FL_UNFOCUS);
   textcolor();
 }
 

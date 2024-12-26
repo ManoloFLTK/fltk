@@ -10,7 +10,7 @@
 
 class Fl_Native_Input_Driver;
 
-class FL_EXPORT Fl_Native_Input : public Fl_Native_Group {
+class FL_EXPORT Fl_Native_Input : public Fl_Group {
   friend class Fl_Native_Multiline_Input;
 private:
   Fl_Color cursor_color_;
@@ -25,8 +25,6 @@ private:
 public:
   Fl_Native_Input(int x, int y, int w, int h, const char *l = 0);
   ~Fl_Native_Input();
-  void get_focus() FL_OVERRIDE;
-  void lost_focus() FL_OVERRIDE;
   void append(const char *t, int length = -1);
   void right_to_left(bool rtl);
   bool right_to_left() { return rtl_; }
@@ -66,7 +64,7 @@ public:
   bool can_undo() const;
   bool can_redo() const;
   bool wrap() { return wrap_; }
-  Fl_Native_Group *as_native_group() FL_OVERRIDE;
+  bool is_native_group() FL_OVERRIDE;
 };
 
 

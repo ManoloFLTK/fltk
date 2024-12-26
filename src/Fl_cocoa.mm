@@ -695,7 +695,7 @@ void Fl_Cocoa_Screen_Driver::breakMacEventLoop()
                 //  when another modal window is currently the key win
   if (!w || w->output() || w->tooltip_window() || w->menu_window()) return NO; // [NATIVE]
   Fl_Widget *focus = Fl::focus();
-  return (!w->parent() || (focus && focus->as_group() && focus->as_group()->as_native_group() && focus->window() == w));
+  return (!w->parent() || (focus && focus->as_group() && focus->as_group()->is_native_group() && focus->window() == w));
 }
 
 - (BOOL)canBecomeMainWindow
@@ -1451,7 +1451,7 @@ static FLWindowDelegate *flwindowdelegate_instance = nil;
   }
   if (!w->parent() && Fl_Window_Driver::last_focus_widget() &&
       Fl_Window_Driver::last_focus_widget()->as_group() &&
-      Fl_Window_Driver::last_focus_widget()->as_group()->as_native_group() &&
+      Fl_Window_Driver::last_focus_widget()->as_group()->is_native_group() &&
       Fl_Window_Driver::last_focus_widget()->window()->parent()) { // [NATIVE]
       w->handle(FL_PUSH);
   } else

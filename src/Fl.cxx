@@ -1069,9 +1069,8 @@ void Fl::focus(Fl_Widget *o)
       while (w1) { win=w1; w1=win->window(); }*/ // same as win = o->top_window();
       Fl_Window *win;
       Fl_Window_Driver::last_focus_widget_ = o; // [NATIVE]
-      if (o->as_group() && o->as_group()->as_native_group()) { // [NATIVE]
+      if (o->as_group() && o->as_group()->is_native_group()) { // [NATIVE]
         win = o->window();
-        o->as_group()->as_native_group()->get_focus();
       } else {
         win = o->top_window();
       }
@@ -1088,9 +1087,6 @@ void Fl::focus(Fl_Widget *o)
     e_number = FL_UNFOCUS;
     for (; p; p = p->parent()) {
       p->handle(FL_UNFOCUS);
-      if (p->as_group() && p->as_group()->as_native_group()) { // [NATIVE]
-        p->as_group()->as_native_group()->lost_focus();
-      }
       fl_oldfocus = p;
     }
     e_number = old_event;
@@ -1169,10 +1165,9 @@ void fl_fix_focus() {
     if (Fl::e_keysym < (FL_Button + FL_LEFT_MOUSE) ||
         Fl::e_keysym > (FL_Button + FL_RIGHT_MOUSE))
       Fl::e_keysym = 0; // make sure widgets don't think a keystroke moved focus
-    Fl_Widget *f = Fl::focus();
-    if (!f || !f->as_group() || !f->as_group()->as_native_group()) w = w->top_window(); // [NATIVE]
+    while (w->parent()) w = w->parent();
     if (Fl::modal()) w = Fl::modal();
-    if (!w->contains(f))
+    if (!w->contains(Fl::focus()))
       if (!w->take_focus()) Fl::focus(w);
     Fl::e_keysym = saved;
   } else

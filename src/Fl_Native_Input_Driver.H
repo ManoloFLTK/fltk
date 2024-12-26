@@ -16,7 +16,7 @@ public:
   static Fl_Native_Input_Driver *newTextWidgetDriver(Fl_Native_Input*);
   Fl_Native_Input *widget;
   virtual ~Fl_Native_Input_Driver() {}
-  virtual Fl_Native_Group *as_native_group() { return widget; }
+  virtual bool is_native_group() { return true; }
   virtual void show_widget() {}
   virtual void hide_widget() {}
   virtual void resize(int x, int y, int w, int h) {}
@@ -38,13 +38,11 @@ public:
   virtual int redo() { return 0; }
   virtual bool can_undo() const { return false; }
   virtual bool can_redo() const { return false; }
-  virtual void focus() {}
-  virtual void unfocus() {}
   virtual void select_all() {}
   virtual void copy() {}
   virtual void paste() {}
   virtual void draw() {}
-  virtual int handle_focus() { return 1; }
+  virtual int handle_focus(int) { return 1; }
   virtual int handle_keyboard() { return 0; }
   virtual int handle_mouse(int event) { return 0; }
   virtual int handle_paste() { return 0; }

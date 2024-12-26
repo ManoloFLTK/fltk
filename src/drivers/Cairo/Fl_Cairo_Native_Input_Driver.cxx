@@ -61,8 +61,7 @@ public:
   void replace_selection(const char *text, int len) FL_OVERRIDE;
   const char *value() FL_OVERRIDE;
   void resize(int x, int y, int w, int h) FL_OVERRIDE;
-  void focus() FL_OVERRIDE;
-  void unfocus() FL_OVERRIDE;
+  int handle_focus(int) FL_OVERRIDE;
   void draw() FL_OVERRIDE;
   unsigned index(int i) const FL_OVERRIDE;
   void copy() FL_OVERRIDE;
@@ -639,16 +638,14 @@ void Fl_Cairo_Native_Input_Driver::resize(int x, int y, int w, int h) {
 }
 
 
-void Fl_Cairo_Native_Input_Driver::focus() {
-  if (!widget->readonly()) {
+int Fl_Cairo_Native_Input_Driver::handle_focus(int event) {
+  if (event == FL_FOCUS) {
     if (!need_allocate_) need_allocate_ = 1; // important
     widget->redraw();
+  } else if (event == FL_UNFOCUS) {
+    widget->redraw();
   }
-}
-
-
-void Fl_Cairo_Native_Input_Driver::unfocus() {
-  widget->redraw();
+  return 1;
 }
 
 

@@ -49,8 +49,7 @@ public:
   int redo() FL_OVERRIDE;
   bool can_undo() const FL_OVERRIDE;
   bool can_redo() const FL_OVERRIDE;
-  void focus() FL_OVERRIDE;
-  void unfocus() FL_OVERRIDE;
+  int handle_focus(int) FL_OVERRIDE;
   void select_all() FL_OVERRIDE;
   void copy() FL_OVERRIDE;
   void paste() FL_OVERRIDE;
@@ -128,9 +127,8 @@ static LRESULT CALLBACK fltk_wnd_proc_plus_focus(HWND hWnd, UINT uMsg, WPARAM wP
       } else {
         Fl_Widget *f = Fl_Window_Driver::last_focus_widget();
         if (f) {
-          if (f->as_group() && f->as_group()->as_native_group())
-            f->as_group()->as_native_group()->get_focus();
-          else SetFocus(fl_win32_xid(f->top_window()));
+          if (!f->as_group() || !f->as_group()->is_native_group())
+            SetFocus(fl_win32_xid(f->top_window()));
         }
       }
       return 0;
@@ -442,17 +440,16 @@ bool Fl_WinAPI_Native_Input_Driver::can_redo() const {
 }
 
 
-void Fl_WinAPI_Native_Input_Driver::focus() {
-  //fprintf(stderr,"focus to %s\n",widget->label());fflush(stderr);
-  if (!widget->readonly()) {
+int Fl_WinAPI_Native_Input_Driver::handle_focus(int event) {
+  if (event == FL_FOCUS) {
+    //fprintf(stderr,"focus to %s\n",widget->label());fflush(stderr);
     SetFocus(edit_win);
+  } else if (event == FL_UNFOCUS) {
+    //fprintf(stderr,"unfocus to %s\n",widget->label());fflush(stderr);
+    if (Fl::focus() && (!Fl::focus()->as_group() || !Fl::focus()->as_group()->is_native_group()))
+      SetFocus(fl_win32_xid(Fl::focus()->window()));
   }
-}
-
-
-void Fl_WinAPI_Native_Input_Driver::unfocus() {
-  //fprintf(stderr,"unfocus to %s\n",widget->label());fflush(stderr);
-  if (Fl::focus() && (!Fl::focus()->as_group() || !Fl::focus()->as_group()->as_native_group())) SetFocus(fl_win32_xid(Fl::focus()->window()));
+  return 1;
 }
 
 
@@ -518,8 +515,7 @@ int Fl_WinAPI_Native_Input_Driver::handle_dnd(int event) {
       Fl::belowmouse(widget); // send the leave events first
       if (dnd_save_focus != widget) {
         dnd_save_focus = Fl::focus();
-        Fl::focus(widget);
-        this->focus();
+        handle_focus(FL_FOCUS);
       }
       // fall through:
     case FL_DND_DRAG:
@@ -546,7 +542,6 @@ int Fl_WinAPI_Native_Input_Driver::handle_dnd(int event) {
     case FL_DND_LEAVE:
       if (dnd_save_focus && dnd_save_focus != widget) {
         Fl::focus(dnd_save_focus);
-        this->unfocus();
       }
       Fl::first_window()->cursor(FL_CURSOR_MOVE);
       dnd_save_focus = NULL;
