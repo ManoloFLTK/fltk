@@ -51,7 +51,7 @@ public:
   bool can_redo() const FL_OVERRIDE;
   int handle_focus(int) FL_OVERRIDE;
   void select_all() FL_OVERRIDE;
-  void copy() FL_OVERRIDE;
+  int copy() FL_OVERRIDE;
   void paste() FL_OVERRIDE;
   int handle_paste() FL_OVERRIDE;
   void right_to_left() FL_OVERRIDE;
@@ -76,6 +76,7 @@ Fl_WinAPI_Native_Input_Driver::Fl_WinAPI_Native_Input_Driver() : Fl_Native_Input
   text_before_show_ = NULL;
   edit_win = NULL;
   brush = NULL;
+  maximum_size_ = INT_MAX;
 }
 
 
@@ -147,8 +148,10 @@ static LRESULT CALLBACK fltk_wnd_proc_plus_focus(HWND hWnd, UINT uMsg, WPARAM wP
 
 static LRESULT CALLBACK fltk_edit_wnd_proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   bool use_edit_proc = true;
+  Fl_WinAPI_Native_Input_Driver *dr =
+    (Fl_WinAPI_Native_Input_Driver*)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
   if (uMsg == WM_KEYDOWN) {
-    if (wParam == VK_TAB || wParam == VK_ESCAPE) { // handle Tab or Esc keystrokes by FLTK
+    if ((wParam == VK_TAB && (dr->kind == Fl_Native_Input_Driver::SINGLE_LINE || dr->widget->tab_nav())) || wParam == VK_ESCAPE) { // handle Tab or Esc keystrokes by FLTK
       use_edit_proc = false;
     }
     // detect Ctrl but not AltGr and not Ctrl-C or Ctrl-V
@@ -162,8 +165,6 @@ static LRESULT CALLBACK fltk_edit_wnd_proc(HWND hWnd, UINT uMsg, WPARAM wParam, 
                            hWnd, uMsg, wParam, lParam);
   }
   // apply FLTK's handling to remaining messages to catch shortcuts
-  Fl_WinAPI_Native_Input_Driver *dr =
-    (Fl_WinAPI_Native_Input_Driver*)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
   HWND xid = fl_win32_xid(dr->widget->window());
   return CallWindowProcW(Fl_WinAPI_Native_Input_Driver::fltk_wnd_proc, xid, uMsg, wParam, lParam);
 }
@@ -459,8 +460,9 @@ void Fl_WinAPI_Native_Input_Driver::select_all() {
 }
 
 
-void Fl_WinAPI_Native_Input_Driver::copy() {
+int Fl_WinAPI_Native_Input_Driver::copy() {
   SendMessageW(edit_win, WM_COPY, (WPARAM)0, (LPARAM)0);
+  return 1;
 }
 
 

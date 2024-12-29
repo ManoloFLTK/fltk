@@ -41,7 +41,7 @@ public:
   bool can_redo() const FL_OVERRIDE;
   int handle_focus(int event) FL_OVERRIDE;
   void select_all() FL_OVERRIDE;
-  void copy() FL_OVERRIDE;
+  int copy() FL_OVERRIDE;
   void paste() FL_OVERRIDE;
   void right_to_left() FL_OVERRIDE;
   void draw() FL_OVERRIDE;
@@ -113,9 +113,11 @@ public:
     return;
   }
   else if (aSelector == @selector(insertTab:)) { // tab
-    Fl::e_keysym = FL_Tab;
-    Fl::handle(FL_KEYBOARD, driver->widget->window());
-    return;
+    if (driver->kind == Fl_Native_Input_Driver::SINGLE_LINE || driver->widget->tab_nav()) {
+      Fl::e_keysym = FL_Tab;
+      Fl::handle(FL_KEYBOARD, driver->widget->window());
+      return;
+    }
   }
   else if (aSelector == @selector(insertBacktab:)) { // shift+tab
     Fl::e_keysym = FL_Tab;
@@ -214,6 +216,7 @@ Fl_Cocoa_Native_Input_Driver::Fl_Cocoa_Native_Input_Driver() : Fl_Native_Input_D
   scroll_view = nil;
   text_view = nil;
   text_before_show = nil;
+  maximum_size_ = INT_MAX;
 }
 
 
@@ -516,13 +519,13 @@ void Fl_Cocoa_Native_Input_Driver::select_all() {
 }
 
 
-void Fl_Cocoa_Native_Input_Driver::copy() {
+int Fl_Cocoa_Native_Input_Driver::copy() {
   if (text_view->driver->kind == Fl_Native_Input_Driver::MULTIPLE_LINES) {
     [text_view writeSelectionToPasteboard:[NSPasteboard generalPasteboard]
                               types:[text_view writablePasteboardTypes]];
   } else {
     NSRange r = [text_view selectedRange];
-    if (!r.length) return;
+    if (!r.length) return 0;
     NSString *sub = [[text_view string] substringWithRange:r];
     // When single-line, replace "␍" by newline and "␉" by tab.
     // Also remove U+202b and U+202c characters
@@ -538,6 +541,7 @@ void Fl_Cocoa_Native_Input_Driver::copy() {
     [clip declareTypes:[NSArray arrayWithObject:@"public.utf8-plain-text"] owner:nil];
     [clip setString:sub forType:@"public.utf8-plain-text"];
   }
+  return 1;
 }
 
 

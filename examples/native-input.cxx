@@ -51,8 +51,8 @@ void select_all_cb(Fl_Widget *) {
 
 
 void copy_cb(Fl_Widget *) {
-  if (multiple->contains(Fl::focus())) multiple->copy();
-  else if (single->contains(Fl::focus())) single->copy();
+  if (multiple->contains(Fl::focus())) multiple->copy(1);
+  else if (single->contains(Fl::focus())) single->copy(1);
   else if (Fl::focus() == input) input->copy(1);
 }
 
@@ -206,6 +206,7 @@ int main(int argc, char **argv) {
   box->box(FL_DOWN_FRAME);
   box->wrap(true);
   box->right_to_left(true);
+  //box->tab_nav(0);
 #if SUBWIN
   Fl_Window *subwin = new Fl_Double_Window(20, box->y()+box->h()+20, 450, 50+40,"subwin");
   subwin->color(FL_YELLOW);

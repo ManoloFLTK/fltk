@@ -12,7 +12,9 @@ class Fl_Native_Input_Driver;
 
 class FL_EXPORT Fl_Native_Input : public Fl_Group {
   friend class Fl_Native_Multiline_Input;
+  friend class Fl_Native_Input_Driver;
 private:
+  Fl_Native_Input_Driver *driver_;
   Fl_Color cursor_color_;
   Fl_Font font_;
   Fl_Fontsize font_size_;
@@ -21,11 +23,12 @@ private:
   bool is_selectable_;
   bool rtl_;
   bool wrap_;
-  Fl_Native_Input_Driver *driver_;
+  int shortcut_;
+  int tab_nav_;
 public:
   Fl_Native_Input(int x, int y, int w, int h, const char *l = 0);
   ~Fl_Native_Input();
-  void append(const char *t, int length = -1);
+  void append(const char *t, int length = 0, char keep_selection = 0);
   void right_to_left(bool rtl);
   bool right_to_left() { return rtl_; }
   int handle(int event) FL_OVERRIDE;
@@ -52,13 +55,27 @@ public:
   bool selectable();
   int replace(int from, int to, const char *text, int len = 0);
   void select_all();
-  void copy();
+  int copy(int clipboard);
+  int copy_cuts() { return 0; }
   void paste();
   int cut(int a, int b);
   int cut();
+  int cut(int n);
   int mark() const;
   void mark(int n);
   unsigned index(int i) const;
+  int input_type() const;
+  void input_type(int t);
+  int maximum_size() const;
+  void maximum_size(int m);
+  int shortcut() const {return shortcut_;}
+  void shortcut(int s) { shortcut_ = s; }
+  int size() const;
+  void size(int W, int H) { Fl_Widget::size(W, H); }
+  int static_value(const char *str, int len) { value(str, len); return 1; }
+  int static_value(const char *str) { return static_value(str, (int)strlen(str)); }
+  int tab_nav() const { return tab_nav_; }
+  void tab_nav(int val);
   int undo();
   int redo();
   bool can_undo() const;

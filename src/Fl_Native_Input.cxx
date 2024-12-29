@@ -5,6 +5,7 @@
 #include <FL/Fl_Native_Input.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Window.H>
+#include <FL/Fl_Input_.H>
 #include "../src/Fl_Native_Input_Driver.H"
 
 //
@@ -47,6 +48,7 @@ public:
       input_->color(widget->color());
       input_->wrap(widget->wrap());
       input_->box(FL_FLAT_BOX);
+      input_->tab_nav(widget->tab_nav());
       widget->end();
     }
   }
@@ -91,15 +93,17 @@ public:
     if (!input_) show_widget();
     Fl::paste(*input_, 1);
   }
-  void copy() FL_OVERRIDE {
-    if (!input_) return;
+  int copy() FL_OVERRIDE {
+    if (!input_) return 0;
     int i = input_->insert_position();
     int m = input_->mark();
     if (i > m) { int tmp = i; i = m; m = tmp; }
     if (i < m) {
       const char *val = input_->value();
       Fl::copy(val + i, m-i, 1);
+      return 1;
     }
+    return 0;
   }
   int undo() FL_OVERRIDE {
     return input_ ? input_->undo() : 0;
@@ -125,6 +129,13 @@ public:
       input_->textsize(widget->textsize());
       input_->redraw();
     }
+  }
+  int size() FL_OVERRIDE {
+    return input_ ? input_->size() : 0;
+  }
+  void tab_nav(int val) FL_OVERRIDE {
+    if (input_) input_->tab_nav(val);
+    Fl_Native_Input_Driver::tab_nav(val);
   }
 };
 
@@ -152,6 +163,8 @@ Fl_Native_Input::Fl_Native_Input(int x, int y, int w, int h, const char *l) : Fl
   is_selectable_ = true;
   wrap_ = false;
   rtl_ = false;
+  shortcut_ = 0;
+  tab_nav_ = 1;
   driver_->kind = Fl_Native_Input_Driver::SINGLE_LINE;
 }
 
@@ -166,8 +179,16 @@ bool Fl_Native_Input::is_native_group() {
 }
 
 
-void Fl_Native_Input::append(const char *t, int length) {
+void Fl_Native_Input::append(const char *t, int length, char keep_selection) {
+  int insert, v_mark;
+  if (keep_selection) {
+    insert = insert_position();
+    v_mark = mark();
+  }
   driver_->append(t, length);
+  if (keep_selection) {
+    insert_position(insert, v_mark);
+  }
 }
 
 
@@ -204,7 +225,8 @@ int Fl_Native_Input::handle(int event) {
       return r;
       }
     case FL_KEYBOARD:
-      if (Fl::e_keysym == FL_Tab) return 0;
+      if (Fl::e_keysym == FL_Tab &&
+          (driver_->kind == Fl_Native_Input_Driver::SINGLE_LINE || tab_nav())) return 0;
       return driver_->handle_keyboard();
     case FL_PASTE:
       return driver_->handle_paste();
@@ -331,11 +353,41 @@ int Fl_Native_Input::cut(int a, int b) {
   return replace(a, b, NULL, 0);
 }
 
+    
+int Fl_Native_Input::cut(int n) {
+  int a = insert_position();
+  return replace(a, a + n, NULL, 0);
+}
 
 int Fl_Native_Input::cut() {
   driver_->copy();
   driver_->replace_selection(NULL, 0);
   return 1;
+}
+
+    
+int Fl_Native_Input::input_type() const {
+  return (driver_->kind == Fl_Native_Input_Driver::MULTIPLE_LINES ? FL_MULTILINE_INPUT : FL_NORMAL_INPUT);
+}
+
+    
+void Fl_Native_Input::input_type(int t) {
+  driver_->kind = (t == FL_MULTILINE_INPUT ? Fl_Native_Input_Driver::MULTIPLE_LINES : Fl_Native_Input_Driver::SINGLE_LINE);
+}
+
+    
+int Fl_Native_Input::maximum_size() const {
+  return driver_->maximum_size();
+}
+
+    
+void Fl_Native_Input::maximum_size(int m) {
+  driver_->maximum_size(m);
+}
+
+
+int Fl_Native_Input::size() const {
+  return driver_->size();
 }
 
 
@@ -379,8 +431,8 @@ void Fl_Native_Input::select_all() {
 }
 
 
-void Fl_Native_Input::copy() {
-  driver_->copy();
+int Fl_Native_Input::copy(int clipboard) {
+  return driver_->copy();
 }
 
 
@@ -392,6 +444,11 @@ void Fl_Native_Input::paste() {
 void Fl_Native_Input::right_to_left(bool rtl) {
   rtl_ = rtl;
   driver_->right_to_left();
+}
+
+
+void Fl_Native_Input::tab_nav(int val) {
+  driver_->tab_nav(val);
 }
 
 

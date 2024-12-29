@@ -48,7 +48,7 @@ private:
   void scan_all_paragraphs_();
   static void scan_single_line_(Fl_Cairo_Native_Input_Driver *o);
   static void put_back_newlines_(char *text);
-  static void delayed_cursor_at_end_(Fl_Cairo_Native_Input_Driver *o);
+  static void delayed_cursor_at_extremity_(Fl_Cairo_Native_Input_Driver *o);
   int char_pos_to_byte_pos_(int pos);
   int apply_undo_();
   void set_style_();
@@ -64,7 +64,7 @@ public:
   int handle_focus(int) FL_OVERRIDE;
   void draw() FL_OVERRIDE;
   unsigned index(int i) const FL_OVERRIDE;
-  void copy() FL_OVERRIDE;
+  int copy() FL_OVERRIDE;
   void paste() FL_OVERRIDE;
   int handle_keyboard() FL_OVERRIDE;
   int handle_mouse(int event) FL_OVERRIDE;
@@ -152,6 +152,7 @@ Fl_Cairo_Native_Input_Driver::Fl_Cairo_Native_Input_Driver() : Fl_Native_Input_D
   lineheight_ = 0;
   upper_ = 0;
   insert_offset_ = -1; // means undefined
+  maximum_size_ = INT32_MAX;
 }
 
 Fl_Cairo_Native_Input_Driver::~Fl_Cairo_Native_Input_Driver() {
@@ -534,11 +535,12 @@ static char *substitute_with_cr_ht(const char *text, int &len) {
 }
 
 
-void Fl_Cairo_Native_Input_Driver::delayed_cursor_at_end_(Fl_Cairo_Native_Input_Driver *o) {
-  Fl::remove_check((Fl_Timeout_Handler)delayed_cursor_at_end_, o);
-  GtkTextIter end;
-  gtk_text_buffer_get_end_iter(o->buffer_, &end);
-  gtk_text_buffer_select_range(o->buffer_, &end, &end);
+void Fl_Cairo_Native_Input_Driver::delayed_cursor_at_extremity_(Fl_Cairo_Native_Input_Driver *o) {
+  Fl::remove_check((Fl_Timeout_Handler)delayed_cursor_at_extremity_, o);
+  GtkTextIter iter;
+  if (o->kind == MULTIPLE_LINES) gtk_text_buffer_get_start_iter(o->buffer_, &iter);
+  else gtk_text_buffer_get_end_iter(o->buffer_, &iter);
+  gtk_text_buffer_select_range(o->buffer_, &iter, &iter);
 }
 
 
@@ -597,8 +599,8 @@ void Fl_Cairo_Native_Input_Driver::replace_selection(const char *text, int len) 
       gtk_text_buffer_get_end_iter(buffer_, &end);
       gtk_text_buffer_apply_tag(buffer_, font_size_tag_, &start, &end);
     }
-    if (full_replace) { // for some reason, cursor positioning at end of text needs be delayed
-      Fl::add_check((Fl_Timeout_Handler)delayed_cursor_at_end_, this);
+    if (full_replace) { // for some reason, cursor positioning at extremity of text needs be delayed
+      Fl::add_check((Fl_Timeout_Handler)delayed_cursor_at_extremity_, this);
     }
     if (char_pos == undo_->undoat_chars) {
       undo_->undoinsert += len;
@@ -657,7 +659,7 @@ unsigned Fl_Cairo_Native_Input_Driver::index(int i) const {
 }
 
 
-void Fl_Cairo_Native_Input_Driver::copy() {
+int Fl_Cairo_Native_Input_Driver::copy() {
   GtkTextIter start, end;
 
   if (gtk_text_buffer_get_selection_bounds(buffer_, &start, &end)) {
@@ -665,7 +667,9 @@ void Fl_Cairo_Native_Input_Driver::copy() {
     if (kind == SINGLE_LINE) put_back_newlines_(buf);
     Fl::copy(buf, (int)strlen(buf), 1);
     delete[] buf;
+    return 1;
   }
+  return 0;
 }
 
 
@@ -837,6 +841,9 @@ int Fl_Cairo_Native_Input_Driver::handle_keyboard() {
                                            v_fl_scrollbar_->maximum() );
       if (changed) v_fl_scrollbar_->do_callback();
     }
+    return 1;
+  } else if (Fl::event_key() == FL_Tab && !Fl::event_state()) {
+    replace_selection("\011", 1);
     return 1;
   }
   return 0;
