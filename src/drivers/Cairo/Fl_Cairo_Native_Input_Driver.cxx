@@ -355,6 +355,7 @@ void Fl_Cairo_Native_Input_Driver::draw()  {
   }
   int text_width = widget->w() - Fl::box_dw(widget->box()) - (v_bar_ ? slider_thickness_ : 0);
   int text_height = widget->h() - Fl::box_dh(widget->box()) - (h_bar_ && kind == Fl_Native_Input_Driver::MULTIPLE_LINES ? slider_thickness_ : 0);
+  if (text_width <= 0 || text_height <= 0) return;
   if (need_allocate_ || text_width != allocation_.width || text_height != allocation_.height) {
     allocation_.width = text_width;
     allocation_.height = text_height;
