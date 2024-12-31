@@ -146,7 +146,11 @@ static LRESULT CALLBACK fltk_wnd_proc_plus_focus(HWND hWnd, UINT uMsg, WPARAM wP
 }
 
 
+static char *wchar_to_utf8(const wchar_t *wstr, char *&utf8);
+
+
 static LRESULT CALLBACK fltk_edit_wnd_proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+  static int drag_start = -1;
   bool use_edit_proc = true;
   Fl_WinAPI_Native_Input_Driver *dr =
     (Fl_WinAPI_Native_Input_Driver*)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
@@ -159,6 +163,52 @@ static LRESULT CALLBACK fltk_edit_wnd_proc(HWND hWnd, UINT uMsg, WPARAM wParam, 
         !(GetKeyState('C') >> 15) && !(GetKeyState('V') >> 15) ) {
       use_edit_proc = false;
     }
+  } else if (uMsg == WM_LBUTTONDOWN) {
+    if (Fl::dnd_text_ops()) {
+      int oldpos, oldmark;
+      SendMessageW(dr->edit_win, EM_GETSEL, (WPARAM)&oldpos, (LPARAM)&oldmark);
+      int newpos = LOWORD(SendMessageW(dr->edit_win, EM_CHARFROMPOS, (WPARAM)0, lParam));
+      if (Fl::focus() == dr->widget && !Fl::event_state(FL_SHIFT) &&
+          ( (newpos >= oldmark && newpos < oldpos) || (newpos >= oldpos && newpos < oldmark) ) ) {
+        // user clicked in the selection, may be trying to drag
+        drag_start = newpos;
+        return 0;
+      }
+      drag_start = -1;
+    }
+  } else if (uMsg == WM_MOUSEMOVE) {
+    if (Fl::dnd_text_ops() && drag_start >= 0 && !Fl::event_is_click()) {
+      // drag the data:
+      int from, to;
+      SendMessageW(dr->edit_win, EM_GETSEL, (WPARAM)&from, (LPARAM)&to);
+      if (from != to) {
+        if (from > to) { int temp = from; from = to; to = temp; }
+        WCHAR *out2 = new WCHAR[(to-from)+1];
+        if (dr->kind == Fl_Native_Input_Driver::MULTIPLE_LINES) {
+          HLOCAL h = (HLOCAL)SendMessageW(dr->edit_win, EM_GETHANDLE, (WPARAM)0, (LPARAM)0);
+          WCHAR *out = (WCHAR*)LocalLock(h);
+          memcpy(out2, out + from, (to-from) * sizeof(WCHAR));
+          LocalUnlock(h);
+        } else {
+          int l = GetWindowTextLengthW(dr->edit_win);
+          WCHAR *out = new WCHAR[l+1];
+          GetWindowTextW(dr->edit_win, out, l+1);
+          memcpy(out2, out + from, (to-from) * sizeof(WCHAR));
+          delete[] out;
+        }
+        out2[to - from] = 0;
+        char *utf8 = NULL;
+        wchar_to_utf8(out2, utf8);
+        delete[] out2;
+        Fl::copy(utf8, strlen(utf8), 0);
+        free(utf8);
+        drag_start = -1;
+        Fl::screen_driver()->dnd();
+        return 0;
+      }
+    }
+  } else if (uMsg == WM_LBUTTONUP) {
+    drag_start = -1;
   }
   if ( use_edit_proc ) { // standard processing of most messages by an EDIT window
     return CallWindowProcW(Fl_WinAPI_Native_Input_Driver::win32_edit_wnd_proc,
