@@ -206,6 +206,8 @@ int main(int argc, char **argv) {
   box->box(FL_DOWN_FRAME);
   box->wrap(true);
   box->right_to_left(true);
+  box->callback(cb);
+  box->when(FL_WHEN_CHANGED);
   //box->tab_nav(0);
 #if SUBWIN
   Fl_Window *subwin = new Fl_Double_Window(20, box->y()+box->h()+20, 450, 50+40,"subwin");
@@ -233,6 +235,7 @@ int main(int argc, char **argv) {
               "أبو عَبد الله مُحَمَّد بن مُوسَى الخَوارِزمي عالم رياضيات وفلك وجغرافيا مسلم."
               );
   box2->callback(cb);
+  box2->when(box->when());
 #if SUBWIN
   subwin->resizable(subwin);
   input = new Fl_Input(box2->x(),box2->y()+box2->h()+20, subwin->w(),30, NULL);
@@ -245,6 +248,7 @@ int main(int argc, char **argv) {
   input->align(FL_ALIGN_TOP);
   input->value("Lorem ipsum dolor sit amet.");
   input->callback(cb);
+  input->when(box->when());
   window->end();
   window->resizable(box);
   box->readonly(readonly);

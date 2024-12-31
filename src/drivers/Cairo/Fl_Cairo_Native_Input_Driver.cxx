@@ -506,7 +506,10 @@ void Fl_Cairo_Native_Input_Driver::value(const char *t, int len) {
     gtk_text_buffer_get_start_iter(buffer_, &start);
     gtk_text_buffer_get_end_iter(buffer_, &end);
     gtk_text_buffer_select_range(buffer_, &start, &end);
+    bool need_tweak = (text_before_show_ == NULL);
+    if (need_tweak) text_before_show_ = (char*)"";
     replace_selection(t, len);
+    if (need_tweak) text_before_show_ = NULL;
   }
 }
 

@@ -157,6 +157,11 @@ static LRESULT CALLBACK fltk_edit_wnd_proc(HWND hWnd, UINT uMsg, WPARAM wParam, 
   if (uMsg == WM_KEYDOWN) {
     if ((wParam == VK_TAB && (dr->kind == Fl_Native_Input_Driver::SINGLE_LINE || dr->widget->tab_nav())) || wParam == VK_ESCAPE) { // handle Tab or Esc keystrokes by FLTK
       use_edit_proc = false;
+    } else if (wParam == VK_RETURN && dr->kind == Fl_Native_Input_Driver::SINGLE_LINE) {
+      if (dr->widget->when() & FL_WHEN_ENTER_KEY) {
+        dr->maybe_do_callback(FL_REASON_ENTER_KEY);
+      }
+      use_edit_proc = false;
     }
     // detect Ctrl but not AltGr and not Ctrl-C or Ctrl-V
     if ( (GetKeyState(VK_CONTROL) >> 15) && !(GetAsyncKeyState(VK_RMENU) >> 15) &&

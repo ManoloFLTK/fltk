@@ -18,6 +18,7 @@ public:
   FLNativeTextView *text_view;
   NSScrollView *scroll_view;
   NSString *text_before_show;
+  bool initial_fill;
   Fl_Cocoa_Native_Input_Driver();
   ~Fl_Cocoa_Native_Input_Driver();
   void show_widget() FL_OVERRIDE;
@@ -156,7 +157,7 @@ public:
     [text_view setFrame:fr];
   } else if (!text_view->driver->widget->wrap()) text_view->driver->full_text_size();
   
-  if (!text_view->driver->text_before_show) {
+  if (!text_view->driver->text_before_show && !text_view->driver->initial_fill) {
     text_view->driver->widget->set_changed();
     if (text_view->driver->widget->when() & FL_WHEN_CHANGED) {
       text_view->driver->widget->do_callback(FL_REASON_CHANGED);
@@ -217,6 +218,7 @@ Fl_Cocoa_Native_Input_Driver::Fl_Cocoa_Native_Input_Driver() : Fl_Native_Input_D
   text_view = nil;
   text_before_show = nil;
   maximum_size_ = INT_MAX;
+  initial_fill = false;
 }
 
 
@@ -316,8 +318,10 @@ void Fl_Cocoa_Native_Input_Driver::show_widget() {
       [text_view setSelectedRange:NSMakeRange(0, 0)];
       [text_before_show release];
       text_before_show = nil;
+      initial_fill = true;
+      [text_view didChangeText];
+      initial_fill = false;
     }
-    [text_view didChangeText];
   } else if ([scroll_view isHidden]) {
     if (kind == Fl_Native_Input_Driver::MULTIPLE_LINES) {
       NSRange save_range = [text_view selectedRange];
