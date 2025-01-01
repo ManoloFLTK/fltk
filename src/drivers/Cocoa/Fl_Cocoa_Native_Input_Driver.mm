@@ -237,7 +237,6 @@ Fl_Cocoa_Native_Input_Driver::~Fl_Cocoa_Native_Input_Driver() {
 
 
 static void delayed_scroll_to_visible(id text_view) {
-  Fl::remove_check((Fl_Timeout_Handler)delayed_scroll_to_visible, text_view);
   [text_view scrollRangeToVisible:[text_view selectedRange]];
 }
 
@@ -262,7 +261,7 @@ void Fl_Cocoa_Native_Input_Driver::resize(int x, int y, int w, int h) {
         [text_view setFrame:fr]; // necessary to resize width, bad to resize height
       }
     }
-    Fl::add_check((Fl_Timeout_Handler)delayed_scroll_to_visible, text_view);
+    Fl::add_timeout(0, (Fl_Timeout_Handler)delayed_scroll_to_visible, text_view);
   }
 }
 

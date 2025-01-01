@@ -165,7 +165,6 @@ Fl_Cairo_Native_Input_Driver::~Fl_Cairo_Native_Input_Driver() {
 
 // compute the full width of the newly changed single-line text
 void Fl_Cairo_Native_Input_Driver::scan_single_line_(Fl_Cairo_Native_Input_Driver *o) {
-  Fl::remove_check((Fl_Timeout_Handler)scan_single_line_, o);
   while (o->need_allocate_ > 0) o->draw();
 }
 
@@ -175,7 +174,7 @@ static void (*old_changed_f)(GtkTextBuffer*) = NULL;
 void Fl_Cairo_Native_Input_Driver::textbuffer_changed_(GtkTextBuffer *buffer_) {
   Fl_Cairo_Native_Input_Driver *dr =
     (Fl_Cairo_Native_Input_Driver*)g_object_get_data((GObject*)buffer_, "driver");
-  if (dr->kind == SINGLE_LINE) Fl::add_check((Fl_Timeout_Handler)scan_single_line_, dr);
+  if (dr->kind == SINGLE_LINE) Fl::add_timeout(0, (Fl_Timeout_Handler)scan_single_line_, dr);
   dr->need_allocate_ = 2;
   if (!dr->text_before_show_) {
     dr->widget->set_changed();
@@ -540,7 +539,6 @@ static char *substitute_with_cr_ht(const char *text, int &len) {
 
 
 void Fl_Cairo_Native_Input_Driver::delayed_cursor_at_extremity_(Fl_Cairo_Native_Input_Driver *o) {
-  Fl::remove_check((Fl_Timeout_Handler)delayed_cursor_at_extremity_, o);
   GtkTextIter iter;
   if (o->kind == MULTIPLE_LINES) gtk_text_buffer_get_start_iter(o->buffer_, &iter);
   else gtk_text_buffer_get_end_iter(o->buffer_, &iter);
@@ -604,7 +602,7 @@ void Fl_Cairo_Native_Input_Driver::replace_selection(const char *text, int len) 
       gtk_text_buffer_apply_tag(buffer_, font_size_tag_, &start, &end);
     }
     if (full_replace) { // for some reason, cursor positioning at extremity of text needs be delayed
-      Fl::add_check((Fl_Timeout_Handler)delayed_cursor_at_extremity_, this);
+      Fl::add_timeout(0, (Fl_Timeout_Handler)delayed_cursor_at_extremity_, this);
     }
     if (char_pos == undo_->undoat_chars) {
       undo_->undoinsert += len;
