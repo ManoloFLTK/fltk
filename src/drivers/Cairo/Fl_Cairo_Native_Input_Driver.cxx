@@ -22,7 +22,6 @@ class Fl_GTK3_Text_Undo_Action_List;
 class Fl_Cairo_Native_Input_Driver : public Fl_Native_Input_Driver {
 private:
   GtkWidget *scrolled_;
-  GtkWidget *v_bar_, *h_bar_;
   GtkAdjustment *v_adjust_, *h_adjust_;
   GtkWidget *text_view_;
   GtkTextBuffer *buffer_;
@@ -142,7 +141,6 @@ Fl_Cairo_Native_Input_Driver::Fl_Cairo_Native_Input_Driver() : Fl_Native_Input_D
   css_provider_ = NULL;
   memset(&allocation_, 0, sizeof(GtkAllocation));
   need_allocate_ = 0;
-  v_bar_ = h_bar_ = NULL;
   v_adjust_ = h_adjust_ = NULL;
   v_fl_scrollbar_ = NULL;
   h_fl_slider_ = NULL;
@@ -286,8 +284,6 @@ void Fl_Cairo_Native_Input_Driver::show_widget()  {
     }
     scrolled_ = gtk_scrolled_window_new(h_adjust_, v_adjust_);
     text_view_ = gtk_text_view_new();
-    if (v_fl_scrollbar_) v_bar_ = gtk_scrolled_window_get_vscrollbar(GTK_SCROLLED_WINDOW(scrolled_));
-    if (h_fl_slider_) h_bar_ = gtk_scrolled_window_get_hscrollbar(GTK_SCROLLED_WINDOW(scrolled_));
     gtk_text_view_set_left_margin(GTK_TEXT_VIEW(text_view_), 3);
     gtk_text_view_set_right_margin(GTK_TEXT_VIEW(text_view_), 3);
     gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view_), !widget->readonly() );
@@ -352,16 +348,13 @@ void Fl_Cairo_Native_Input_Driver::draw()  {
   } else if (Fl_Window::current() != widget->window()) {
     widget->window()->make_current();
   }
-  int text_width = widget->w() - Fl::box_dw(widget->box()) - (v_bar_ ? slider_thickness_ : 0);
-  int text_height = widget->h() - Fl::box_dh(widget->box()) - (h_bar_ && kind == Fl_Native_Input_Driver::MULTIPLE_LINES ? slider_thickness_ : 0);
+  int text_width = widget->w() - Fl::box_dw(widget->box()) - (v_fl_scrollbar_ ? slider_thickness_ : 0);
+  int text_height = widget->h() - Fl::box_dh(widget->box()) - (h_fl_slider_ && kind == Fl_Native_Input_Driver::MULTIPLE_LINES ? slider_thickness_ : 0);
   if (text_width <= 0 || text_height <= 0) return;
   if (need_allocate_ || text_width != allocation_.width || text_height != allocation_.height) {
     allocation_.width = text_width;
     allocation_.height = text_height;
     gtk_widget_size_allocate(scrolled_, &allocation_);
-    GtkAllocation alloc_v_scroll, alloc_h_scroll;
-    if (v_fl_scrollbar_) gtk_widget_get_allocated_size(v_bar_, &alloc_v_scroll, NULL);
-    if (h_fl_slider_) gtk_widget_get_allocated_size(h_bar_, &alloc_h_scroll, NULL);
     if (v_fl_scrollbar_)  {
       v_fl_scrollbar_->resize(widget->x() + Fl::box_dx(widget->box()) +
                              (widget->right_to_left() ? 0 : allocation_.width),
