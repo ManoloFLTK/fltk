@@ -187,6 +187,7 @@ static void scroll_cb(Fl_Slider *sb, GtkAdjustment *adjust, int *p_need_allocate
   int v = sb->value();
   gtk_adjustment_set_value(adjust, v);
   *p_need_allocate = 1;
+  Fl::focus(sb->parent());
   sb->parent()->redraw();
 }
 
@@ -366,7 +367,7 @@ void Fl_Cairo_Native_Input_Driver::draw()  {
       v_fl_scrollbar_->linesize(lineheight_);
     }
     if (h_fl_slider_)  {
-      h_fl_slider_->resize(widget->x() + Fl::box_dx(widget->box()) ,
+      h_fl_slider_->resize(widget->x() + Fl::box_dx(widget->box()) + (widget->right_to_left() ? slider_thickness_ : 0),
                              widget->y() + Fl::box_dy(widget->box()) + allocation_.height,
                              allocation_.width, slider_thickness_);
       h_fl_slider_->parent()->init_sizes();
@@ -502,6 +503,15 @@ void Fl_Cairo_Native_Input_Driver::value(const char *t, int len) {
     if (need_tweak) text_before_show_ = (char*)"";
     replace_selection(t, len);
     if (need_tweak) text_before_show_ = NULL;
+    if (kind == MULTIPLE_LINES && !widget->wrap()) {
+      gtk_text_buffer_get_start_iter(buffer_, &start);
+      gtk_text_buffer_place_cursor(buffer_, &start);
+      text_view_scroll_mark_onscreen_();
+      double d = (widget->right_to_left() ? gtk_adjustment_get_upper(h_adjust_) : 0);
+      gtk_adjustment_set_value(h_adjust_, d);
+      h_fl_slider_->value( (int)gtk_adjustment_get_value(h_adjust_) );
+      need_allocate_ = 1;
+    }
   }
 }
 
