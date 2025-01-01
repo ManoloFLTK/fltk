@@ -633,7 +633,7 @@ void Fl_Cairo_Native_Input_Driver::replace(int from, int to, const char *text, i
 
 
 void Fl_Cairo_Native_Input_Driver::resize(int x, int y, int w, int h) {
-  if (h_fl_slider_ && h_fl_slider_->visible()) {
+  if (h_fl_slider_) {
     h_fl_slider_->bounds(0, (int)gtk_adjustment_get_upper(h_adjust_) );
     h_fl_slider_->value( (int)gtk_adjustment_get_value(h_adjust_) );
   }
