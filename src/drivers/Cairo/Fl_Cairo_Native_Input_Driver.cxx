@@ -499,19 +499,7 @@ void Fl_Cairo_Native_Input_Driver::value(const char *t, int len) {
     gtk_text_buffer_get_start_iter(buffer_, &start);
     gtk_text_buffer_get_end_iter(buffer_, &end);
     gtk_text_buffer_select_range(buffer_, &start, &end);
-    bool need_tweak = (text_before_show_ == NULL);
-    if (need_tweak) text_before_show_ = (char*)"";
     replace_selection(t, len);
-    if (need_tweak) text_before_show_ = NULL;
-    if (kind == MULTIPLE_LINES && !widget->wrap()) {
-      gtk_text_buffer_get_start_iter(buffer_, &start);
-      gtk_text_buffer_place_cursor(buffer_, &start);
-      text_view_scroll_mark_onscreen_();
-      double d = (widget->right_to_left() ? gtk_adjustment_get_upper(h_adjust_) : 0);
-      gtk_adjustment_set_value(h_adjust_, d);
-      h_fl_slider_->value( (int)gtk_adjustment_get_value(h_adjust_) );
-      need_allocate_ = 1;
-    }
   }
 }
 
@@ -546,6 +534,15 @@ void Fl_Cairo_Native_Input_Driver::delayed_cursor_at_extremity_(Fl_Cairo_Native_
   if (o->kind == MULTIPLE_LINES) gtk_text_buffer_get_start_iter(o->buffer_, &iter);
   else gtk_text_buffer_get_end_iter(o->buffer_, &iter);
   gtk_text_buffer_select_range(o->buffer_, &iter, &iter);
+  if (o->kind == MULTIPLE_LINES && !o->widget->wrap()) {
+    double d = (o->widget->right_to_left() ? gtk_adjustment_get_upper(o->h_adjust_) : 0);
+    gtk_adjustment_set_value(o->h_adjust_, d);
+    o->h_fl_slider_->value( (int)gtk_adjustment_get_value(o->h_adjust_) );
+    o->need_allocate_ = 1;
+    o->draw();
+    o->h_fl_slider_->bounds(0, (int)gtk_adjustment_get_upper(o->h_adjust_) );
+    o->h_fl_slider_->value( (int)d );
+  }
 }
 
 
