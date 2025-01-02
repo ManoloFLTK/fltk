@@ -165,6 +165,7 @@ Fl_Cairo_Native_Input_Driver::~Fl_Cairo_Native_Input_Driver() {
 
 // compute the full width of the newly changed single-line text
 void Fl_Cairo_Native_Input_Driver::scan_single_line_(Fl_Cairo_Native_Input_Driver *o) {
+  o->need_allocate_ = 2;
   while (o->need_allocate_ > 0) o->draw();
 }
 
@@ -176,8 +177,8 @@ static void (*old_adjc_value_changed_f)(GtkAdjustment*) = NULL;
 void Fl_Cairo_Native_Input_Driver::textbuffer_changed_(GtkTextBuffer *buffer_) {
   Fl_Cairo_Native_Input_Driver *dr =
     (Fl_Cairo_Native_Input_Driver*)g_object_get_data((GObject*)buffer_, "driver");
+  dr->need_allocate_ = 1;
   if (dr->kind == SINGLE_LINE) Fl::add_timeout(0, (Fl_Timeout_Handler)scan_single_line_, dr);
-  dr->need_allocate_ = 2;
   if (!dr->text_before_show_) {
     dr->widget->set_changed();
     if (dr->widget->when() & FL_WHEN_CHANGED) {
@@ -491,7 +492,7 @@ const char *Fl_Cairo_Native_Input_Driver::value() {
 
 
 /*
- Called when the text buffer_'s content is fully changed.
+ Called when the multiline widget buffer_'s content is fully changed.
  Moves across all text, paragraph by paragraph, and computes position of its beginning;
  sets v_adjust_ and v_fl_scrollbar_ parameters accordingly.
  This makes GTK and FLTK aware of the full size of the widget's formatted text.
