@@ -42,6 +42,9 @@ private:
   int insert_offset_; // offset in drawing units from left margin to insertion point
   static const int slider_thickness_ = 10;
   static void textbuffer_changed_(GtkTextBuffer *buffer_);
+  static void adjustment_changed_(GtkAdjustment *adj);
+  static void adjustment_value_changed_(GtkAdjustment *adj);
+  void change_adjustment_virtual_fs(GtkAdjustment *adj);
   void text_view_scroll_mark_onscreen_(bool relative_to_mark = false);
   void text_view_scroll_mark_h_(GtkTextIter *before);
   void scan_all_paragraphs_();
@@ -59,7 +62,6 @@ public:
   void replace(int from, int to, const char *text, int len) FL_OVERRIDE;
   void replace_selection(const char *text, int len) FL_OVERRIDE;
   const char *value() FL_OVERRIDE;
-  void resize(int x, int y, int w, int h) FL_OVERRIDE;
   int handle_focus(int) FL_OVERRIDE;
   void draw() FL_OVERRIDE;
   unsigned index(int i) const FL_OVERRIDE;
@@ -168,6 +170,8 @@ void Fl_Cairo_Native_Input_Driver::scan_single_line_(Fl_Cairo_Native_Input_Drive
 
 
 static void (*old_changed_f)(GtkTextBuffer*) = NULL;
+static void (*old_adjc_changed_f)(GtkAdjustment*) = NULL;
+static void (*old_adjc_value_changed_f)(GtkAdjustment*) = NULL;
 
 void Fl_Cairo_Native_Input_Driver::textbuffer_changed_(GtkTextBuffer *buffer_) {
   Fl_Cairo_Native_Input_Driver *dr =
@@ -181,6 +185,35 @@ void Fl_Cairo_Native_Input_Driver::textbuffer_changed_(GtkTextBuffer *buffer_) {
     }
   }
 }
+
+
+void Fl_Cairo_Native_Input_Driver::adjustment_changed_(GtkAdjustment *adj) {
+  Fl_Cairo_Native_Input_Driver *dr =
+    (Fl_Cairo_Native_Input_Driver*)g_object_get_data((GObject*)adj, "driver");
+  if (dr) {
+    if (adj == dr->h_adjust_)
+      dr->h_fl_slider_->scrollvalue(gtk_adjustment_get_value(adj), dr->allocation_.width, 0,
+                                    int(gtk_adjustment_get_upper(adj)));
+    else if (adj == dr->v_adjust_) {
+      dr->v_fl_scrollbar_->value(gtk_adjustment_get_value(adj), dr->allocation_.height, 0, int(gtk_adjustment_get_upper(adj)));
+      dr->v_fl_scrollbar_->linesize(dr->lineheight_);
+    }
+  }
+}
+
+
+void Fl_Cairo_Native_Input_Driver::adjustment_value_changed_(GtkAdjustment *adj) {
+  Fl_Cairo_Native_Input_Driver *dr =
+    (Fl_Cairo_Native_Input_Driver*)g_object_get_data((GObject*)adj, "driver");
+  if (dr) {
+    if (adj == dr->h_adjust_)
+      dr->h_fl_slider_->value(gtk_adjustment_get_value(adj));
+    else if (adj == dr->v_adjust_) {
+      dr->v_fl_scrollbar_->value(gtk_adjustment_get_value(adj));
+    }
+  }
+}
+
 
 
 static void scroll_cb(Fl_Slider *sb, GtkAdjustment *adjust, int *p_need_allocate) {
@@ -252,6 +285,20 @@ void Fl_Cairo_Native_Input_Driver::set_style_()  {
 }
 
 
+void Fl_Cairo_Native_Input_Driver::change_adjustment_virtual_fs(GtkAdjustment *adj) {
+  g_object_set_data((GObject*)adj, "driver", this);
+  GtkAdjustmentClass *adjc = GTK_ADJUSTMENT_GET_CLASS(adj);
+  if (!old_adjc_changed_f) {
+    old_adjc_changed_f = adjc->changed;
+    adjc->changed = adjustment_changed_;
+  }
+  if (!old_adjc_value_changed_f) {
+    old_adjc_value_changed_f = adjc->value_changed;
+    adjc->value_changed = adjustment_value_changed_;
+  }
+}
+
+
 void Fl_Cairo_Native_Input_Driver::show_widget()  {
   static bool first = true;
   if (first) {
@@ -271,6 +318,7 @@ void Fl_Cairo_Native_Input_Driver::show_widget()  {
     widget->end();
     if (v_fl_scrollbar_) {
       v_adjust_ = gtk_adjustment_new(0, 0, 10, 1, 1, 5); // temp values
+      change_adjustment_virtual_fs(v_adjust_);
       FL_FUNCTION_CALLBACK_3(v_fl_scrollbar_, scroll_cb,
                              Fl_Slider*, v_fl_scrollbar_,
                              GtkAdjustment*, v_adjust_,
@@ -278,6 +326,7 @@ void Fl_Cairo_Native_Input_Driver::show_widget()  {
     }
     if (h_fl_slider_) {
       h_adjust_ = gtk_adjustment_new(0, 0, 10, 1, 1, 5);
+      change_adjustment_virtual_fs(h_adjust_);
       FL_FUNCTION_CALLBACK_3(h_fl_slider_, scroll_cb,
                              Fl_Slider*, h_fl_slider_,
                              GtkAdjustment*, h_adjust_,
@@ -295,10 +344,7 @@ void Fl_Cairo_Native_Input_Driver::show_widget()  {
     gtk_widget_set_can_focus(text_view_, !widget->readonly());
     gtk_container_add(GTK_CONTAINER(scrolled_), text_view_);
     gtk_container_add(GTK_CONTAINER(window_), scrolled_);
-    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_),
-      (kind == Fl_Native_Input_Driver::MULTIPLE_LINES && widget->wrap() ? GTK_POLICY_NEVER: GTK_POLICY_ALWAYS), //H
-          (kind == Fl_Native_Input_Driver::SINGLE_LINE ? GTK_POLICY_NEVER : GTK_POLICY_ALWAYS) //V
-                                   );
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_), GTK_POLICY_NEVER, GTK_POLICY_NEVER);
     gtk_widget_show_all(window_);
     
     buffer_ = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view_));
@@ -362,17 +408,12 @@ void Fl_Cairo_Native_Input_Driver::draw()  {
                              widget->y() + Fl::box_dy(widget->box()),
                               slider_thickness_, allocation_.height);
       v_fl_scrollbar_->parent()->init_sizes();
-      if (need_allocate_ == 1) upper_ = gtk_adjustment_get_upper(v_adjust_);
-      v_fl_scrollbar_->value(v_fl_scrollbar_->value(), allocation_.height, 1, int (upper_));
-      v_fl_scrollbar_->linesize(lineheight_);
     }
     if (h_fl_slider_)  {
       h_fl_slider_->resize(widget->x() + Fl::box_dx(widget->box()) + (widget->right_to_left() ? slider_thickness_ : 0),
                              widget->y() + Fl::box_dy(widget->box()) + allocation_.height,
                              allocation_.width, slider_thickness_);
       h_fl_slider_->parent()->init_sizes();
-      gdouble d = gtk_adjustment_get_upper(h_adjust_);
-      h_fl_slider_->scrollvalue(h_fl_slider_->value(), allocation_.width, 0, int(d));
     }
     if (need_allocate_ > 0) need_allocate_--;
   }
@@ -477,9 +518,7 @@ void Fl_Cairo_Native_Input_Driver::scan_all_paragraphs_() {
       gtk_adjustment_set_value(v_adjust_, upper_);
     }
   }  while(gtk_text_iter_compare(&current, &end) < 0);
-  v_fl_scrollbar_->maximum(upper_);
   gtk_adjustment_set_value(v_adjust_, 0);
-  v_fl_scrollbar_->value(0);
   gtk_text_buffer_place_cursor(buffer_, &start);
   need_allocate_ = 1;
   draw();
@@ -537,11 +576,8 @@ void Fl_Cairo_Native_Input_Driver::delayed_cursor_at_extremity_(Fl_Cairo_Native_
   if (o->kind == MULTIPLE_LINES && !o->widget->wrap()) {
     double d = (o->widget->right_to_left() ? gtk_adjustment_get_upper(o->h_adjust_) : 0);
     gtk_adjustment_set_value(o->h_adjust_, d);
-    o->h_fl_slider_->value( (int)gtk_adjustment_get_value(o->h_adjust_) );
     o->need_allocate_ = 1;
-    o->draw();
-    o->h_fl_slider_->bounds(0, (int)gtk_adjustment_get_upper(o->h_adjust_) );
-    o->h_fl_slider_->value( (int)d );
+    o->widget->redraw();
   }
 }
 
@@ -629,16 +665,6 @@ void Fl_Cairo_Native_Input_Driver::replace_selection(const char *text, int len) 
 void Fl_Cairo_Native_Input_Driver::replace(int from, int to, const char *text, int len) {
   insert_position(from, to);
   replace_selection(text, len);
-}
-
-
-void Fl_Cairo_Native_Input_Driver::resize(int x, int y, int w, int h) {
-  if (h_fl_slider_) {
-    h_fl_slider_->bounds(0, (int)gtk_adjustment_get_upper(h_adjust_) );
-    h_fl_slider_->value( (int)gtk_adjustment_get_value(h_adjust_) );
-  }
-  need_allocate_ = 1;
-  draw();
 }
 
 
@@ -872,11 +898,8 @@ void Fl_Cairo_Native_Input_Driver::text_view_scroll_mark_onscreen_(bool relative
     if (strong2.y < 0) val += strong2.y;
     else val += strong2.y + lineheight_ - allocation_.height;
     gtk_adjustment_set_value(v_adjust_, val);
-    v_fl_scrollbar_->value( (int)gtk_adjustment_get_value(v_adjust_) );
     if (!need_allocate_) {
       gtk_widget_size_allocate(scrolled_, &allocation_);
-      upper_ = gtk_adjustment_get_upper(v_adjust_);
-      v_fl_scrollbar_->value(v_fl_scrollbar_->value(), allocation_.height, 1, int(upper_));
     }
   }
 }
@@ -895,7 +918,6 @@ void Fl_Cairo_Native_Input_Driver::text_view_scroll_mark_h_(GtkTextIter *before)
   if (strong.x > allocation_.width || strong.x < 0) {
     double d = gtk_adjustment_get_value(h_adjust_);
     gtk_adjustment_set_value(h_adjust_, d + charwidth);
-    h_fl_slider_->value( (int)gtk_adjustment_get_value(h_adjust_) );
     if (!need_allocate_) need_allocate_ = 1; // important
   }
 }
