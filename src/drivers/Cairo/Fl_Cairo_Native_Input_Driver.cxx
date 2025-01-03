@@ -450,12 +450,18 @@ void Fl_Cairo_Native_Input_Driver::draw()  {
     gtk_render_insertion_cursor(gtk_widget_get_style_context(text_view_),
       dr->cr(), strong.x, strong.y + widget->textsize()/4, layout, 0, PANGO_DIRECTION_NEUTRAL);
     g_object_unref(layout);
-    int d = 1;
+    if (to_display) {
+      float d = 1;
+      float s = 1;
 #if FLTK_USE_WAYLAND
-    if (fl_wl_display()) d = fl_wl_buffer_scale(widget->window());
+      if (fl_wl_display()) {
+        d = fl_wl_buffer_scale(widget->window()) / 1.05;
+        s = Fl::screen_scale(widget->window()->screen_num());
+      }
 #endif
-    fl_set_spot(widget->textfont(), widget->textsize(),
-                (strong.x + widget->x())/d, (strong.y + lineheight_ + widget->y())/d, 1, lineheight_);
+      fl_set_spot(widget->textfont(), lineheight_ * s * d,
+                  (strong.x + widget->x()) / d, (strong.y + lineheight_ + widget->y()) / d, 1, 0);
+    }
   }
   Fl_Surface_Device::pop_current();
   if (to_display) {
@@ -850,7 +856,6 @@ int Fl_Cairo_Native_Input_Driver::handle_keyboard() {
       text_view_scroll_mark_onscreen_();
       return 1;
     } else if (widget->when() & FL_WHEN_ENTER_KEY) {
-      //insert_position(size(), 0); //TODO useful?
       maybe_do_callback(FL_REASON_ENTER_KEY);
     }
   } else if (Fl::event_key() == FL_Home || Fl::event_key() == FL_End) {
