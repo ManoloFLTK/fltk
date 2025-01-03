@@ -498,14 +498,13 @@ const char *Fl_Cairo_Native_Input_Driver::value() {
  This makes GTK and FLTK aware of the full size of the widget's formatted text.
  */
 void Fl_Cairo_Native_Input_Driver::scan_all_paragraphs_() {
-  GtkTextIter start, end, current;
-  gtk_text_buffer_get_start_iter (buffer_, &start);
+  GtkTextIter end, current;
+  gtk_text_buffer_get_start_iter (buffer_, &current);
   gtk_text_buffer_get_end_iter (buffer_, &end);
   gtk_adjustment_set_upper(v_adjust_, 0);
   while (need_allocate_) draw();
   upper_ = 0;
 //printf("end=%d chars upper_=%.1f\n",gtk_text_iter_get_offset(&end), upper_);
-  current = start;
   do {
 //printf("current=%d\n",gtk_text_iter_get_offset(&current));
     /*gboolean b =*/ gtk_text_iter_forward_line(&current);
@@ -520,7 +519,6 @@ void Fl_Cairo_Native_Input_Driver::scan_all_paragraphs_() {
     }
   }  while(gtk_text_iter_compare(&current, &end) < 0);
   gtk_adjustment_set_value(v_adjust_, 0);
-  gtk_text_buffer_place_cursor(buffer_, &start);
   need_allocate_ = 1;
   draw();
 //printf("upper_=%.1f v_fl_scrollbar_=%d\n",gtk_adjustment_get_upper(v_adjust_), v_fl_scrollbar_->value());
@@ -578,8 +576,8 @@ void Fl_Cairo_Native_Input_Driver::delayed_cursor_at_extremity_(Fl_Cairo_Native_
     double d = (o->widget->right_to_left() ? gtk_adjustment_get_upper(o->h_adjust_) : 0);
     gtk_adjustment_set_value(o->h_adjust_, d);
     o->need_allocate_ = 1;
-    o->widget->redraw();
   }
+  o->widget->redraw();
 }
 
 
@@ -638,7 +636,7 @@ void Fl_Cairo_Native_Input_Driver::replace_selection(const char *text, int len) 
       gtk_text_buffer_get_end_iter(buffer_, &end);
       gtk_text_buffer_apply_tag(buffer_, font_size_tag_, &start, &end);
     }
-    if (full_replace) { // for some reason, cursor positioning at extremity of text needs be delayed
+    if (full_replace && len_chars > 1) { // for some reason, cursor positioning at extremity of text needs be delayed
       Fl::add_timeout(0, (Fl_Timeout_Handler)delayed_cursor_at_extremity_, this);
     }
     if (char_pos == undo_->undoat_chars) {
@@ -716,15 +714,17 @@ int Fl_Cairo_Native_Input_Driver::handle_keyboard() {
       else {
         if (del) {
           int insert = insert_position();
-          replace(insert, insert - del, NULL, 0);
+          int mrk = mark();
+          if (mrk < insert) mrk = insert;
+          replace(mrk - del, mrk, NULL, 0);
         } else {
           replace_selection(Fl::event_text(), Fl::event_length());
         }
       }
     }
-    /*if (Fl::screen_driver()->has_marked_text() && Fl::compose_state) {
-     this->mark( this->insert_position() - Fl::compose_state );
-     }*/
+    if (Fl::screen_driver()->has_marked_text() && Fl::compose_state) {
+      widget->mark(insert_position() - Fl::compose_state);
+    }
     return 1;
   }
   int mods = Fl::event_state() & (FL_META|FL_CTRL|FL_ALT);
