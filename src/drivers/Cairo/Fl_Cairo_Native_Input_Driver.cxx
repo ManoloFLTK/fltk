@@ -719,13 +719,14 @@ int Fl_Cairo_Native_Input_Driver::handle_keyboard() {
       if (widget->readonly()) fl_beep();
       else {
         if (del) {
-          int insert = insert_position();
-          int mrk = mark();
-          if (mrk < insert) mrk = insert;
-          replace(mrk, mrk - del, Fl::event_text(), Fl::event_length());
-        } else {
-          replace_selection(Fl::event_text(), Fl::event_length());
+          GtkTextIter insert, mrk;
+          gtk_text_buffer_get_selection_bounds(buffer_, &insert, &mrk);
+          if (gtk_text_iter_compare(&insert, &mrk) > 0) mrk = insert;
+          int mark2 = byte_pos_to_char_pos(char_pos_to_byte_pos_(gtk_text_iter_get_offset(&mrk)) - del);
+          gtk_text_iter_set_offset(&insert, mark2);
+          gtk_text_buffer_select_range(buffer_, &mrk, &insert);
         }
+        replace_selection(Fl::event_text(), Fl::event_length());
       }
     }
     if (Fl::screen_driver()->has_marked_text() && Fl::compose_state) {
