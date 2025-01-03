@@ -676,11 +676,9 @@ void Fl_Cairo_Native_Input_Driver::replace(int from, int to, const char *text, i
 
 
 int Fl_Cairo_Native_Input_Driver::handle_focus(int event) {
-  if (event == FL_FOCUS) {
+  if (event == FL_FOCUS || event == FL_UNFOCUS) {
     if (!need_allocate_) need_allocate_ = 1; // important
-    widget->redraw();
-  } else if (event == FL_UNFOCUS) {
-    widget->redraw();
+    widget->damage(FL_DAMAGE_CHILD);
   }
   return 1;
 }
