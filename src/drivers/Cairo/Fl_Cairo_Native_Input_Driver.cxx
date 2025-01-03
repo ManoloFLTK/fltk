@@ -373,10 +373,6 @@ void Fl_Cairo_Native_Input_Driver::show_widget()  {
       delete text_before_show_;
       text_before_show_ = NULL;
     }
-    GtkTextIter iter;
-    if (kind == Fl_Native_Input_Driver::MULTIPLE_LINES) gtk_text_buffer_get_start_iter(buffer_, &iter);
-    else gtk_text_buffer_get_end_iter(buffer_, &iter);
-    gtk_text_buffer_place_cursor(buffer_, &iter);
     lineheight_ = widget->textsize() * 1.2;
     draw();
   } else if (widget->visible() && v_fl_scrollbar_) {
@@ -454,6 +450,12 @@ void Fl_Cairo_Native_Input_Driver::draw()  {
     gtk_render_insertion_cursor(gtk_widget_get_style_context(text_view_),
       dr->cr(), strong.x, strong.y + widget->textsize()/4, layout, 0, PANGO_DIRECTION_NEUTRAL);
     g_object_unref(layout);
+    int d = 1;
+#if FLTK_USE_WAYLAND
+    if (fl_wl_display()) d = fl_wl_buffer_scale(widget->window());
+#endif
+    fl_set_spot(widget->textfont(), widget->textsize(),
+                (strong.x + widget->x())/d, (strong.y + lineheight_ + widget->y())/d, 1, lineheight_);
   }
   Fl_Surface_Device::pop_current();
   if (to_display) {
@@ -716,7 +718,7 @@ int Fl_Cairo_Native_Input_Driver::handle_keyboard() {
           int insert = insert_position();
           int mrk = mark();
           if (mrk < insert) mrk = insert;
-          replace(mrk - del, mrk, NULL, 0);
+          replace(mrk, mrk - del, Fl::event_text(), Fl::event_length());
         } else {
           replace_selection(Fl::event_text(), Fl::event_length());
         }
