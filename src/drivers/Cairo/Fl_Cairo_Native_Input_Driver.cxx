@@ -411,7 +411,7 @@ void Fl_Cairo_Native_Input_Driver::draw()  {
     }
   }
   if (to_display) {
-    cairo_stroke(dr->cr()); // sometimes necessary to restore cairo context OK
+    cairo_new_path(dr->cr()); // sometimes necessary to restore cairo context OK
     cairo_restore(dr->cr());
   } else {
     Fl_RGB_Image *rgb = offscreen->image();
