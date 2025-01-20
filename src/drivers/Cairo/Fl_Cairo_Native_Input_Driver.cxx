@@ -7,7 +7,6 @@
 #include <FL/Fl_Scrollbar.H>
 #include "../Cairo/Fl_Cairo_Graphics_Driver.H"
 #include <FL/fl_ask.H>          // fl_beep()
-#include <FL/platform.H>        // fl_wl_display(), fl_wl_buffer_scale()
 #include "../../Fl_Screen_Driver.H"
 
 #include <gtk/gtk.h>
@@ -398,16 +397,8 @@ void Fl_Cairo_Native_Input_Driver::draw()  {
       dr->cr(), strong.x, strong.y + widget->textsize()/4, layout, 0, PANGO_DIRECTION_NEUTRAL);
     g_object_unref(layout);
     if (to_display) {
-      float d = 1;
-      float s = 1;
-#if FLTK_USE_WAYLAND
-      if (fl_wl_display()) {
-        d = fl_wl_buffer_scale(widget->window()) / 1.05;
-        s = Fl::screen_scale(widget->window()->screen_num());
-      }
-#endif
-      fl_set_spot(widget->textfont(), lineheight_ * s * d,
-                  (strong.x + widget->x()) / d, (strong.y + lineheight_ + widget->y()) / d, 1, 0);
+      fl_set_spot(widget->textfont(), widget->textsize(),
+                  (strong.x + widget->x()), (strong.y + widget->textsize() * 1.3 + widget->y()), 1, 0);
     }
   }
   if (to_display) {
