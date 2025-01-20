@@ -503,7 +503,7 @@ int Fl_Cocoa_Native_Input_Driver::handle_focus(int event) {
   if (event == FL_FOCUS) {
     NSWindow *xid = [text_view window];
     //printf("focus() %s\n",widget->label());
-    if ([xid parentWindow] && [NSApp keyWindow] != xid)
+    if ([xid parentWindow] && [NSApp keyWindow] != xid && [xid canBecomeKeyWindow])
       [xid makeKeyWindow];
     if ([xid firstResponder] != text_view) {
       [xid makeFirstResponder:text_view];
