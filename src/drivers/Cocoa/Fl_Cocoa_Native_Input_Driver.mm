@@ -503,8 +503,11 @@ int Fl_Cocoa_Native_Input_Driver::handle_focus(int event) {
   if (event == FL_FOCUS) {
     NSWindow *xid = [text_view window];
     //printf("focus() %s\n",widget->label());
-    if ([xid parentWindow] && [NSApp keyWindow] != xid && [xid canBecomeKeyWindow])
-      [xid makeKeyWindow];
+    if ([xid parentWindow]) { // avoid greyed out titlebar buttons
+      [[[xid parentWindow] standardWindowButton:NSWindowCloseButton] highlight:YES];
+      [[[xid parentWindow] standardWindowButton:NSWindowMiniaturizeButton] highlight:YES];
+      [[[xid parentWindow] standardWindowButton:NSWindowZoomButton] highlight:YES];
+    }
     if ([xid firstResponder] != text_view) {
       [xid makeFirstResponder:text_view];
       [text_view scrollRangeToVisible:[text_view selectedRange]];
@@ -514,6 +517,11 @@ int Fl_Cocoa_Native_Input_Driver::handle_focus(int event) {
     if ([xid firstResponder] == text_view) {
       //printf("unfocus() %s\n",widget->label());
       [xid makeFirstResponder:[xid contentView]];
+    }
+    if ([xid parentWindow]) {
+      [[[xid parentWindow] standardWindowButton:NSWindowCloseButton] highlight:NO];
+      [[[xid parentWindow] standardWindowButton:NSWindowMiniaturizeButton] highlight:NO];
+      [[[xid parentWindow] standardWindowButton:NSWindowZoomButton] highlight:NO];
     }
   }
   return 1;
