@@ -241,10 +241,12 @@ static void delayed_scroll_to_visible(id text_view) {
 
 
 void Fl_Cocoa_Native_Input_Driver::resize() {
-  CGRect fr = CGRectMake(widget->x(), widget->window()->h()-(widget->y()+widget->h()), widget->w(), widget->h());
+  Fl_Window *top = widget->top_window();
+  int X, Y;
+  widget->top_window_offset(X, Y);
+  CGRect fr = CGRectMake(X, top->h() - (Y + widget->h()), widget->w(), widget->h());
   fr = NSInsetRect(fr, Fl::box_dx(widget->box()), Fl::box_dy(widget->box()));
-  int ns = widget->top_window()->screen_num();
-  float s = Fl::screen_scale(ns);
+  float s = Fl::screen_scale(top->screen_num());
   fr = CGRectMake(fr.origin.x * s, fr.origin.y * s, fr.size.width * s, fr.size.height * s);
   [scroll_view setFrame:fr];
   textfontandsize();
@@ -264,17 +266,31 @@ void Fl_Cocoa_Native_Input_Driver::resize() {
 
 
 void Fl_Cocoa_Native_Input_Driver::show_widget() {
-  NSWindow *flwin = (NSWindow*)fl_mac_xid(widget->window());
-  if (!flwin) return;
+  if (!widget->window()->shown()) return;
   if (!scroll_view) {
-    CGRect fr = CGRectMake(widget->x(), widget->window()->h()-(widget->y()+widget->h()), widget->w(), widget->h());
+    // The native input object is an NSScrollView containing an FLNativeTextView.
+    // Together, these 2 cocoa objects produce a scrollable text input widget.
+    // The NSScrollView is made a subview of the top window's contentView,
+    // even if the native object belongs to a subwindow.
+    // Focus remains always to the top window, but that window's firstResponder
+    // goes to the FLNativeTextView (instead of the contentView elsewhere in FLTK)
+    // when the native widget takes focus. This way, the native object receives
+    // and processes events and draws the NSScrollView without FLTK doing anything
+    // except running custom methods of FLNativeTextView.
+    // A key detail when the native widget is in a subwindow: the area of this
+    // widget in the subwindow's contentView needs to be made fully transparent
+    // in order for the underlying NSScrollView to be visible. That's done in
+    // member Fl_Cocoa_Native_Input_Driver::draw().
+    Fl_Window *top = widget->top_window();
+    int X, Y;
+    widget->top_window_offset(X, Y);
+    CGRect fr = CGRectMake(X, top->h() - (Y + widget->h()), widget->w(), widget->h());
     fr = NSInsetRect(fr, Fl::box_dx(widget->box()), Fl::box_dy(widget->box()));
-    int ns = widget->top_window()->screen_num();
-    float s = Fl::screen_scale(ns);
+    float s = Fl::screen_scale(top->screen_num());
     fr = CGRectMake(fr.origin.x * s, fr.origin.y * s, fr.size.width * s, fr.size.height * s);
     scroll_view = [[NSScrollView alloc] initWithFrame:fr];
+    NSWindow *flwin = (NSWindow*)fl_mac_xid(top);
     [[flwin contentView] addSubview:scroll_view];
-    if ([flwin parentWindow]) [flwin setIgnoresMouseEvents:NO];
     [scroll_view release];
     text_view = [[FLNativeTextView alloc] initWithFrame:fr];
     [scroll_view setDocumentView:text_view];
@@ -293,10 +309,7 @@ void Fl_Cocoa_Native_Input_Driver::show_widget() {
     [text_view setRichText:NO];
     if (!widget->selectable()) [text_view setSelectable:NO];
     if (widget->readonly()) [text_view setEditable:NO];
-    else if (widget->active()) {
-      [flwin makeFirstResponder:text_view];
-      [text_view setAllowsUndo:YES];
-    }
+    else if (widget->active()) [text_view setAllowsUndo:YES];
     [scroll_view setHasVerticalScroller:(kind == Fl_Native_Input_Driver::MULTIPLE_LINES)];
     [scroll_view setHasHorizontalScroller:
      (kind == Fl_Native_Input_Driver::MULTIPLE_LINES && !widget->wrap())];
@@ -500,28 +513,17 @@ bool Fl_Cocoa_Native_Input_Driver::can_redo() const {
 
 
 int Fl_Cocoa_Native_Input_Driver::handle_focus(int event) {
+  NSWindow *xid = (NSWindow*)fl_mac_xid(widget->top_window());
   if (event == FL_FOCUS) {
-    NSWindow *xid = [text_view window];
     //printf("focus() %s\n",widget->label());
-    if ([xid parentWindow]) { // avoid greyed out titlebar buttons
-      [[[xid parentWindow] standardWindowButton:NSWindowCloseButton] highlight:YES];
-      [[[xid parentWindow] standardWindowButton:NSWindowMiniaturizeButton] highlight:YES];
-      [[[xid parentWindow] standardWindowButton:NSWindowZoomButton] highlight:YES];
-    }
     if ([xid firstResponder] != text_view) {
       [xid makeFirstResponder:text_view];
       [text_view scrollRangeToVisible:[text_view selectedRange]];
     }
   } else if (event == FL_UNFOCUS) {
-    NSWindow *xid = [text_view window];
     if ([xid firstResponder] == text_view) {
       //printf("unfocus() %s\n",widget->label());
       [xid makeFirstResponder:[xid contentView]];
-    }
-    if ([xid parentWindow]) {
-      [[[xid parentWindow] standardWindowButton:NSWindowCloseButton] highlight:NO];
-      [[[xid parentWindow] standardWindowButton:NSWindowMiniaturizeButton] highlight:NO];
-      [[[xid parentWindow] standardWindowButton:NSWindowZoomButton] highlight:NO];
     }
   }
   return 1;
@@ -583,7 +585,7 @@ void Fl_Cocoa_Native_Input_Driver::right_to_left() {
 }
 
 
-static Fl_RGB_Image *cgimage_to_rgb(CGImageRef img, Fl_Window *win) {
+static Fl_RGB_Image *cgimage_to_rgb(CGImageRef img) {
   int w = CGImageGetWidth(img);
   int h = CGImageGetHeight(img);
   CGColorSpaceRef cspace = CGColorSpaceCreateDeviceRGB();
@@ -601,20 +603,35 @@ static Fl_RGB_Image *cgimage_to_rgb(CGImageRef img, Fl_Window *win) {
 
 void Fl_Cocoa_Native_Input_Driver::draw() {
   if (Fl_Surface_Device::surface() != Fl_Display_Device::display_device()) {
-    Fl_Window *win = widget->window();
-    NSWindow *nswin = (NSWindow*)fl_mac_xid(win);
+    NSWindow *nswin = (NSWindow*)fl_mac_xid(widget->top_window());
     CGImageRef img = Fl_Cocoa_Window_Driver::capture_decorated_window_10_6(nswin);
     int bt = [nswin frame].size.height - [[nswin contentView] frame].size.height;
     float s = Fl::screen_driver()->scale(0);
-    if (Fl_Cocoa_Window_Driver::driver(win)->mapped_to_retina()) { s *= 2; bt *= 2; }
-    CGRect cgr = CGRectMake(s*widget->x(), s*widget->y() + bt,
-                            s*widget->w(), s*widget->h());
+    int X, Y;
+    widget->top_window_offset(X, Y);
+    if (Fl_Cocoa_Window_Driver::driver(widget->top_window())->mapped_to_retina()) { s *= 2; bt *= 2; }
+    CGRect cgr = CGRectMake(s*X, s*Y + bt, s*widget->w(), s*widget->h());
+    cgr = NSInsetRect(cgr, s*Fl::box_dx(widget->box()), s*Fl::box_dy(widget->box()));
     CGImageRef img2 = CGImageCreateWithImageInRect(img, cgr);
     CGImageRelease(img);
-    Fl_RGB_Image *rgb = cgimage_to_rgb(img2, win);
+    Fl_RGB_Image *rgb = cgimage_to_rgb(img2);
     CGImageRelease(img2);
-    rgb->scale(widget->w(), widget->h(), 1, 1);
-    rgb->draw(widget->x(), widget->y());
+    rgb->scale(widget->w() - Fl::box_dw(widget->box()), widget->h() - Fl::box_dh(widget->box()), 1, 1);
+    rgb->draw(widget->x() + Fl::box_dx(widget->box()), widget->y() + Fl::box_dy(widget->box()));
     delete rgb;
+  } else if (widget->window()->parent()) {
+    // Here, the widget is in a subwindow. We make that widget's area fully transparent
+    // so the NSScrollView below it is visible.
+    // Compute the widget's area in the subwindow, and clear it using the current gc.
+    CGRect fr = CGRectMake(widget->x(), widget->y(), widget->w(), widget->h());
+    fr = NSInsetRect(fr, Fl::box_dx(widget->box()), Fl::box_dy(widget->box()));
+    Fl_Window *win = widget->window();
+    do {
+      Fl_Cocoa_Window_Driver *dr = (Fl_Cocoa_Window_Driver*)Fl_Window_Driver::driver(win);
+      CGContextClearRect(dr->gc, fr);
+      fr.origin.x += win->x();
+      fr.origin.y += win->y();
+      win = win->window();
+    } while (win->parent());
   }
 }

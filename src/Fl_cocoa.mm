@@ -27,7 +27,6 @@ extern "C" {
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Tooltip.H>
 #include <FL/Fl_Image_Surface.H>
-#include <FL/Fl_Native_Input.H> // for FL_NATIVE_INPUT
 #include <FL/fl_draw.H>
 #include <FL/Fl_Rect.H>
 #include <FL/fl_string_functions.h>
@@ -693,9 +692,7 @@ void Fl_Cocoa_Screen_Driver::breakMacEventLoop()
   if (Fl::modal_ && (Fl::modal_ != w))
     return NO;  // prevent the caption to be redrawn as active on click
                 //  when another modal window is currently the key win
-  if (!w || w->output() || w->tooltip_window() || w->menu_window()) return NO; // [NATIVE]
-  Fl_Widget *focus = Fl::focus();
-  return (!w->parent() || (focus && focus->as_group() && focus->type() == FL_NATIVE_INPUT && focus->window() == w));
+  return !(!w || w->output() || w->tooltip_window() || w->menu_window() || w->parent());
 }
 
 - (BOOL)canBecomeMainWindow
@@ -1062,11 +1059,6 @@ static void cocoaMouseHandler(NSEvent *theEvent)
   float s = Fl::screen_driver()->scale(0);
   pos.x /= s; pos.y /= s;
   pos.y = window->h() - pos.y;
-  while (window->parent()) { // [NATIVE] subwindows receive mouse events, transform coords to toplevel
-    pos.x += window->x();
-    pos.y += window->y();
-    window = window->window();
-  }
   NSInteger btn = [theEvent buttonNumber] + 1;
   NSUInteger mods = [theEvent modifierFlags];
   int sendEvent = 0;
@@ -1124,7 +1116,7 @@ static void cocoaMouseHandler(NSEvent *theEvent)
           Fl::e_is_click = 0;
       }
       mods_to_e_state( mods );
-      update_e_xy_and_e_xy_root(fl_xid(window)/*[theEvent window]*/); // [NATIVE]
+      update_e_xy_and_e_xy_root([theEvent window]);
       if (fl_mac_os_version < 100500) {
         // before 10.5, mouse moved events aren't sent to borderless windows such as tooltips
         Fl_Window *tooltip = Fl_Tooltip::current_window();
@@ -1449,12 +1441,6 @@ static FLWindowDelegate *flwindowdelegate_instance = nil;
     [nsw setLevel:NSStatusWindowLevel];
     fixup_window_levels();
   }
-  if (!w->parent() && Fl_Window_Driver::last_focus_widget() &&
-      Fl_Window_Driver::last_focus_widget()->as_group() &&
-      Fl_Window_Driver::last_focus_widget()->type() == FL_NATIVE_INPUT &&
-      Fl_Window_Driver::last_focus_widget()->window()->parent()) { // [NATIVE]
-      w->handle(FL_PUSH);
-  } else
   Fl::handle( FL_FOCUS, w);
   fl_unlock_function();
 }

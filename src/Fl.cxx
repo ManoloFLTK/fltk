@@ -26,7 +26,6 @@
 #include "Fl_Timeout.h"
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Tooltip.H>
-#include <FL/Fl_Native_Input.H> // for FL_NATIVE_INPUT [NATIVE]
 #include <FL/fl_draw.H>
 
 #include <ctype.h>
@@ -1065,16 +1064,10 @@ void Fl::focus(Fl_Widget *o)
     // make sure that fl_xfocus is set to the top level window
     // of this widget, or fl_fix_focus will clear our focus again
     if (o) {
-      /*Fl_Window *win = 0, *w1 = o->as_window();
+      Fl_Window *win = 0, *w1 = o->as_window();
       if (!w1) w1 = o->window();
-      while (w1) { win=w1; w1=win->window(); }*/ // same as win = o->top_window();
-      Fl_Window *win;
+      while (w1) { win=w1; w1=win->window(); }
       Fl_Window_Driver::last_focus_widget_ = o; // [NATIVE]
-      if (o->as_group() && o->type() == FL_NATIVE_INPUT) { // [NATIVE]
-        win = o->window();
-      } else {
-        win = o->top_window();
-      }
       if (win) {
         if (fl_xfocus != win) {
           Fl_Window_Driver::driver(win)->take_focus();
