@@ -165,6 +165,9 @@ Fl_Native_Input_Driver *Fl_Native_Input_Driver::newNativeInputDriver(Fl_Native_I
 Fl_Native_Input::Fl_Native_Input(int x, int y, int w, int h, const char *l) : Fl_Group(x,y,w,h,l) {
   end();
   box(FL_DOWN_BOX);
+  align(FL_ALIGN_LEFT);
+  set_flag(SHORTCUT_LABEL);
+  set_flag(NEEDS_KEYBOARD);
   type(FL_NATIVE_INPUT);
   driver = Fl_Native_Input_Driver::newNativeInputDriver(this);
   font_size_ = FL_NORMAL_SIZE;
@@ -426,6 +429,7 @@ void Fl_Native_Input::insert_position(int pos, int m) {
 \param [in] on_off  if \e false, the text in this widget can be edited by the user */
 void Fl_Native_Input::readonly(bool on_off) {
   is_readonly_ = on_off;
+  if (is_readonly_) clear_flag(NEEDS_KEYBOARD);
   driver->readonly(on_off);
 }
 
