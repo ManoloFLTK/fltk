@@ -18,13 +18,13 @@ class Fl_Native_Input_Driver;
  It displays a single line of text and lets the user edit it.
  The text may contain any Unicode text.
  In contrast with Fl_Input, an Fl_Native_Input widget supports any kind of script, right-to-left included,
- on platforms that natively implement it. On other platforms, this widget is the same as an Fl_Input widget.
+ on platforms (macOS, Windows, Wayland and X11-with-cairo)
+ that natively implement it. On other platforms, this widget is the same as an Fl_Input widget.
  Characters can be input using the keyboard
  or a text input method. Character composition is done using dead keys and/or a compose key as defined by the operating system.
  Text selection, copy/paste to/from the clipboard, undo, redo, and text drag-and-drop are supported.
  Class Fl_Native_Input API is the same as that of class Fl_Input_.
  By default, it is drawn with an inset box and a white background.
- \see uses_native_widget()
  */
 class FL_EXPORT Fl_Native_Input : public Fl_Group {
 private:
@@ -96,7 +96,6 @@ public:
   bool can_redo() const;
   bool wrap();
   void wrap(bool value);
-  bool uses_native_widget();
 };
 
 

@@ -190,12 +190,6 @@ Fl_Native_Input::~Fl_Native_Input() {
 };
 
 
-/** Returns whether the Fl_Native_Input widget uses a platform native widget.
- The result is \e true for  platforms macOS, Windows, Wayland and X11-with-cairo and \e false otherwise.*/
-bool Fl_Native_Input::uses_native_widget() {
-  return type() == FL_NATIVE_INPUT;
-}
-
 /**
  Append text at the end.
 This function appends the string in \e t to the end of the text.
@@ -713,7 +707,6 @@ void Fl_Native_Input::tab_nav(int val) {
  The default boxtype is FL_DOWN_BOX.
  \param    x,y,w,h  the dimensions of the new widget
  \param    l  an optional label text
- \see uses_native_widget()
  */
 Fl_Native_Multiline_Input::Fl_Native_Multiline_Input(int x, int y, int w, int h, const char *l) : Fl_Native_Input(x,y,w,h,l) {
   driver->kind = Fl_Native_Input_Driver::MULTIPLE_LINES;
