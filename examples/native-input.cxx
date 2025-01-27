@@ -188,7 +188,7 @@ Fl_Menu_Item items[] = {
   {"Undo", FL_COMMAND+'z', (Fl_Callback*)undo_cb, 0, 0},
   {"Redo", FL_COMMAND+'Z', (Fl_Callback*)redo_cb, 0, FL_MENU_DIVIDER},
   {"Select All", FL_COMMAND+'a', (Fl_Callback*)select_all_cb, 0, FL_MENU_DIVIDER},
-  {"RtoL<->LtoR  ", FL_COMMAND+'R', (Fl_Callback*)toggle_rtl_cb, 0, 0},
+  {"RtoL ⟺ LtoR  ", FL_COMMAND+'R', (Fl_Callback*)toggle_rtl_cb, 0, 0},
   {"Inactive M", 0, (Fl_Callback*)toggle_inactive, 0, FL_MENU_TOGGLE},
   {"Inactive S", 0, (Fl_Callback*)toggle_inactive, 0, FL_MENU_TOGGLE},
   {0},
