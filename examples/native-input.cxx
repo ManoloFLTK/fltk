@@ -258,6 +258,7 @@ int main(int argc, char **argv) {
   single = box2;
   item = (Fl_Menu_Item*)menubar->find_item("Edit/Inactive S");
   item->user_data(single);
+  box2->align(FL_ALIGN_TOP);
   box2->textfont(box->textfont());
   box2->textsize(box->textsize());
   box2->textcolor(box->textcolor());
