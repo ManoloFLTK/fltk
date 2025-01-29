@@ -305,7 +305,7 @@ void Fl_Cocoa_Native_Input_Driver::show_widget() {
     textcolor();
     Fl::get_color(widget->cursor_color(), r, g, b);
     [text_view setInsertionPointColor:[NSColor colorWithRed:r/255. green:g/255. blue:b/255. alpha:1.]];
-    widget->textfont(widget->textfont());
+    textfontandsize();
     [text_view setRichText:NO];
     if (!widget->selectable()) [text_view setSelectable:NO];
     if (widget->readonly()) [text_view setEditable:NO];
