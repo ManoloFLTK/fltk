@@ -245,12 +245,13 @@ int main(int argc, char **argv) {
   box->when(FL_WHEN_CHANGED);
   //box->tab_nav(0);
 #if SUBWIN
-  Fl_Window *subwin = new Fl_Double_Window(20, box->y()+box->h()+20, 450, 50+40,"subwin");
+  Fl_Window *subwin = new Fl_Double_Window(15, box->y()+box->h()+3, 460, 107,"subwin");
   subwin->color(FL_YELLOW);
+  subwin->box(FL_PLASTIC_UP_BOX);
 #endif
   Fl_Native_Input *box2 = new Fl_Native_Input(
 #if SUBWIN
-      0, 0,
+      5, 17,
 #else
       20, box->y()+box->h()+20,
 #endif
@@ -274,7 +275,7 @@ int main(int argc, char **argv) {
   box2->when(box->when());
 #if SUBWIN
   subwin->resizable(subwin);
-  input = new Fl_Input(box2->x(),box2->y()+box2->h()+20, subwin->w(),30, NULL);
+  input = new Fl_Input(box2->x(),box2->y()+box2->h()+20, 450,30, NULL);
   subwin->end();
   new Fl_Input(20, window->h()-20, 450, 20, "extra2 Fl_Input");
 #else
