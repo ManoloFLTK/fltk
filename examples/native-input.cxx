@@ -274,9 +274,9 @@ int main(int argc, char **argv) {
   box2->callback(cb);
   box2->when(box->when());
 #if SUBWIN
-  subwin->resizable(subwin);
   input = new Fl_Input(box2->x(),box2->y()+box2->h()+20, 450,30, NULL);
   subwin->end();
+  subwin->resizable(input);
   new Fl_Input(20, window->h()-20, 450, 20, "extra2 Fl_Input");
 #else
   input =new Fl_Input(box2->x(),box2->y()+box2->h()+20, box2->w(),30, NULL);
