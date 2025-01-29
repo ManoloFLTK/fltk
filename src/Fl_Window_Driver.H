@@ -53,7 +53,7 @@ class Fl_Widget;
 class Fl_Window_Driver
 {
   friend class Fl_Window;
-  friend void Fl::focus(Fl_Widget *);
+  friend void Fl::focus(Fl_Widget *); // [NATIVE]
 private:
   static bool is_a_rescale_; // true when a top-level window is being rescaled
   static Fl_Widget* last_focus_widget_; // last widget given focus [NATIVE]
