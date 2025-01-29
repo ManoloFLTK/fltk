@@ -19,6 +19,8 @@
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Multiline_Input.H>
 
+//TODO try to let focus to the Fl_Native_Input widget even if it's a group with one child
+
 // Class Fl_Backup_Native_Input_Driver gives a default implementation of
 // Fl_Native_Input_Driver for platforms that don't provide a platform-native text widget.
 // In this implementation, Fl_Native_Input_Driver is an Fl_Group
