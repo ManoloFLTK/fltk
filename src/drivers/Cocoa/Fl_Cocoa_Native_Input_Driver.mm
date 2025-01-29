@@ -622,7 +622,7 @@ void Fl_Cocoa_Native_Input_Driver::draw() {
   } else if (widget->window()->parent()) {
     // Here, the widget is in a subwindow. We make that widget's area fully transparent
     // so the NSScrollView below it is visible.
-    // Compute the widget's area in the subwindow, and clear it using the current gc.
+    // Compute the widget's area in the subwindow, and clear it in the subwindow's bitmap context.
     CGRect fr = CGRectMake(widget->x(), widget->y(), widget->w(), widget->h());
     fr = NSInsetRect(fr, Fl::box_dx(widget->box()), Fl::box_dy(widget->box()));
     Fl_Window *win = widget->window();
