@@ -7,9 +7,6 @@
 
 #include <FL/Fl_Group.H>
 
-// Needs to be different from any other type() value used by other Fl_Group subclasses and < FL_WINDOW
-#define FL_NATIVE_INPUT 0x10
-
 
 class Fl_Native_Input_Driver;
 

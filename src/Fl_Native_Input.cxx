@@ -148,7 +148,6 @@ public:
 Fl_Native_Input_Driver *Fl_Native_Input_Driver::newNativeInputDriver(Fl_Native_Input *n) {
   Fl_Backup_Native_Input_Driver *retval = new Fl_Backup_Native_Input_Driver();
   retval->widget = n;
-  retval->widget->type(0);
   return retval;
 }
 #endif
@@ -170,7 +169,6 @@ Fl_Native_Input::Fl_Native_Input(int x, int y, int w, int h, const char *l) : Fl
   align(FL_ALIGN_LEFT);
   set_flag(SHORTCUT_LABEL);
   set_flag(NEEDS_KEYBOARD);
-  type(FL_NATIVE_INPUT);
   driver = Fl_Native_Input_Driver::newNativeInputDriver(this);
   font_size_ = FL_NORMAL_SIZE;
   font_ = FL_HELVETICA;

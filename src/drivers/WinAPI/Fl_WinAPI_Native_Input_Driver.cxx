@@ -98,6 +98,10 @@ void Fl_WinAPI_Native_Input_Driver::resize() {
 }
 
 
+// the current native widget having focus or NULL if something else has focus
+static Fl_Widget *focus_to_native_widget = 0;
+
+
 static LRESULT CALLBACK fltk_wnd_proc_plus_focus(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   if (uMsg == WM_CTLCOLOREDIT) {
     Fl_WinAPI_Native_Input_Driver *dr =
@@ -122,8 +126,12 @@ static LRESULT CALLBACK fltk_wnd_proc_plus_focus(HWND hWnd, UINT uMsg, WPARAM wP
       } else {
         Fl_Widget *f = Fl_Window_Driver::last_focus_widget();
         if (f) {
-          if (!f->as_group() || f->type() != FL_NATIVE_INPUT)
+          if (f != focus_to_native_widget) {
             SetFocus(fl_win32_xid(f->top_window()));
+          } else {
+            Fl_Native_Input *native = (Fl_Native_Input*)f;
+            native->handle(FL_FOCUS);
+          }
         }
       }
       return 0;
@@ -494,10 +502,14 @@ int Fl_WinAPI_Native_Input_Driver::handle_focus(int event) {
   if (event == FL_FOCUS) {
     //fprintf(stderr,"focus to %s\n",widget->label());fflush(stderr);
     SetFocus(edit_win);
+    focus_to_native_widget = widget;
   } else if (event == FL_UNFOCUS) {
     //fprintf(stderr,"unfocus to %s\n",widget->label());fflush(stderr);
-    if (Fl::focus() && (!Fl::focus()->as_group() || Fl::focus()->type() != FL_NATIVE_INPUT))
-      SetFocus(fl_win32_xid(Fl::focus()->top_window()));
+    Fl_Widget *f = Fl::focus();
+    if (f && f != focus_to_native_widget) {
+      SetFocus(fl_win32_xid(f->top_window()));
+      focus_to_native_widget = 0;
+    }
   }
   return 1;
 }
