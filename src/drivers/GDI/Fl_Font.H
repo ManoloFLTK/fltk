@@ -24,6 +24,11 @@
 
 #include <config.h>
 #if USE_GDIPLUS
+#  if defined(_MSC_VER)
+#    include <objidl.h>
+#  else
+#    include <wtypes.h> // for PROPID needed with gcc 4.9.0 but not with 4.9.3
+#  endif
 #include <gdiplus.h>
 #endif
 
