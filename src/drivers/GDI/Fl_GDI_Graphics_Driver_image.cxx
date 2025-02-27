@@ -401,6 +401,15 @@ void Fl_GDI_Graphics_Driver::delete_bitmask(fl_uintptr_t bm) {
   DeleteObject((HGDIOBJ)bm);
 }
 
+#if USE_GDIPLUS
+
+void Fl_GDIplus_Graphics_Driver::draw_fixed(Fl_Bitmap *bm, int X, int Y, int W, int H, int cx, int cy) {
+  delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::draw_fixed(bm, X, Y, W, H, cx, cy);
+}
+
+#endif
+
 void Fl_GDI_Graphics_Driver::draw_fixed(Fl_Bitmap *bm, int X, int Y, int W, int H, int cx, int cy) {
   X = this->floor(X);
   Y = this->floor(Y);

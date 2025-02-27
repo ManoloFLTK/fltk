@@ -1,7 +1,7 @@
 //
 // Rectangle drawing routines for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 1998-2022 by Bill Spitzak and others.
+// Copyright 1998-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -26,26 +26,63 @@
 #if USE_GDIPLUS
 
 Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Driver() {
+  pen_ = NULL;
+  brush_ = NULL;
   if (!fl_current_xmap) color(FL_BLACK);
   pen_ = new Gdiplus::Pen(gdiplus_color_, 1);
   pen_->SetLineJoin(Gdiplus::LineJoinRound);
   pen_->SetStartCap(Gdiplus::LineCapFlat);
   pen_->SetEndCap(Gdiplus::LineCapFlat);
   brush_ = new Gdiplus::SolidBrush(gdiplus_color_);
-  active = true;
+  do_antialias_ = true;
+  graphics_ = NULL;
+  clip_ = NULL;
+  cliprect_ = NULL;
 }
 
 Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
   delete pen_;
   delete brush_;
+  delete graphics_;
+  delete clip_;
+  delete cliprect_;
 }
 
+
+void Fl_GDIplus_Graphics_Driver::new_graphics() {
+  delete graphics_;
+  graphics_ = new Gdiplus::Graphics((HDC)gc());
+  antialias(do_antialias_);
+  graphics_->ScaleTransform(scale(), scale());
+  if (cliprect_) graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);
+}
+
+
+void Fl_GDIplus_Graphics_Driver::gc(void *ctxt) {
+  delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::gc(ctxt);
+}
+
+
+void Fl_GDIplus_Graphics_Driver::translate_all(int x, int y) {
+  delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::translate_all(x, y);
+}
+
+
+void Fl_GDIplus_Graphics_Driver::untranslate_all() {
+  delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::untranslate_all();
+}
+
+
 void Fl_GDIplus_Graphics_Driver::antialias(int state) {
-  active = state;
+  do_antialias_ = state;
+  if (graphics_) graphics_->SetSmoothingMode(state ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeDefault);
 }
 
 int Fl_GDIplus_Graphics_Driver::antialias() {
-  return active;
+  return do_antialias_;
 }
 
 void Fl_GDIplus_Graphics_Driver::draw_circle(int x, int y, int d, Fl_Color c) {
@@ -69,7 +106,9 @@ void Fl_GDIplus_Graphics_Driver::shutdown() {
 //    Fl::warning("Fl_GDIplus_Graphics_Driver::shutdown() called while driver is starting up.");
   }
 }
-#endif
+
+#endif // USE_GDIPLUS
+
 
 // Code used to switch output to an off-screen window.  See macros in
 // win32.H which save the old state in local variables.
@@ -187,7 +226,6 @@ BOOL Fl_GDI_Graphics_Driver::alpha_blend_(int x, int y, int w, int h, HDC src_gc
   return fl_alpha_blend(gc_, x, y, w, h, src_gc, srcx, srcy, srcw, srch, blendfunc);
 }
 
-#if ! defined(FL_DOXYGEN)
 void Fl_GDI_Graphics_Driver::copy_offscreen_with_alpha(int x,int y,int w,int h,HBITMAP bitmap,int srcx,int srcy) {
   HDC new_gc = CreateCompatibleDC(gc_);
   int save = SaveDC(new_gc);
@@ -224,7 +262,6 @@ void Fl_GDI_Graphics_Driver::untranslate_all() {
   if (depth > 0) depth--;
   SetWindowOrgEx((HDC)gc(), origins[depth].x, origins[depth].y, NULL);
 }
-#endif
 
 void Fl_GDI_Graphics_Driver::add_rectangle_to_region(Fl_Region r, int X, int Y, int W, int H) {
   HRGN R = (HRGN)XRectangleRegion(X, Y, W, H);

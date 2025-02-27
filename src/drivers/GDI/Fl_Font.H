@@ -24,6 +24,7 @@
 
 #include <config.h>
 
+
 class Fl_GDI_Font_Descriptor : public Fl_Font_Descriptor {
 public:
   HFONT fid;

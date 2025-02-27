@@ -49,10 +49,10 @@ private:
   POINT *origins; // to support translation
   void set_current_() FL_OVERRIDE;
   void draw_fixed(Fl_Pixmap *pxm, int XP, int YP, int WP, int HP, int cx, int cy) FL_OVERRIDE;
-  void draw_fixed(Fl_Bitmap *pxm, int XP, int YP, int WP, int HP, int cx, int cy) FL_OVERRIDE;
   void make_unused_color_(unsigned char &r, unsigned char &g, unsigned char &b, int color_count, void **data) FL_OVERRIDE;
 protected:
   void draw_fixed(Fl_RGB_Image *rgb, int XP, int YP, int WP, int HP, int cx, int cy) FL_OVERRIDE;
+  void draw_fixed(Fl_Bitmap *pxm, int XP, int YP, int WP, int HP, int cx, int cy) FL_OVERRIDE;
   void cache(Fl_RGB_Image *rgb) FL_OVERRIDE;
   HDC gc_;
   int numcount;
@@ -100,8 +100,8 @@ public:
   void add_rectangle_to_region(Fl_Region r, int x, int y, int w, int h) FL_OVERRIDE;
   Fl_Region XRectangleRegion(int x, int y, int w, int h) FL_OVERRIDE;
   void XDestroyRegion(Fl_Region r) FL_OVERRIDE;
-  void translate_all(int x, int y);
-  void untranslate_all(void);
+  virtual void translate_all(int x, int y);
+  virtual void untranslate_all(void);
   static HRGN scale_region(HRGN r, float f, Fl_GDI_Graphics_Driver *dr);
   void scale(float f) FL_OVERRIDE;
   float scale() {return Fl_Graphics_Driver::scale();}
@@ -112,9 +112,9 @@ protected:
   void focus_rect(int x, int y, int w, int h) FL_OVERRIDE;
   void rect_unscaled(int x, int y, int w, int h) FL_OVERRIDE;
   void rectf_unscaled(int x, int y, int w, int h) FL_OVERRIDE;
-#if USE_COLORMAP
+#  if USE_COLORMAP
   void colored_rectf(int x, int y, int w, int h, uchar r, uchar g, uchar b) FL_OVERRIDE;
-#endif
+#  endif
   void line_unscaled(int x, int y, int x1, int y1) FL_OVERRIDE;
   void line_unscaled(int x, int y, int x1, int y1, int x2, int y2) FL_OVERRIDE;
   void xyline_unscaled(int x, int y, int x1) FL_OVERRIDE;
@@ -124,9 +124,9 @@ protected:
   void polygon_unscaled(int x0, int y0, int x1, int y1, int x2, int y2) FL_OVERRIDE;
   void polygon_unscaled(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) FL_OVERRIDE;
   // --- clipping
-  void push_clip(int x, int y, int w, int h) FL_OVERRIDE;
   int clip_box(int x, int y, int w, int h, int &X, int &Y, int &W, int &H) FL_OVERRIDE;
   int not_clipped(int x, int y, int w, int h) FL_OVERRIDE;
+  void push_clip(int x, int y, int w, int h) FL_OVERRIDE;
   void restore_clip() FL_OVERRIDE;
   Fl_Region scale_clip(float f) FL_OVERRIDE;
   // --- implementation is in src/fl_vertex.cxx which includes src/cfg_gfx/xxx_rect.cxx
@@ -136,11 +136,13 @@ protected:
   void end_loop() FL_OVERRIDE;
   void end_polygon() FL_OVERRIDE;
   void end_complex_polygon() FL_OVERRIDE;
-  void gap() FL_OVERRIDE;
   void ellipse_unscaled(double xt, double yt, double rx, double ry) FL_OVERRIDE;
   void arc_unscaled(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
   void pie_unscaled(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
   void line_style_unscaled(int style, int width, char* dashes) FL_OVERRIDE;
+  void* change_pen_width(int width) FL_OVERRIDE;
+  void reset_pen_width(void *data) FL_OVERRIDE;
+  void gap() FL_OVERRIDE;
   void color(Fl_Color c) FL_OVERRIDE;
   Fl_Color color() FL_OVERRIDE { return color_; }
   void color(uchar r, uchar g, uchar b) FL_OVERRIDE;
@@ -154,8 +156,6 @@ protected:
   void global_gc() FL_OVERRIDE;
   void overlay_rect(int x, int y, int w , int h) FL_OVERRIDE;
   void cache_size(Fl_Image *img, int &width, int &height) FL_OVERRIDE;
-  void* change_pen_width(int width) FL_OVERRIDE;
-  void reset_pen_width(void *data) FL_OVERRIDE;
 };
 
 
@@ -185,20 +185,23 @@ private:
   Gdiplus::Color gdiplus_color_;
   Gdiplus::Pen *pen_;
   Gdiplus::SolidBrush *brush_;
+  Gdiplus::Graphics *graphics_;
+  Gdiplus::Rect *cliprect_;
+  bool do_antialias_;
   // The code below ensures that a connection to GDIplus is only made once, and that the
   // matching connection shutdown is also done exactly once.
   enum {
-        STATE_CLOSED = 0,           // no connection, token is invalid
-        STATE_STARTUP,              // attempt to start up, avoid recursions for whatever reason
-        STATE_OPEN,                 // connection was successful and the token is valid
-        STATE_SHUTDOWN              // shutting down the gdi connection, avoid possible recursion
+    STATE_CLOSED = 0,           // no connection, token is invalid
+    STATE_STARTUP,              // attempt to start up, avoid recursions for whatever reason
+    STATE_OPEN,                 // connection was successful and the token is valid
+    STATE_SHUTDOWN              // shutting down the gdi connection, avoid possible recursion
   };
   static int gdiplus_state_;        // reflect the state of the GDIplus driver connection
   static ULONG_PTR gdiplus_token_;  // the token that GDIplus gives to us
+  void new_graphics();
 public:
   Fl_GDIplus_Graphics_Driver();
   virtual ~Fl_GDIplus_Graphics_Driver();
-  bool active;
   static void shutdown(void);
   void color(Fl_Color c) FL_OVERRIDE;
   Fl_Color color() FL_OVERRIDE { return color_; }
@@ -210,8 +213,8 @@ public:
   void polygon(int x0, int y0, int x1, int y1, int x2, int y2) FL_OVERRIDE;
   void polygon(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) FL_OVERRIDE;
   void line_style(int style, int width, char* dashes) FL_OVERRIDE;
-  void arc_unscaled(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
-  void pie_unscaled(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
+  void arc(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
+  void pie(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
   void draw_circle(int x, int y, int d, Fl_Color c) FL_OVERRIDE;
   void transformed_vertex(double xf, double yf) FL_OVERRIDE;
   void vertex(double x,double y) FL_OVERRIDE;
@@ -223,6 +226,25 @@ public:
   void circle(double x, double y, double r) FL_OVERRIDE;
   void antialias(int state) FL_OVERRIDE;
   int antialias() FL_OVERRIDE;
+  
+  void gc(void *ctxt) FL_OVERRIDE;
+  void *gc() FL_OVERRIDE {return gc_;}
+  
+  class Clip {
+    public:
+      int x, y, w, h; // the clip rectangle
+      Clip *prev; // previous in pile of clips
+    };
+  Clip * clip_; // top of pile of clips
+  Fl_Region scale_clip(float f) FL_OVERRIDE;
+  void push_clip(int x, int y, int w, int h) FL_OVERRIDE;
+  void push_no_clip() FL_OVERRIDE;
+  void pop_clip() FL_OVERRIDE;
+  int clip_box(int x, int y, int w, int h, int &X, int &Y, int &W, int &H) FL_OVERRIDE;
+  int not_clipped(int x, int y, int w, int h) FL_OVERRIDE;
+  void translate_all(int x, int y) FL_OVERRIDE;
+  void untranslate_all(void) FL_OVERRIDE;
+  void draw_fixed(Fl_Bitmap *bm, int X, int Y, int W, int H, int cx, int cy) FL_OVERRIDE;
 };
 
 #endif // USE_GDIPLUS

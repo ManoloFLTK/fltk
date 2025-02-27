@@ -31,10 +31,6 @@
 
 // --- line and polygon drawing with integer coordinates
 
-void Fl_GDI_Graphics_Driver::point(int x, int y) {
-  rectf(x, y, 1, 1);
-}
-
 void Fl_GDI_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
   // make pen have a one-pixel width
   line_style_unscaled( (color()==FL_WHITE?FL_SOLID:FL_DOT), 1, NULL);
@@ -45,6 +41,11 @@ void Fl_GDI_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
   LineTo(gc_, right, bottom);
   LineTo(gc_, x, bottom);
   LineTo(gc_, x, y);
+}
+
+
+void Fl_GDI_Graphics_Driver::point(int x, int y) {
+  rectf(x, y, 1, 1);
 }
 
 void Fl_GDI_Graphics_Driver::focus_rect(int x, int y, int w, int h) {
@@ -150,6 +151,7 @@ void Fl_GDI_Graphics_Driver::polygon_unscaled(int x, int y, int x1, int y1, int 
   Polygon(gc_, p, 4);
 }
 
+
 // --- clipping
 
 void Fl_GDI_Graphics_Driver::push_clip(int x, int y, int w, int h) {
@@ -167,6 +169,7 @@ void Fl_GDI_Graphics_Driver::push_clip(int x, int y, int w, int h) {
   else Fl::warning("Fl_GDI_Graphics_Driver::push_clip: clip stack overflow!\n");
   fl_restore_clip();
 }
+
 
 int Fl_GDI_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int& Y, int& W, int& H){
   X = x; Y = y; W = w; H = h;
@@ -202,6 +205,7 @@ int Fl_GDI_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int& Y,
   return ret;
 }
 
+
 int Fl_GDI_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
   if (x+w <= 0 || y+h <= 0) return 0;
   HRGN r = (HRGN)rstack[rstackptr];
@@ -217,6 +221,7 @@ int Fl_GDI_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
   return RectInRegion(r,&rect);
 }
 
+
 void Fl_GDI_Graphics_Driver::restore_clip() {
   fl_clip_state_number++;
   if (gc_) {
@@ -229,33 +234,36 @@ void Fl_GDI_Graphics_Driver::restore_clip() {
 
 #if USE_GDIPLUS
 
+/* Use GDI to draw horizontal and vertical lines because adjacency of
+ lines is not guaranteed with GDI+ and is necessary for correct box styles.
+ */
+
 void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1) {
-  if (!active) return Fl_Scalable_Graphics_Driver::line(x, y, x1, y1);
   bool AA = !(x == x1 || y == y1);
-  Gdiplus::Graphics graphics_(gc_);
-  graphics_.ScaleTransform(scale(), scale());
-  pen_->SetColor(gdiplus_color_);
-  if (AA) graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-  graphics_.DrawLine(pen_, x, y, x1, y1);
+  if (!graphics_) new_graphics();
+  if (!AA) graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
+  graphics_->DrawLine(pen_, x, y, x1, y1);
+  if (!AA && antialias()) graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
 }
 
 void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1, int x2, int y2) {
-  if (!active) return Fl_Scalable_Graphics_Driver::line(x, y, x1, y1, x2, y2);
-  line(x, y, x1, y1);
-  line(x1, y1, x2, y2);
+  Gdiplus::GraphicsPath path;
+  Gdiplus::Point gdi2_p[3] = {Gdiplus::Point(x, y), Gdiplus::Point(x1, y1), Gdiplus::Point(x2, y2)};
+  path.AddLines(gdi2_p, 3);
+  if (!graphics_) new_graphics();
+  bool AA = !((x == x1 || y == y1) && (x1 == x2 || y1 == y2));
+  if (!AA) graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
+  graphics_->DrawPath(pen_, &path);
+  if (!AA && antialias()) graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
 }
 
 void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, int y2) {
-  if (!active) return Fl_Scalable_Graphics_Driver::loop(x0, y0, x1, y1, x2, y2);
   Gdiplus::GraphicsPath path;
   Gdiplus::Point gdi2_p[3] = {Gdiplus::Point(x0, y0), Gdiplus::Point(x1, y1), Gdiplus::Point(x2, y2)};
   path.AddLines(gdi2_p, 3);
   path.CloseFigure();
-  Gdiplus::Graphics graphics_(gc_);
-  graphics_.ScaleTransform(scale(), scale());
-  pen_->SetColor(gdiplus_color_);
-  graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-  graphics_.DrawPath(pen_, &path);
+  if (!graphics_) new_graphics();
+  graphics_->DrawPath(pen_, &path);
 }
 
 #define fl_min(a,b) (a < b ? a : b)
@@ -269,30 +277,22 @@ void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, in
     int bottom = fl_max(y0, fl_max(y1, fl_max(y2, y3)));
     rect(left, top, right-left+1, bottom-top+1);
   } else {
-    if (!active) return Fl_Scalable_Graphics_Driver::loop(x0, y0, x1, y1, x2, y2, x3, y3);
     Gdiplus::GraphicsPath path;
     Gdiplus::PointF gdi2_p[4] = {Gdiplus::PointF(x0+1-line_width_/2.f, y0+1-line_width_/2.f), Gdiplus::PointF(x1+1-line_width_/2.f, y1+1-line_width_/2.f), Gdiplus::PointF(x2+1-line_width_/2.f, y2+1-line_width_/2.f), Gdiplus::PointF(x3+1-line_width_/2.f, y3+1-line_width_/2.f)};
     path.AddLines(gdi2_p, 4);
     path.CloseFigure();
-    Gdiplus::Graphics graphics_(gc_);
-    graphics_.ScaleTransform(scale(), scale());
-    pen_->SetColor(gdiplus_color_);
-    graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-    graphics_.DrawPath(pen_, &path);
+    if (!graphics_) new_graphics();
+    graphics_->DrawPath(pen_, &path);
   }
 }
 
 void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2, int y2) {
-  if (!active) return Fl_Scalable_Graphics_Driver::polygon(x0, y0, x1, y1, x2, y2);
   Gdiplus::GraphicsPath path;
   path.AddLine(x0, y0, x1, y1);
   path.AddLine(x1, y1, x2, y2);
   path.CloseFigure();
-  Gdiplus::Graphics graphics_(gc_);
-  graphics_.ScaleTransform(scale(), scale());
-  brush_->SetColor(gdiplus_color_);
-  graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-  graphics_.FillPath(brush_, &path);
+  if (!graphics_) new_graphics();
+  graphics_->FillPath(brush_, &path);
 }
 
 void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) {
@@ -304,17 +304,109 @@ void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2,
     int bottom = fl_max(y0, fl_max(y1, fl_max(y2, y3)));
     rectf(left, top, right-left, bottom-top);
   } else {
-    if (!active) return Fl_Scalable_Graphics_Driver::polygon(x0, y0, x1, y1, x2, y2, x3, y3);
     Gdiplus::GraphicsPath path;
     path.AddLine(x0, y0, x1, y1);
     path.AddLine(x1, y1, x2, y2);
     path.AddLine(x2, y2, x3, y3);
     path.CloseFigure();
-    Gdiplus::Graphics graphics_(gc_);
-    graphics_.ScaleTransform(scale(), scale());
-    brush_->SetColor(gdiplus_color_);
-    graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-    graphics_.FillPath(brush_, &path);
+    if (!graphics_) new_graphics();
+    graphics_->FillPath(brush_, &path);
   }
 }
-#endif
+
+
+// clipping
+
+Fl_Region Fl_GDIplus_Graphics_Driver::scale_clip(float f) {
+  delete graphics_; graphics_ = NULL;
+  return Fl_GDI_Graphics_Driver::scale_clip(f);
+}
+
+
+void Fl_GDIplus_Graphics_Driver::push_clip(int x, int y, int w, int h) {
+  Clip *c = new Clip();
+  clip_box(x,y,w,h,c->x,c->y,c->w,c->h);
+  c->prev = clip_;
+  clip_ = c;
+  delete cliprect_;
+  cliprect_ = new Gdiplus::Rect(clip_->x , clip_->y , clip_->w, clip_->h);
+  delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::push_clip(x,y,w,h);
+}
+
+
+void Fl_GDIplus_Graphics_Driver::push_no_clip() {
+  Clip *c = new Clip();
+  c->x = c->y = -1000000; c->w = c->h = 2000000;
+  c->prev = clip_;
+  clip_ = c;
+  delete cliprect_;
+  cliprect_ = NULL;
+  delete graphics_; graphics_ = NULL;
+  Fl_Graphics_Driver::push_no_clip();
+}
+
+
+void Fl_GDIplus_Graphics_Driver::pop_clip() {
+  Clip *c;
+  if (clip_) {
+    c = clip_;
+    clip_ = clip_->prev;
+    delete c;
+  }
+  delete cliprect_;
+  delete graphics_; graphics_ = NULL;
+  if (clip_) {
+    cliprect_ = new Gdiplus::Rect(clip_->x , clip_->y , clip_->w, clip_->h);
+  } else {
+    cliprect_ = NULL;
+  }
+  Fl_Graphics_Driver::pop_clip();
+}
+
+
+int Fl_GDIplus_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int& Y, int& W, int& H) {
+  if (!clip_) {
+    X = x; Y = y; W = w; H = h;
+    return 0;
+  }
+  if (clip_->w < 0) {
+    X = x; Y = y; W = w; H = h;
+    return 1;
+  }
+  int ret = 0;
+  if (x > (X=clip_->x)) {X=x; ret=1;}
+  if (y > (Y=clip_->y)) {Y=y; ret=1;}
+  if ((x+w) < (clip_->x+clip_->w)) {
+    W=x+w-X;
+    ret=1;
+  }else
+    W = clip_->x + clip_->w - X;
+  if(W<0){
+    W=0;
+    return 1;
+  }
+  if ((y+h) < (clip_->y+clip_->h)) {
+    H=y+h-Y;
+    ret=1;
+  }else
+    H = clip_->y + clip_->h - Y;
+  if(H<0){
+    W=0;
+    H=0;
+    return 1;
+  }
+  return ret;
+}
+
+
+int Fl_GDIplus_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
+  if (!clip_) return 1;
+  if (clip_->w < 0) return 1;
+  int X = 0, Y = 0, W = 0, H = 0;
+  clip_box(x, y, w, h, X, Y, W, H);
+  if (W) return 1;
+  return 0;
+}
+
+#endif // USE_GDIPLUS

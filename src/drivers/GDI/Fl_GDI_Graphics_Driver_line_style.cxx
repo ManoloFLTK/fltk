@@ -1,7 +1,7 @@
 //
 // Line style code for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 1998-2018 by Bill Spitzak and others.
+// Copyright 1998-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -64,7 +64,8 @@ void Fl_GDI_Graphics_Driver::line_style_unscaled(int style, int width, char* das
 #if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::line_style(int style, int width, char* dashes) {
-  if (!active) return Fl_Scalable_Graphics_Driver::line_style(style, width, dashes);
+  // set both the GDI and GDI+ pens
+  Fl_Scalable_Graphics_Driver::line_style(style, width, dashes);
   int gdi_width = (width ? width : 1);
   pen_->SetWidth(Gdiplus::REAL(gdi_width));
   int standard_dash = style & 0x7;
@@ -105,7 +106,6 @@ void Fl_GDIplus_Graphics_Driver::line_style(int style, int width, char* dashes) 
     pen_->SetDashPattern(gdi_dashes, n);
     delete[] gdi_dashes;
   }
-  Fl_Scalable_Graphics_Driver::line_style(style, width, dashes);
 }
 
 #endif

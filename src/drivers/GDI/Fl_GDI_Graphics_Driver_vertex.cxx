@@ -1,7 +1,7 @@
 //
 // Portable drawing routines for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 1998-2018 by Bill Spitzak and others.
+// Copyright 1998-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -74,6 +74,7 @@ void Fl_GDI_Graphics_Driver::gap() {
   }
 }
 
+
 void Fl_GDI_Graphics_Driver::end_complex_polygon() {
   gap();
   if (n < 3) {
@@ -85,6 +86,7 @@ void Fl_GDI_Graphics_Driver::end_complex_polygon() {
     PolyPolygon(gc_, long_point, counts, numcount);
   }
 }
+
 
 void Fl_GDI_Graphics_Driver::ellipse_unscaled(double xt, double yt, double rx, double ry) {
   int llx = (int)rint(xt-rx);
@@ -99,25 +101,22 @@ void Fl_GDI_Graphics_Driver::ellipse_unscaled(double xt, double yt, double rx, d
     Arc(gc_, llx, lly, llx+w, lly+h, 0,0, 0,0);
 }
 
+
 #if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::transformed_vertex(double xf, double yf) {
-  if (!active) return Fl_Scalable_Graphics_Driver::transformed_vertex(xf, yf);
   transformed_vertex0(float(xf) , float(yf) );
 }
 
 void Fl_GDIplus_Graphics_Driver::vertex(double x,double y) {
-  if (!active) return Fl_Scalable_Graphics_Driver::vertex(x, y);
   transformed_vertex0(float(x*m.a + y*m.c + m.x) , float(x*m.b + y*m.d + m.y) );
 }
 
 void Fl_GDIplus_Graphics_Driver::end_points() {
-  if (!active) return Fl_GDI_Graphics_Driver::end_points();
   for (int i = 0; i < n; i++) point(long_point[i].x, long_point[i].y);
 }
 
 void Fl_GDIplus_Graphics_Driver::end_line() {
-  if (!active) return Fl_GDI_Graphics_Driver::end_line();
   if (n < 2) {
     end_points();
     return;
@@ -130,16 +129,12 @@ void Fl_GDIplus_Graphics_Driver::end_line() {
     }
     path.AddLines(gdi2_p, n);
     delete[] gdi2_p;
-    Gdiplus::Graphics graphics_(gc_);
-    graphics_.ScaleTransform(scale(), scale());
-    graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-    pen_->SetColor(gdiplus_color_);
-    graphics_.DrawPath(pen_, &path);
+    if (!graphics_) new_graphics();
+    graphics_->DrawPath(pen_, &path);
   }
 }
 
 void Fl_GDIplus_Graphics_Driver::end_loop() {
-  if (!active) return Fl_GDI_Graphics_Driver::end_loop();
   fixloop();
   if (n >= 2) {
     Gdiplus::GraphicsPath path;
@@ -150,16 +145,12 @@ void Fl_GDIplus_Graphics_Driver::end_loop() {
     path.AddLines(gdi2_p, n);
     path.CloseFigure();
     delete[] gdi2_p;
-    Gdiplus::Graphics graphics_(gc_);
-    graphics_.ScaleTransform(scale(), scale());
-    graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-    pen_->SetColor(gdiplus_color_);
-    graphics_.DrawPath(pen_, &path);
+    if (!graphics_) new_graphics();
+    graphics_->DrawPath(pen_, &path);
   }
 }
 
 void Fl_GDIplus_Graphics_Driver::end_polygon() {
-  if (!active) return Fl_GDI_Graphics_Driver::end_polygon();
   fixloop();
   if (n < 3) {
     end_line();
@@ -174,16 +165,12 @@ void Fl_GDIplus_Graphics_Driver::end_polygon() {
     path.AddPolygon(gdi2_p, n);
     delete[] gdi2_p;
     path.CloseFigure();
-    Gdiplus::Graphics graphics_(gc_);
-    graphics_.ScaleTransform(scale(), scale());
-    graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-    brush_->SetColor(gdiplus_color_);
-    graphics_.FillPath(brush_, &path);
+    if (!graphics_) new_graphics();
+    graphics_->FillPath(brush_, &path);
   }
 }
 
 void Fl_GDIplus_Graphics_Driver::end_complex_polygon() {
-  if (!active) return Fl_GDI_Graphics_Driver::end_complex_polygon();
   gap();
   if (n < 3) {
     end_line();
@@ -198,16 +185,12 @@ void Fl_GDIplus_Graphics_Driver::end_complex_polygon() {
     path.AddPolygon(gdi2_p, n);
     delete[] gdi2_p;
     path.CloseFigure();
-    Gdiplus::Graphics graphics_(gc_);
-    graphics_.ScaleTransform(scale(), scale());
-    graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-    brush_->SetColor(gdiplus_color_);
-    graphics_.FillPath(brush_, &path);
+    if (!graphics_) new_graphics();
+    graphics_->FillPath(brush_, &path);
   }
 }
 
 void Fl_GDIplus_Graphics_Driver::circle(double x, double y, double r) {
-  if (!active) return Fl_Scalable_Graphics_Driver::circle(x, y, r);
   double xt = transform_x(x,y);
   double yt = transform_y(x,y);
   double rx = r * (m.c ? sqrt(m.a*m.a+m.c*m.c) : fabs(m.a));
@@ -216,16 +199,12 @@ void Fl_GDIplus_Graphics_Driver::circle(double x, double y, double r) {
   int w = (int)rint(xt+rx)-llx;
   int lly = (int)rint(yt-ry);
   int h = (int)rint(yt+ry)-lly;
-  Gdiplus::Graphics graphics_(gc_);
-  graphics_.ScaleTransform(scale(), scale());
-  graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  if (!graphics_) new_graphics();
   if (what==POLYGON) {
-    brush_->SetColor(gdiplus_color_);
-    graphics_.FillPie(brush_, llx, lly, w, h, 0, 360);
+    graphics_->FillPie(brush_, llx, lly, w, h, 0, 360);
   } else {
-    pen_->SetColor(gdiplus_color_);
-    graphics_.DrawArc(pen_, llx, lly, w, h, 0, 360);
+    graphics_->DrawArc(pen_, llx, lly, w, h, 0, 360);
   }
 }
-#endif
 
+#endif
