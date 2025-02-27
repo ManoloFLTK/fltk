@@ -641,25 +641,37 @@ void Fl_GDI_Graphics_Driver::rtl_draw_unscaled(const char* c, int n, int x, int 
 
 
 #if USE_GDIPLUS
+
+void Fl_GDIplus_Graphics_Driver::font_unscaled(Fl_Font fnum, Fl_Fontsize size) {
+  Fl_GDI_Font_Descriptor *old_font_desc = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  Fl_GDI_Graphics_Driver::font_unscaled(fnum, size);
+  if (fnum < 0 || !gc()) return;
+  Fl_GDI_Font_Descriptor *font_desc = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  if (gdiplus_font_ && font_desc == old_font_desc) return;
+  delete gdiplus_font_;
+  gdiplus_font_ = new Gdiplus::Font((HDC)gc(), font_desc->fid);
+}
+
+
 void Fl_GDIplus_Graphics_Driver::draw_unscaled(const char* str, int n, int x, int y) {
+  if (!gdiplus_font_) return;
   int wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   if(wn >= wstr_len) {
     wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
     wstr_len = wn + 1;
     wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   }
-  Gdiplus::Font font((HDC)gc());
   Gdiplus::PointF origin(x, y - size() * scale());
   graphics_->ScaleTransform(1/scale(), 1/scale());
   brush_->SetColor(gdiplus_color_);
-  graphics_->DrawString((const WCHAR*)wstr, wn, &font, origin, brush_);
+  graphics_->DrawString((const WCHAR*)wstr, wn, gdiplus_font_, origin, brush_);
   graphics_->ScaleTransform(scale(), scale());
 }
 
 
 void Fl_GDIplus_Graphics_Driver::draw_unscaled(int angle, const char *str, int n, int x, int y) {
   graphics_->RotateTransform(angle);
-  //draw_unscaled(str, n, x, y);
+  draw_unscaled(str, n, x, y);
   graphics_->RotateTransform(-angle);
 }
 #endif

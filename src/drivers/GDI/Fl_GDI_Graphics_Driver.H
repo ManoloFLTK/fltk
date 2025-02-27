@@ -187,6 +187,7 @@ private:
   Gdiplus::SolidBrush *brush_;
   Gdiplus::Rect *cliprect_;
   Gdiplus::Graphics *graphics_;
+  Gdiplus::Font *gdiplus_font_;
   int translate_x_, translate_y_;
   // The code below ensures that a connection to GDIplus is only made once, and that the
   // matching connection shutdown is also done exactly once.
@@ -228,8 +229,6 @@ public:
   int antialias() FL_OVERRIDE;
   void gc(void *ctxt) FL_OVERRIDE;
   void *gc() FL_OVERRIDE {return gc_;}
-  void scale(float f) FL_OVERRIDE;
-  float scale() {return Fl_Graphics_Driver::scale();}
   void rect(int x, int y, int w, int h) FL_OVERRIDE;
   void rectf(int x, int y, int w, int h) FL_OVERRIDE;
   void xyline(int x, int y, int x1) FL_OVERRIDE;
@@ -252,6 +251,7 @@ public:
   int not_clipped(int x, int y, int w, int h) FL_OVERRIDE;
   void restore_clip() FL_OVERRIDE;
   
+  void font_unscaled(Fl_Font fnum, Fl_Fontsize size) FL_OVERRIDE;
   void draw_unscaled(const char* str, int n, int x, int y) FL_OVERRIDE;
   void draw_unscaled(int angle, const char *str, int n, int x, int y) FL_OVERRIDE;
 };
