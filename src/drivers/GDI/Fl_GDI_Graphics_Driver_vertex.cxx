@@ -1,7 +1,7 @@
 //
 // Portable drawing routines for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 1998-2018 by Bill Spitzak and others.
+// Copyright 1998-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -28,7 +28,7 @@
 #include <FL/math.h>
 
 
-void Fl_GDI_Graphics_Driver::end_points() {
+/*void Fl_GDI_Graphics_Driver::end_points() {
   for (int i=0; i<n; i++) SetPixel(gc_, long_point[i].x, long_point[i].y, fl_RGB());
 }
 
@@ -56,7 +56,7 @@ void Fl_GDI_Graphics_Driver::end_polygon() {
     SelectObject(gc_, fl_brush());
     Polygon(gc_, long_point, n);
   }
-}
+}*/
 
 void Fl_GDI_Graphics_Driver::begin_complex_polygon() {
   Fl_Graphics_Driver::begin_complex_polygon();
@@ -74,7 +74,7 @@ void Fl_GDI_Graphics_Driver::gap() {
   }
 }
 
-void Fl_GDI_Graphics_Driver::end_complex_polygon() {
+/*void Fl_GDI_Graphics_Driver::end_complex_polygon() {
   gap();
   if (n < 3) {
     end_line();
@@ -84,9 +84,9 @@ void Fl_GDI_Graphics_Driver::end_complex_polygon() {
     SelectObject(gc_, fl_brush());
     PolyPolygon(gc_, long_point, counts, numcount);
   }
-}
+}*/
 
-void Fl_GDI_Graphics_Driver::ellipse_unscaled(double xt, double yt, double rx, double ry) {
+/*void Fl_GDI_Graphics_Driver::ellipse_unscaled(double xt, double yt, double rx, double ry) {
   int llx = (int)rint(xt-rx);
   int w = (int)rint(xt+rx)-llx;
   int lly = (int)rint(yt-ry);
@@ -97,7 +97,7 @@ void Fl_GDI_Graphics_Driver::ellipse_unscaled(double xt, double yt, double rx, d
     Pie(gc_, llx, lly, llx+w, lly+h, 0,0, 0,0);
   } else
     Arc(gc_, llx, lly, llx+w, lly+h, 0,0, 0,0);
-}
+}*/
 
 #if USE_GDIPLUS
 
@@ -130,11 +130,8 @@ void Fl_GDIplus_Graphics_Driver::end_line() {
     }
     path.AddLines(gdi2_p, n);
     delete[] gdi2_p;
-    Gdiplus::Graphics graphics_(gc_);
-    graphics_.ScaleTransform(scale(), scale());
-    graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     pen_->SetColor(gdiplus_color_);
-    graphics_.DrawPath(pen_, &path);
+    graphics_->DrawPath(pen_, &path);
   }
 }
 
@@ -150,11 +147,8 @@ void Fl_GDIplus_Graphics_Driver::end_loop() {
     path.AddLines(gdi2_p, n);
     path.CloseFigure();
     delete[] gdi2_p;
-    Gdiplus::Graphics graphics_(gc_);
-    graphics_.ScaleTransform(scale(), scale());
-    graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     pen_->SetColor(gdiplus_color_);
-    graphics_.DrawPath(pen_, &path);
+    graphics_->DrawPath(pen_, &path);
   }
 }
 
@@ -174,11 +168,8 @@ void Fl_GDIplus_Graphics_Driver::end_polygon() {
     path.AddPolygon(gdi2_p, n);
     delete[] gdi2_p;
     path.CloseFigure();
-    Gdiplus::Graphics graphics_(gc_);
-    graphics_.ScaleTransform(scale(), scale());
-    graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     brush_->SetColor(gdiplus_color_);
-    graphics_.FillPath(brush_, &path);
+    graphics_->FillPath(brush_, &path);
   }
 }
 
@@ -198,11 +189,8 @@ void Fl_GDIplus_Graphics_Driver::end_complex_polygon() {
     path.AddPolygon(gdi2_p, n);
     delete[] gdi2_p;
     path.CloseFigure();
-    Gdiplus::Graphics graphics_(gc_);
-    graphics_.ScaleTransform(scale(), scale());
-    graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
     brush_->SetColor(gdiplus_color_);
-    graphics_.FillPath(brush_, &path);
+    graphics_->FillPath(brush_, &path);
   }
 }
 
@@ -216,15 +204,12 @@ void Fl_GDIplus_Graphics_Driver::circle(double x, double y, double r) {
   int w = (int)rint(xt+rx)-llx;
   int lly = (int)rint(yt-ry);
   int h = (int)rint(yt+ry)-lly;
-  Gdiplus::Graphics graphics_(gc_);
-  graphics_.ScaleTransform(scale(), scale());
-  graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   if (what==POLYGON) {
     brush_->SetColor(gdiplus_color_);
-    graphics_.FillPie(brush_, llx, lly, w, h, 0, 360);
+    graphics_->FillPie(brush_, llx, lly, w, h, 0, 360);
   } else {
     pen_->SetColor(gdiplus_color_);
-    graphics_.DrawArc(pen_, llx, lly, w, h, 0, 360);
+    graphics_->DrawArc(pen_, llx, lly, w, h, 0, 360);
   }
 }
 #endif

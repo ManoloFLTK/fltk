@@ -1,7 +1,7 @@
 //
 // Rectangle drawing routines for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 1998-2022 by Bill Spitzak and others.
+// Copyright 1998-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -33,15 +33,39 @@ Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Drive
   pen_->SetEndCap(Gdiplus::LineCapFlat);
   brush_ = new Gdiplus::SolidBrush(gdiplus_color_);
   active = true;
+  clip_ = NULL;
+  cliprect_ = NULL;
+  graphics_ = NULL;
 }
 
 Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
   delete pen_;
   delete brush_;
+  delete clip_;
+  delete cliprect_;
+  delete graphics_;
 }
+
+
+void Fl_GDIplus_Graphics_Driver::gc(void *ctxt) {
+  Fl_GDI_Graphics_Driver::gc(ctxt);
+  delete graphics_;
+  graphics_ = new Gdiplus::Graphics((HDC)ctxt);
+  antialias(active);
+  graphics_->ScaleTransform(scale(), scale());
+  if (cliprect_) graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);
+}
+
+
+void Fl_GDIplus_Graphics_Driver::scale(float f) {
+  Fl_GDI_Graphics_Driver::scale(f);
+  gc(gc());
+}
+
 
 void Fl_GDIplus_Graphics_Driver::antialias(int state) {
   active = state;
+  graphics_->SetSmoothingMode(state ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeDefault);
 }
 
 int Fl_GDIplus_Graphics_Driver::antialias() {
