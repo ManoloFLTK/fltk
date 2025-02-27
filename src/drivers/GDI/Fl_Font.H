@@ -24,7 +24,7 @@
 
 #include <config.h>
 #if USE_GDIPLUS
-#include <Gdiplus.h>
+#include <gdiplus.h>
 #endif
 
 
