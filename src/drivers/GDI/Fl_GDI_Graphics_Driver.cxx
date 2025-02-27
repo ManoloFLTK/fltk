@@ -45,7 +45,6 @@ Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
   delete clip_;
   delete cliprect_;
   delete graphics_;
-  delete gdiplus_font_;
 }
 
 
@@ -56,10 +55,11 @@ void Fl_GDIplus_Graphics_Driver::gc(void *ctxt) {
   antialias(active);
   graphics_->ScaleTransform(scale(), scale());
   if (cliprect_) graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);
-  if (gdiplus_font_) {
-    delete gdiplus_font_;
-    gdiplus_font_ = NULL;
-  }
+}
+
+
+void Fl_GDIplus_Graphics_Driver::scale(float f) {
+    Fl_Graphics_Driver::scale(f);
 }
 
 

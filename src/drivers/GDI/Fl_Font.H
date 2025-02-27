@@ -23,10 +23,17 @@
 #define FL_FONT_
 
 #include <config.h>
+#if USE_GDIPLUS
+#include <Gdiplus.h>
+#endif
+
 
 class Fl_GDI_Font_Descriptor : public Fl_Font_Descriptor {
 public:
   HFONT fid;
+#if USE_GDIPLUS
+  Gdiplus::Font *gdiplus_fid;
+#endif
   int *width[64];
   TEXTMETRIC metr;
   int angle;

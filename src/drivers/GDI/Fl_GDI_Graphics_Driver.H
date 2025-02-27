@@ -229,6 +229,8 @@ public:
   int antialias() FL_OVERRIDE;
   void gc(void *ctxt) FL_OVERRIDE;
   void *gc() FL_OVERRIDE {return gc_;}
+  void scale(float) FL_OVERRIDE;
+  float scale() { return Fl_Graphics_Driver::scale(); }
   void rect(int x, int y, int w, int h) FL_OVERRIDE;
   void rectf(int x, int y, int w, int h) FL_OVERRIDE;
   void xyline(int x, int y, int x1) FL_OVERRIDE;
@@ -251,9 +253,12 @@ public:
   int not_clipped(int x, int y, int w, int h) FL_OVERRIDE;
   void restore_clip() FL_OVERRIDE;
   
-  void font_unscaled(Fl_Font fnum, Fl_Fontsize size) FL_OVERRIDE;
-  void draw_unscaled(const char* str, int n, int x, int y) FL_OVERRIDE;
-  void draw_unscaled(int angle, const char *str, int n, int x, int y) FL_OVERRIDE;
+  void font(Fl_Font fnum, Fl_Fontsize size) FL_OVERRIDE;
+  void draw(const char* str, int n, int x, int y) FL_OVERRIDE;
+  void draw(int angle, const char *str, int n, int x, int y) FL_OVERRIDE;
+  int height() FL_OVERRIDE;
+  int descent() FL_OVERRIDE;
+  int size() FL_OVERRIDE;
 };
 
 #endif // USE_GDIPLUS
