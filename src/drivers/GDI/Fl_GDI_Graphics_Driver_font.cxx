@@ -638,3 +638,29 @@ void Fl_GDI_Graphics_Driver::rtl_draw_unscaled(const char* c, int n, int x, int 
   SetTextColor(gc_, oldColor);
 }
 #endif
+
+
+#if USE_GDIPLUS
+void Fl_GDIplus_Graphics_Driver::draw_unscaled(const char* str, int n, int x, int y) {
+  int wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
+  if(wn >= wstr_len) {
+    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
+    wstr_len = wn + 1;
+    wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
+  }
+  Gdiplus::Font font((HDC)gc());
+  Gdiplus::PointF origin(x, y - size() * scale());
+  graphics_->ScaleTransform(1/scale(), 1/scale());
+  brush_->SetColor(gdiplus_color_);
+  graphics_->DrawString((const WCHAR*)wstr, wn, &font, origin, brush_);
+  graphics_->ScaleTransform(scale(), scale());
+}
+
+
+void Fl_GDIplus_Graphics_Driver::draw_unscaled(int angle, const char *str, int n, int x, int y) {
+  graphics_->RotateTransform(angle);
+  //draw_unscaled(str, n, x, y);
+  graphics_->RotateTransform(-angle);
+}
+#endif
+

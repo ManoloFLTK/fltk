@@ -1,7 +1,7 @@
 //
 // Arc (integer) drawing functions for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 1998-2018 by Bill Spitzak and others.
+// Copyright 1998-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -30,7 +30,7 @@
 #include <FL/math.h>
 #include <FL/platform.H>
 
-void Fl_GDI_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double a1, double a2) {
+/*void Fl_GDI_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
   w++; h++;
   int xa = int( x+w/2+int(w*cos(a1/180.0*M_PI)) );
@@ -60,30 +60,32 @@ void Fl_GDI_Graphics_Driver::pie_unscaled(int x, int y, int w, int h, double a1,
       SetPixel(gc_, xa, ya, fl_RGB());
     } else Pie(gc_, int(x), int(y), int(x+w), int(y+h), xa, ya, xb, yb);
   } else Pie(gc_, int(x), int(y), int(x+w), int(y+h), xa, ya, xb, yb);
-}
+}*/
 
 #if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
   if (!active) return Fl_GDI_Graphics_Driver::arc_unscaled(x, y, w, h, a1, a2);
-  Gdiplus::Graphics graphics_(gc_);
+  Gdiplus::GraphicsState state = graphics_->Save();
+  graphics_->ScaleTransform(1/scale(), 1/scale());
   pen_->SetColor(gdiplus_color_);
   Gdiplus::REAL oldw = pen_->GetWidth();
   Gdiplus::REAL new_w = (line_width_ <= scale() ? 1 : line_width_) * scale();
   pen_->SetWidth(new_w);
-  graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-  graphics_.DrawArc(pen_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
+  graphics_->DrawArc(pen_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
   pen_->SetWidth(oldw);
+  graphics_->Restore(state);
 }
 
 void Fl_GDIplus_Graphics_Driver::pie_unscaled(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
   if (!active) return Fl_GDI_Graphics_Driver::pie_unscaled(x, y, w, h, a1, a2);
-  Gdiplus::Graphics graphics_(gc_);
+  Gdiplus::GraphicsState state = graphics_->Save();
+  graphics_->ScaleTransform(1/scale(), 1/scale());
   brush_->SetColor(gdiplus_color_);
-  graphics_.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-  graphics_.FillPie(brush_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
+  graphics_->FillPie(brush_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
+  graphics_->Restore(state);
 }
 
 #endif

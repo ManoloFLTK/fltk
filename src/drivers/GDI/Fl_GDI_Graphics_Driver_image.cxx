@@ -323,7 +323,7 @@ void Fl_GDI_Graphics_Driver::draw_image_mono_unscaled(Fl_Draw_Image_Cb cb, void*
   }
 }
 
-#if USE_COLORMAP
+/*#if USE_COLORMAP
 void Fl_GDI_Graphics_Driver::colored_rectf(int x, int y, int w, int h, uchar r, uchar g, uchar b) {
   // use the error diffusion dithering code to produce a much nicer block:
   if (fl_palette) {
@@ -335,7 +335,7 @@ void Fl_GDI_Graphics_Driver::colored_rectf(int x, int y, int w, int h, uchar r, 
   }
   Fl_Graphics_Driver::colored_rectf(x, y, w, h, r, g, b);
 }
-#endif
+#endif*/
 
 // Create an N-bit bitmap for masking...
 HBITMAP Fl_GDI_Graphics_Driver::create_bitmask(int w, int h, const uchar *data) {
