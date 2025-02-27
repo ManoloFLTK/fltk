@@ -45,6 +45,12 @@
 #include <stdlib.h>
 #include <FL/fl_string_functions.h>
 
+#if USE_GDIPLUS
+#  include <Gdiplus.h>
+  Gdiplus::Font *calc_gdiplusfont(const char* name, Fl_Fontsize fsize);
+#endif
+
+
 // This function fills in the FLTK font table with all the fonts that
 // are found on the X server.  It tries to place the fonts into families
 // and to sort them so the first 4 in a family are normal, bold, italic,
@@ -214,6 +220,9 @@ static int wstr_len    = 0;
 
 #ifndef FL_DOXYGEN
 Fl_GDI_Font_Descriptor::Fl_GDI_Font_Descriptor(const char* name, Fl_Fontsize fsize) : Fl_Font_Descriptor(name,fsize) {
+#if USE_GDIPLUS
+  gdiplus_fid = calc_gdiplusfont(name, fsize);
+#endif
   int weight = FW_NORMAL;
   int italic = 0;
   switch (*name++) {
@@ -270,6 +279,9 @@ Fl_GDI_Font_Descriptor::~Fl_GDI_Font_Descriptor() {
 #endif
   if (this == fl_graphics_driver->font_descriptor()) fl_graphics_driver->font_descriptor(NULL);
   DeleteObject(fid);
+#if USE_GDIPLUS
+  delete gdiplus_fid;
+#endif
   for (int i = 0; i < 64; i++) {
     if ( width[i] ) free(width[i]);
     }
@@ -642,18 +654,36 @@ void Fl_GDI_Graphics_Driver::rtl_draw_unscaled(const char* c, int n, int x, int 
 
 #if USE_GDIPLUS
 
-void Fl_GDIplus_Graphics_Driver::font_unscaled(Fl_Font fnum, Fl_Fontsize size) {
-  Fl_GDI_Font_Descriptor *old_font_desc = (Fl_GDI_Font_Descriptor*)font_descriptor();
-  Fl_GDI_Graphics_Driver::font_unscaled(fnum, size);
-  if (fnum < 0 || !gc()) return;
-  Fl_GDI_Font_Descriptor *font_desc = (Fl_GDI_Font_Descriptor*)font_descriptor();
-  if (gdiplus_font_ && font_desc == old_font_desc) return;
-  delete gdiplus_font_;
-  gdiplus_font_ = new Gdiplus::Font((HDC)gc(), font_desc->fid);
+Gdiplus::Font *calc_gdiplusfont(const char* name, Fl_Fontsize fsize) {
+  int weight = FW_NORMAL;
+  int italic = 0;
+  Gdiplus::FontStyle style = Gdiplus::FontStyleRegular;
+  switch (*name++) {
+    case 'I': style = Gdiplus::FontStyleItalic; break;
+    case 'P': style = Gdiplus::FontStyleBoldItalic; break;
+    case 'B': style = Gdiplus::FontStyleBold; break;
+    case ' ': break;
+    default: name--;
+  }
+  int wn = fl_utf8toUtf16(name, (unsigned int)strlen(name), wstr, wstr_len);
+  if (wn >= wstr_len) {
+    wstr = (unsigned short*) realloc(wstr, sizeof(unsigned short) * (wn + 1));
+    wstr_len = wn + 1;
+    wn = fl_utf8toUtf16(name, (unsigned int)strlen(name), wstr, wstr_len);
+  }
+  return new Gdiplus::Font((const WCHAR*)wstr, fsize, style);
 }
 
 
-void Fl_GDIplus_Graphics_Driver::draw_unscaled(const char* str, int n, int x, int y) {
+void Fl_GDIplus_Graphics_Driver::font(Fl_Font fnum, Fl_Fontsize size) {
+  Fl_GDI_Graphics_Driver::font_unscaled(fnum, size);
+  if (fnum < 0 || !gc()) return;
+  Fl_GDI_Font_Descriptor *font_desc = (Fl_GDI_Font_Descriptor*)font_descriptor();
+  gdiplus_font_ = font_desc->gdiplus_fid;
+}
+
+
+void Fl_GDIplus_Graphics_Driver::draw(const char* str, int n, int x, int y) {
   if (!gdiplus_font_) return;
   int wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   if(wn >= wstr_len) {
@@ -661,18 +691,33 @@ void Fl_GDIplus_Graphics_Driver::draw_unscaled(const char* str, int n, int x, in
     wstr_len = wn + 1;
     wn = fl_utf8toUtf16(str, n, wstr, wstr_len);
   }
-  Gdiplus::PointF origin(x, y - size() * scale());
-  graphics_->ScaleTransform(1/scale(), 1/scale());
+  float s = scale();
+  Gdiplus::PointF origin(x * s, y * s - height() * s );
+  graphics_->ScaleTransform(1/s, 1/s);
   brush_->SetColor(gdiplus_color_);
   graphics_->DrawString((const WCHAR*)wstr, wn, gdiplus_font_, origin, brush_);
-  graphics_->ScaleTransform(scale(), scale());
+  graphics_->ScaleTransform(s, s);
 }
 
 
-void Fl_GDIplus_Graphics_Driver::draw_unscaled(int angle, const char *str, int n, int x, int y) {
+void Fl_GDIplus_Graphics_Driver::draw(int angle, const char *str, int n, int x, int y) {
   graphics_->RotateTransform(angle);
   draw_unscaled(str, n, x, y);
   graphics_->RotateTransform(-angle);
 }
+
+
+int Fl_GDIplus_Graphics_Driver::height() {
+  return height_unscaled() ;
+}
+
+int Fl_GDIplus_Graphics_Driver::descent() {
+  return descent_unscaled();
+}
+
+Fl_Fontsize Fl_GDIplus_Graphics_Driver::size() {
+  return size_unscaled();
+}
+
 #endif
 
