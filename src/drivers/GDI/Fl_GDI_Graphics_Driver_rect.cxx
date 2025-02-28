@@ -168,7 +168,7 @@ void Fl_GDI_Graphics_Driver::push_clip(int x, int y, int w, int h) {
   fl_restore_clip();
 }
 
-/*int Fl_GDI_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int& Y, int& W, int& H){
+int Fl_GDI_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int& Y, int& W, int& H){
   X = x; Y = y; W = w; H = h;
   HRGN r = (HRGN)rstack[rstackptr];
   if (!r) return 0;
@@ -215,7 +215,7 @@ int Fl_GDI_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
     rect.left = x; rect.top = y; rect.right = x+w; rect.bottom = y+h;
   }
   return RectInRegion(r,&rect);
-}*/
+}
 
 void Fl_GDI_Graphics_Driver::restore_clip() {
   fl_clip_state_number++;
@@ -352,107 +352,6 @@ void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2) {
 void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2, int y3) {
   line(x, y, x, y1, x2, y1);
   line(x, y1, x2, y1, x2, y3);
-}
-
-
-// ** clipping **
-
-void Fl_GDIplus_Graphics_Driver::push_clip(int x, int y, int w, int h) {
-  Clip *c = new Clip();
-  clip_box(x,y,w,h,c->x,c->y,c->w,c->h);
-  c->prev = clip_;
-  clip_ = c;
-  delete cliprect_;
-  cliprect_ = new Gdiplus::Rect(clip_->x , clip_->y , clip_->w, clip_->h);
-//fprintf(stderr,"push_clip %dx%d %dx%d\n",clip_->x , clip_->y , clip_->w, clip_->h);fflush(stderr);
-  graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);
-  Fl_GDI_Graphics_Driver::push_clip(x,y,w,h);
-}
-
-
-void Fl_GDIplus_Graphics_Driver::push_no_clip() {
-  Clip *c = new Clip();
-  c->x = c->y = -1000000; c->w = c->h = 2000000;
-  c->prev = clip_;
-  clip_ = c;
-  delete cliprect_;
-  cliprect_ = NULL;
-  graphics_->ResetClip();
-  Fl_Graphics_Driver::push_no_clip();
-//fprintf(stderr,"push_no_clip\n");fflush(stderr);
-}
-
-
-void Fl_GDIplus_Graphics_Driver::pop_clip() {
-  Clip *c;
-  if (clip_) {
-    c = clip_;
-    clip_ = clip_->prev;
-    delete c;
-  }
-  delete cliprect_;
-  if (clip_) {
-    cliprect_ = new Gdiplus::Rect(clip_->x , clip_->y , clip_->w, clip_->h);
-//fprintf(stderr,"pop_clip to %dx%d %dx%d\n",clip_->x , clip_->y , clip_->w, clip_->h);fflush(stderr);
-    graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);
-  } else {
-    cliprect_ = NULL;
-//fprintf(stderr,"pop_clip to NULL\n");fflush(stderr);
-    graphics_->ResetClip();
-  }
-  Fl_Graphics_Driver::pop_clip();
-}
-
-
-int Fl_GDIplus_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int& Y, int& W, int& H) {
-  if (!clip_) {
-    X = x; Y = y; W = w; H = h;
-    return 0;
-  }
-  if (clip_->w < 0) {
-    X = x; Y = y; W = w; H = h;
-    return 1;
-  }
-  int ret = 0;
-  if (x > (X=clip_->x)) {X=x; ret=1;}
-  if (y > (Y=clip_->y)) {Y=y; ret=1;}
-  if ((x+w) < (clip_->x+clip_->w)) {
-    W=x+w-X;
-    ret=1;
-  }else
-    W = clip_->x + clip_->w - X;
-  if(W<0){
-    W=0;
-    return 1;
-  }
-  if ((y+h) < (clip_->y+clip_->h)) {
-    H=y+h-Y;
-    ret=1;
-  }else
-    H = clip_->y + clip_->h - Y;
-  if(H<0){
-    W=0;
-    H=0;
-    return 1;
-  }
-  return ret;
-}
-
-
-int Fl_GDIplus_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
-  if (!clip_) return 1;
-  if (clip_->w < 0) return 1;
-  int X = 0, Y = 0, W = 0, H = 0;
-  clip_box(x, y, w, h, X, Y, W, H);
-  if (W) return 1;
-  return 0;
-}
-
-
-void Fl_GDIplus_Graphics_Driver::restore_clip() {
-  delete cliprect_;
-  cliprect_ = NULL;
-  Fl_GDI_Graphics_Driver::restore_clip();
 }
 
 #endif

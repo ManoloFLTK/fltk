@@ -33,7 +33,6 @@ Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Drive
   pen_->SetEndCap(Gdiplus::LineCapFlat);
   brush_ = new Gdiplus::SolidBrush(gdiplus_color_);
   active = true;
-  clip_ = NULL;
   cliprect_ = NULL;
   graphics_ = NULL;
 }
@@ -41,7 +40,6 @@ Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Drive
 Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
   delete pen_;
   delete brush_;
-  delete clip_;
   delete cliprect_;
   delete graphics_;
 }
