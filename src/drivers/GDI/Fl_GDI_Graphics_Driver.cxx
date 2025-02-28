@@ -34,12 +34,16 @@ Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Drive
   brush_ = new Gdiplus::SolidBrush(gdiplus_color_);
   active = true;
   graphics_ = NULL;
+  clip_ = NULL;
+  cliprect_ = NULL;
 }
 
 Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
   delete pen_;
   delete brush_;
   delete graphics_;
+  delete clip_;
+  delete cliprect_;
 }
 
 
@@ -49,6 +53,7 @@ void Fl_GDIplus_Graphics_Driver::gc(void *ctxt) {
   graphics_ = new Gdiplus::Graphics((HDC)ctxt);
   antialias(active);
   graphics_->ScaleTransform(scale(), scale());
+  if (cliprect_) graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);
 }
 
 
