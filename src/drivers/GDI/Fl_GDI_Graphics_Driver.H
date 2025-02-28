@@ -124,10 +124,10 @@ protected:
   //void polygon_unscaled(int x0, int y0, int x1, int y1, int x2, int y2) FL_OVERRIDE;
   //void polygon_unscaled(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) FL_OVERRIDE;
   // --- clipping
-  //void push_clip(int x, int y, int w, int h) FL_OVERRIDE;
+  void push_clip(int x, int y, int w, int h) FL_OVERRIDE;
   //int clip_box(int x, int y, int w, int h, int &X, int &Y, int &W, int &H) FL_OVERRIDE;
   //int not_clipped(int x, int y, int w, int h) FL_OVERRIDE;
-  //void restore_clip() FL_OVERRIDE;
+  void restore_clip() FL_OVERRIDE;
   Fl_Region scale_clip(float f) FL_OVERRIDE;
   // --- implementation is in src/fl_vertex.cxx which includes src/cfg_gfx/xxx_rect.cxx
   void begin_complex_polygon() FL_OVERRIDE;
@@ -187,7 +187,6 @@ private:
   Gdiplus::SolidBrush *brush_;
   Gdiplus::Rect *cliprect_;
   Gdiplus::Graphics *graphics_;
-  Gdiplus::Font *gdiplus_font_;
   int translate_x_, translate_y_;
   // The code below ensures that a connection to GDIplus is only made once, and that the
   // matching connection shutdown is also done exactly once.

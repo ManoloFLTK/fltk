@@ -36,7 +36,6 @@ Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Drive
   clip_ = NULL;
   cliprect_ = NULL;
   graphics_ = NULL;
-  gdiplus_font_ = NULL;
 }
 
 Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
