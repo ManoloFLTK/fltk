@@ -252,13 +252,6 @@ public:
   int clip_box(int x, int y, int w, int h, int &X, int &Y, int &W, int &H) FL_OVERRIDE;
   int not_clipped(int x, int y, int w, int h) FL_OVERRIDE;
   void restore_clip() FL_OVERRIDE;
-  
-  void font(Fl_Font fnum, Fl_Fontsize size) FL_OVERRIDE;
-  void draw(const char* str, int n, int x, int y) FL_OVERRIDE;
-  void draw(int angle, const char *str, int n, int x, int y) FL_OVERRIDE;
-  int height() FL_OVERRIDE;
-  int descent() FL_OVERRIDE;
-  int size() FL_OVERRIDE;
 };
 
 #endif // USE_GDIPLUS
