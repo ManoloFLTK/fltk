@@ -59,7 +59,14 @@ void Fl_GDIplus_Graphics_Driver::gc(void *ctxt) {
 
 
 void Fl_GDIplus_Graphics_Driver::scale(float f) {
-    Fl_Graphics_Driver::scale(f);
+  //float old_s = scale();
+  Fl_Graphics_Driver::scale(f);
+  /*Fl_GDIplus_Graphics_Driver *dr =(Fl_GDIplus_Graphics_Driver*)&Fl_Graphics_Driver::default_driver();
+  delete graphics_;
+  graphics_ = new Gdiplus::Graphics((HDC)dr->gc());
+  antialias(active);
+  graphics_->ScaleTransform(f/old_s, f/old_s);
+  if (cliprect_) graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);*/
 }
 
 

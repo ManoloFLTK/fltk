@@ -23,22 +23,11 @@
 #define FL_FONT_
 
 #include <config.h>
-#if USE_GDIPLUS
-#  if defined(_MSC_VER)
-#    include <objidl.h>
-#  else
-#    include <wtypes.h> // for PROPID needed with gcc 4.9.0 but not with 4.9.3
-#  endif
-#include <gdiplus.h>
-#endif
 
 
 class Fl_GDI_Font_Descriptor : public Fl_Font_Descriptor {
 public:
   HFONT fid;
-#if USE_GDIPLUS
-  Gdiplus::Font *gdiplus_fid;
-#endif
   int *width[64];
   TEXTMETRIC metr;
   int angle;
