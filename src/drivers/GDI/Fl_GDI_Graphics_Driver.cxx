@@ -33,14 +33,12 @@ Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Drive
   pen_->SetEndCap(Gdiplus::LineCapFlat);
   brush_ = new Gdiplus::SolidBrush(gdiplus_color_);
   active = true;
-  cliprect_ = NULL;
   graphics_ = NULL;
 }
 
 Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
   delete pen_;
   delete brush_;
-  delete cliprect_;
   delete graphics_;
 }
 
@@ -51,19 +49,17 @@ void Fl_GDIplus_Graphics_Driver::gc(void *ctxt) {
   graphics_ = new Gdiplus::Graphics((HDC)ctxt);
   antialias(active);
   graphics_->ScaleTransform(scale(), scale());
-  if (cliprect_) graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::scale(float f) {
-  //float old_s = scale();
   Fl_Graphics_Driver::scale(f);
-  /*Fl_GDIplus_Graphics_Driver *dr =(Fl_GDIplus_Graphics_Driver*)&Fl_Graphics_Driver::default_driver();
-  delete graphics_;
-  graphics_ = new Gdiplus::Graphics((HDC)dr->gc());
-  antialias(active);
-  graphics_->ScaleTransform(f/old_s, f/old_s);
-  if (cliprect_) graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);*/
+  Fl_GDIplus_Graphics_Driver *dr = this;
+  if (Fl_Display_Device::display_device() == Fl_Surface_Device::surface()) {
+    // important for Fl_Double_Window
+    dr = (Fl_GDIplus_Graphics_Driver*)&Fl_Graphics_Driver::default_driver();
+  }
+  gc((HDC)dr->gc());
 }
 
 
@@ -97,7 +93,9 @@ void Fl_GDIplus_Graphics_Driver::shutdown() {
 //    Fl::warning("Fl_GDIplus_Graphics_Driver::shutdown() called while driver is starting up.");
   }
 }
-#endif
+
+#endif // USE_GDIPLUS
+
 
 // Code used to switch output to an off-screen window.  See macros in
 // win32.H which save the old state in local variables.
@@ -215,7 +213,6 @@ BOOL Fl_GDI_Graphics_Driver::alpha_blend_(int x, int y, int w, int h, HDC src_gc
   return fl_alpha_blend(gc_, x, y, w, h, src_gc, srcx, srcy, srcw, srch, blendfunc);
 }
 
-#if ! defined(FL_DOXYGEN)
 void Fl_GDI_Graphics_Driver::copy_offscreen_with_alpha(int x,int y,int w,int h,HBITMAP bitmap,int srcx,int srcy) {
   HDC new_gc = CreateCompatibleDC(gc_);
   int save = SaveDC(new_gc);
@@ -252,7 +249,6 @@ void Fl_GDI_Graphics_Driver::untranslate_all() {
   if (depth > 0) depth--;
   SetWindowOrgEx((HDC)gc(), origins[depth].x, origins[depth].y, NULL);
 }
-#endif
 
 void Fl_GDI_Graphics_Driver::add_rectangle_to_region(Fl_Region r, int X, int Y, int W, int H) {
   HRGN R = (HRGN)XRectangleRegion(X, Y, W, H);

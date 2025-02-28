@@ -185,7 +185,6 @@ private:
   Gdiplus::Color gdiplus_color_;
   Gdiplus::Pen *pen_;
   Gdiplus::SolidBrush *brush_;
-  Gdiplus::Rect *cliprect_;
   Gdiplus::Graphics *graphics_;
   int translate_x_, translate_y_;
   // The code below ensures that a connection to GDIplus is only made once, and that the
