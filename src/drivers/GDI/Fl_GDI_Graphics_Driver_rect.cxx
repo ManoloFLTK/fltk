@@ -148,7 +148,7 @@ void Fl_GDI_Graphics_Driver::polygon_unscaled(int x, int y, int x1, int y1, int 
   p[3].x = x3; p[3].y = y3;
   SelectObject(gc_, fl_brush());
   Polygon(gc_, p, 4);
-}
+}*/
 
 // --- clipping
 
@@ -168,7 +168,7 @@ void Fl_GDI_Graphics_Driver::push_clip(int x, int y, int w, int h) {
   fl_restore_clip();
 }
 
-int Fl_GDI_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int& Y, int& W, int& H){
+/*int Fl_GDI_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int& Y, int& W, int& H){
   X = x; Y = y; W = w; H = h;
   HRGN r = (HRGN)rstack[rstackptr];
   if (!r) return 0;
@@ -215,7 +215,7 @@ int Fl_GDI_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
     rect.left = x; rect.top = y; rect.right = x+w; rect.bottom = y+h;
   }
   return RectInRegion(r,&rect);
-}
+}*/
 
 void Fl_GDI_Graphics_Driver::restore_clip() {
   fl_clip_state_number++;
@@ -225,7 +225,7 @@ void Fl_GDI_Graphics_Driver::restore_clip() {
     SelectClipRgn(gc_, (HRGN)rstack[rstackptr]); // if region is NULL, clip is automatically cleared
     if (r) unscale_clip(r);
   }
-}*/
+}
 
 #if USE_GDIPLUS
 
@@ -366,6 +366,7 @@ void Fl_GDIplus_Graphics_Driver::push_clip(int x, int y, int w, int h) {
   cliprect_ = new Gdiplus::Rect(clip_->x , clip_->y , clip_->w, clip_->h);
 //fprintf(stderr,"push_clip %dx%d %dx%d\n",clip_->x , clip_->y , clip_->w, clip_->h);fflush(stderr);
   graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);
+  Fl_GDI_Graphics_Driver::push_clip(x,y,w,h);
 }
 
 
@@ -377,6 +378,7 @@ void Fl_GDIplus_Graphics_Driver::push_no_clip() {
   delete cliprect_;
   cliprect_ = NULL;
   graphics_->ResetClip();
+  Fl_Graphics_Driver::push_no_clip();
 //fprintf(stderr,"push_no_clip\n");fflush(stderr);
 }
 
@@ -398,6 +400,7 @@ void Fl_GDIplus_Graphics_Driver::pop_clip() {
 //fprintf(stderr,"pop_clip to NULL\n");fflush(stderr);
     graphics_->ResetClip();
   }
+  Fl_Graphics_Driver::pop_clip();
 }
 
 
@@ -449,6 +452,7 @@ int Fl_GDIplus_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
 void Fl_GDIplus_Graphics_Driver::restore_clip() {
   delete cliprect_;
   cliprect_ = NULL;
+  Fl_GDI_Graphics_Driver::restore_clip();
 }
 
 #endif
