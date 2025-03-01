@@ -100,8 +100,8 @@ public:
   void add_rectangle_to_region(Fl_Region r, int x, int y, int w, int h) FL_OVERRIDE;
   Fl_Region XRectangleRegion(int x, int y, int w, int h) FL_OVERRIDE;
   void XDestroyRegion(Fl_Region r) FL_OVERRIDE;
-  void translate_all(int x, int y);
-  void untranslate_all(void);
+  virtual void translate_all(int x, int y);
+  virtual void untranslate_all(void);
   static HRGN scale_region(HRGN r, float f, Fl_GDI_Graphics_Driver *dr);
   void scale(float f) FL_OVERRIDE;
   float scale() {return Fl_Graphics_Driver::scale();}
@@ -187,7 +187,6 @@ private:
   Gdiplus::SolidBrush *brush_;
   Gdiplus::Graphics *graphics_;
   Gdiplus::Rect *cliprect_;
-  int translate_x_, translate_y_;
   // The code below ensures that a connection to GDIplus is only made once, and that the
   // matching connection shutdown is also done exactly once.
   enum {
@@ -250,6 +249,8 @@ public:
   void pop_clip() FL_OVERRIDE;
   int clip_box(int x, int y, int w, int h, int &X, int &Y, int &W, int &H) FL_OVERRIDE;
   int not_clipped(int x, int y, int w, int h) FL_OVERRIDE;
+  void translate_all(int x, int y) FL_OVERRIDE;
+  void untranslate_all(void) FL_OVERRIDE;
 };
 
 #endif // USE_GDIPLUS
