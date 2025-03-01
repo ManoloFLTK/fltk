@@ -68,6 +68,20 @@ void Fl_GDIplus_Graphics_Driver::scale(float f) {
 }
 
 
+void Fl_GDIplus_Graphics_Driver::translate_all(int x, int y) {
+//fprintf(stderr,"translate_all %dx%d\n",x,y);fflush(stderr);
+  Fl_GDI_Graphics_Driver::translate_all(x, y);
+  gc((HDC)gc());
+}
+
+
+void Fl_GDIplus_Graphics_Driver::untranslate_all() {
+//fprintf(stderr,"untranslate_all\n");fflush(stderr);
+  Fl_GDI_Graphics_Driver::untranslate_all();
+  gc((HDC)gc());
+}
+
+
 void Fl_GDIplus_Graphics_Driver::antialias(int state) {
   active = state;
   graphics_->SetSmoothingMode(state ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeDefault);
