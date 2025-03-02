@@ -28,7 +28,7 @@
 #include <FL/math.h>
 
 
-/*void Fl_GDI_Graphics_Driver::end_points() {
+void Fl_GDI_Graphics_Driver::end_points() {
   for (int i=0; i<n; i++) SetPixel(gc_, long_point[i].x, long_point[i].y, fl_RGB());
 }
 
@@ -56,7 +56,7 @@ void Fl_GDI_Graphics_Driver::end_polygon() {
     SelectObject(gc_, fl_brush());
     Polygon(gc_, long_point, n);
   }
-}*/
+}
 
 void Fl_GDI_Graphics_Driver::begin_complex_polygon() {
   Fl_Graphics_Driver::begin_complex_polygon();
@@ -75,8 +75,6 @@ void Fl_GDI_Graphics_Driver::gap() {
 }
 
 
-#if ! USE_GDIPLUS
-
 void Fl_GDI_Graphics_Driver::end_complex_polygon() {
   gap();
   if (n < 3) {
@@ -88,6 +86,7 @@ void Fl_GDI_Graphics_Driver::end_complex_polygon() {
     PolyPolygon(gc_, long_point, counts, numcount);
   }
 }
+
 
 void Fl_GDI_Graphics_Driver::ellipse_unscaled(double xt, double yt, double rx, double ry) {
   int llx = (int)rint(xt-rx);
@@ -102,7 +101,8 @@ void Fl_GDI_Graphics_Driver::ellipse_unscaled(double xt, double yt, double rx, d
     Arc(gc_, llx, lly, llx+w, lly+h, 0,0, 0,0);
 }
 
-#else // USE_GDIPLUS
+
+#if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::transformed_vertex(double xf, double yf) {
   if (!active) return Fl_Scalable_Graphics_Driver::transformed_vertex(xf, yf);

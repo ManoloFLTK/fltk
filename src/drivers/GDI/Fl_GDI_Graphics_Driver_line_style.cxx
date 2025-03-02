@@ -27,7 +27,7 @@
 #include "Fl_GDI_Graphics_Driver.H"
 
 
-/*void Fl_GDI_Graphics_Driver::line_style_unscaled(int style, int width, char* dashes) {
+void Fl_GDI_Graphics_Driver::line_style_unscaled(int style, int width, char* dashes) {
 
   // According to Bill, the "default" cap and join should be the
   // "fastest" mode supported for the platform.  I don't know why
@@ -59,7 +59,7 @@
   DeleteObject(fl_current_xmap->pen);
   fl_current_xmap->pen = newpen;
   style_ = style;
-}*/
+}
 
 #if USE_GDIPLUS
 
@@ -105,7 +105,6 @@ void Fl_GDIplus_Graphics_Driver::line_style(int style, int width, char* dashes) 
     pen_->SetDashPattern(gdi_dashes, n);
     delete[] gdi_dashes;
   }
-  //Fl_Scalable_Graphics_Driver::line_style(style, width, dashes);
 }
 
 #endif

@@ -30,7 +30,6 @@
 #include <FL/math.h>
 #include <FL/platform.H>
 
-#if ! USE_GDIPLUS
 
 void Fl_GDI_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
@@ -64,7 +63,7 @@ void Fl_GDI_Graphics_Driver::pie_unscaled(int x, int y, int w, int h, double a1,
   } else Pie(gc_, int(x), int(y), int(x+w), int(y+h), xa, ya, xb, yb);
 }
 
-#else // USE_GDIPLUS
+#if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;

@@ -108,7 +108,6 @@ public:
 protected:
   void transformed_vertex0(float x, float y) FL_OVERRIDE;
   void fixloop() FL_OVERRIDE;
-#if ! USE_GDIPLUS
   void point(int x, int y) FL_OVERRIDE;
   void focus_rect(int x, int y, int w, int h) FL_OVERRIDE;
   void rect_unscaled(int x, int y, int w, int h) FL_OVERRIDE;
@@ -127,13 +126,11 @@ protected:
   // --- clipping
   int clip_box(int x, int y, int w, int h, int &X, int &Y, int &W, int &H) FL_OVERRIDE;
   int not_clipped(int x, int y, int w, int h) FL_OVERRIDE;
-#endif // ! USE_GDIPLUS
   void push_clip(int x, int y, int w, int h) FL_OVERRIDE;
   void restore_clip() FL_OVERRIDE;
   Fl_Region scale_clip(float f) FL_OVERRIDE;
   // --- implementation is in src/fl_vertex.cxx which includes src/cfg_gfx/xxx_rect.cxx
   void begin_complex_polygon() FL_OVERRIDE;
-#if ! USE_GDIPLUS
   void end_points() FL_OVERRIDE;
   void end_line() FL_OVERRIDE;
   void end_loop() FL_OVERRIDE;
@@ -145,7 +142,6 @@ protected:
   void line_style_unscaled(int style, int width, char* dashes) FL_OVERRIDE;
   void* change_pen_width(int width) FL_OVERRIDE;
   void reset_pen_width(void *data) FL_OVERRIDE;
-#endif // ! USE_GDIPLUS
   void gap() FL_OVERRIDE;
   void color(Fl_Color c) FL_OVERRIDE;
   Fl_Color color() FL_OVERRIDE { return color_; }

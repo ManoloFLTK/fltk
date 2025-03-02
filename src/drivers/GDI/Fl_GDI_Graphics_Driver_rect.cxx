@@ -44,8 +44,6 @@ void Fl_GDI_Graphics_Driver::overlay_rect(int x, int y, int w , int h) {
 }
 
 
-#if  ! USE_GDIPLUS
-
 void Fl_GDI_Graphics_Driver::point(int x, int y) {
   rectf(x, y, 1, 1);
 }
@@ -153,7 +151,6 @@ void Fl_GDI_Graphics_Driver::polygon_unscaled(int x, int y, int x1, int y1, int 
   Polygon(gc_, p, 4);
 }
 
- #endif
 
 // --- clipping
 
@@ -173,8 +170,6 @@ void Fl_GDI_Graphics_Driver::push_clip(int x, int y, int w, int h) {
   fl_restore_clip();
 }
 
-
-#if ! USE_GDIPLUS
 
 int Fl_GDI_Graphics_Driver::clip_box(int x, int y, int w, int h, int& X, int& Y, int& W, int& H){
   X = x; Y = y; W = w; H = h;
@@ -225,8 +220,6 @@ int Fl_GDI_Graphics_Driver::not_clipped(int x, int y, int w, int h) {
   }
   return RectInRegion(r,&rect);
 }
-
-#endif //! USE_GDIPLUS
 
 
 void Fl_GDI_Graphics_Driver::restore_clip() {
