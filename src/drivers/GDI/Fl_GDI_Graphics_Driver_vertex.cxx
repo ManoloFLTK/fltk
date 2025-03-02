@@ -74,7 +74,10 @@ void Fl_GDI_Graphics_Driver::gap() {
   }
 }
 
-/*void Fl_GDI_Graphics_Driver::end_complex_polygon() {
+
+#if ! USE_GDIPLUS
+
+void Fl_GDI_Graphics_Driver::end_complex_polygon() {
   gap();
   if (n < 3) {
     end_line();
@@ -84,9 +87,9 @@ void Fl_GDI_Graphics_Driver::gap() {
     SelectObject(gc_, fl_brush());
     PolyPolygon(gc_, long_point, counts, numcount);
   }
-}*/
+}
 
-/*void Fl_GDI_Graphics_Driver::ellipse_unscaled(double xt, double yt, double rx, double ry) {
+void Fl_GDI_Graphics_Driver::ellipse_unscaled(double xt, double yt, double rx, double ry) {
   int llx = (int)rint(xt-rx);
   int w = (int)rint(xt+rx)-llx;
   int lly = (int)rint(yt-ry);
@@ -97,9 +100,9 @@ void Fl_GDI_Graphics_Driver::gap() {
     Pie(gc_, llx, lly, llx+w, lly+h, 0,0, 0,0);
   } else
     Arc(gc_, llx, lly, llx+w, lly+h, 0,0, 0,0);
-}*/
+}
 
-#if USE_GDIPLUS
+#else // USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::transformed_vertex(double xf, double yf) {
   if (!active) return Fl_Scalable_Graphics_Driver::transformed_vertex(xf, yf);
@@ -130,7 +133,7 @@ void Fl_GDIplus_Graphics_Driver::end_line() {
     }
     path.AddLines(gdi2_p, n);
     delete[] gdi2_p;
-    pen_->SetColor(gdiplus_color_);
+    if (!graphics_) new_graphics();
     graphics_->DrawPath(pen_, &path);
   }
 }
@@ -147,7 +150,7 @@ void Fl_GDIplus_Graphics_Driver::end_loop() {
     path.AddLines(gdi2_p, n);
     path.CloseFigure();
     delete[] gdi2_p;
-    pen_->SetColor(gdiplus_color_);
+    if (!graphics_) new_graphics();
     graphics_->DrawPath(pen_, &path);
   }
 }
@@ -168,7 +171,7 @@ void Fl_GDIplus_Graphics_Driver::end_polygon() {
     path.AddPolygon(gdi2_p, n);
     delete[] gdi2_p;
     path.CloseFigure();
-    brush_->SetColor(gdiplus_color_);
+    if (!graphics_) new_graphics();
     graphics_->FillPath(brush_, &path);
   }
 }
@@ -189,7 +192,7 @@ void Fl_GDIplus_Graphics_Driver::end_complex_polygon() {
     path.AddPolygon(gdi2_p, n);
     delete[] gdi2_p;
     path.CloseFigure();
-    brush_->SetColor(gdiplus_color_);
+    if (!graphics_) new_graphics();
     graphics_->FillPath(brush_, &path);
   }
 }
@@ -204,13 +207,12 @@ void Fl_GDIplus_Graphics_Driver::circle(double x, double y, double r) {
   int w = (int)rint(xt+rx)-llx;
   int lly = (int)rint(yt-ry);
   int h = (int)rint(yt+ry)-lly;
+  if (!graphics_) new_graphics();
   if (what==POLYGON) {
-    brush_->SetColor(gdiplus_color_);
     graphics_->FillPie(brush_, llx, lly, w, h, 0, 360);
   } else {
-    pen_->SetColor(gdiplus_color_);
     graphics_->DrawArc(pen_, llx, lly, w, h, 0, 360);
   }
 }
-#endif
 
+#endif

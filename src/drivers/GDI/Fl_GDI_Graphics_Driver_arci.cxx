@@ -30,7 +30,9 @@
 #include <FL/math.h>
 #include <FL/platform.H>
 
-/*void Fl_GDI_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double a1, double a2) {
+#if ! USE_GDIPLUS
+
+void Fl_GDI_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
   w++; h++;
   int xa = int( x+w/2+int(w*cos(a1/180.0*M_PI)) );
@@ -60,16 +62,16 @@ void Fl_GDI_Graphics_Driver::pie_unscaled(int x, int y, int w, int h, double a1,
       SetPixel(gc_, xa, ya, fl_RGB());
     } else Pie(gc_, int(x), int(y), int(x+w), int(y+h), xa, ya, xb, yb);
   } else Pie(gc_, int(x), int(y), int(x+w), int(y+h), xa, ya, xb, yb);
-}*/
+}
 
-#if USE_GDIPLUS
+#else // USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
   if (!active) return Fl_GDI_Graphics_Driver::arc_unscaled(x, y, w, h, a1, a2);
+  if (!graphics_) new_graphics();
   Gdiplus::GraphicsState state = graphics_->Save();
   graphics_->ScaleTransform(1/scale(), 1/scale());
-  pen_->SetColor(gdiplus_color_);
   Gdiplus::REAL oldw = pen_->GetWidth();
   Gdiplus::REAL new_w = (line_width_ <= scale() ? 1 : line_width_) * scale();
   pen_->SetWidth(new_w);
@@ -81,9 +83,9 @@ void Fl_GDIplus_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double
 void Fl_GDIplus_Graphics_Driver::pie_unscaled(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
   if (!active) return Fl_GDI_Graphics_Driver::pie_unscaled(x, y, w, h, a1, a2);
+  if (!graphics_) new_graphics();
   Gdiplus::GraphicsState state = graphics_->Save();
   graphics_->ScaleTransform(1/scale(), 1/scale());
-  brush_->SetColor(gdiplus_color_);
   graphics_->FillPie(brush_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
   graphics_->Restore(state);
 }

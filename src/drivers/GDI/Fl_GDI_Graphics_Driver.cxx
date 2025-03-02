@@ -26,6 +26,8 @@
 #if USE_GDIPLUS
 
 Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Driver() {
+  pen_ = NULL;
+  brush_ = NULL;
   if (!fl_current_xmap) color(FL_BLACK);
   pen_ = new Gdiplus::Pen(gdiplus_color_, 1);
   pen_->SetLineJoin(Gdiplus::LineJoinRound);
@@ -47,13 +49,18 @@ Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
 }
 
 
-void Fl_GDIplus_Graphics_Driver::gc(void *ctxt) {
-  Fl_GDI_Graphics_Driver::gc(ctxt);
+void Fl_GDIplus_Graphics_Driver::new_graphics() {
   delete graphics_;
-  graphics_ = new Gdiplus::Graphics((HDC)ctxt);
+  graphics_ = new Gdiplus::Graphics((HDC)gc());
   antialias(active);
   graphics_->ScaleTransform(scale(), scale());
   if (cliprect_) graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);
+}
+
+
+void Fl_GDIplus_Graphics_Driver::gc(void *ctxt) {
+  delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::gc(ctxt);
 }
 
 
@@ -69,22 +76,20 @@ void Fl_GDIplus_Graphics_Driver::scale(float f) {
 
 
 void Fl_GDIplus_Graphics_Driver::translate_all(int x, int y) {
-//fprintf(stderr,"translate_all %dx%d\n",x,y);fflush(stderr);
+  delete graphics_; graphics_ = NULL;
   Fl_GDI_Graphics_Driver::translate_all(x, y);
-  gc((HDC)gc());
 }
 
 
 void Fl_GDIplus_Graphics_Driver::untranslate_all() {
-//fprintf(stderr,"untranslate_all\n");fflush(stderr);
+  delete graphics_; graphics_ = NULL;
   Fl_GDI_Graphics_Driver::untranslate_all();
-  gc((HDC)gc());
 }
 
 
 void Fl_GDIplus_Graphics_Driver::antialias(int state) {
   active = state;
-  graphics_->SetSmoothingMode(state ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeDefault);
+  if (graphics_) graphics_->SetSmoothingMode(state ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeDefault);
 }
 
 int Fl_GDIplus_Graphics_Driver::antialias() {

@@ -250,10 +250,18 @@ fl_select_palette(void)
 void Fl_GDIplus_Graphics_Driver::color(uchar r, uchar g, uchar b) {
   Fl_GDI_Graphics_Driver::color(r, g, b);
   gdiplus_color_.SetFromCOLORREF(fl_RGB());
+  if (pen_ && brush_) {
+    pen_->SetColor(gdiplus_color_);
+    brush_->SetColor(gdiplus_color_);
+  }
 }
 
 void Fl_GDIplus_Graphics_Driver::color(Fl_Color i) {
   Fl_GDI_Graphics_Driver::color(i);
   gdiplus_color_.SetFromCOLORREF(fl_RGB());
+  if (pen_ && brush_) {
+    pen_->SetColor(gdiplus_color_);
+    brush_->SetColor(gdiplus_color_);
+  }
 }
 #endif // USE_GDIPLUS
