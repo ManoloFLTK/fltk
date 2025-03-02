@@ -65,28 +65,18 @@ void Fl_GDI_Graphics_Driver::pie_unscaled(int x, int y, int w, int h, double a1,
 
 #if USE_GDIPLUS
 
-void Fl_GDIplus_Graphics_Driver::arc_unscaled(int x, int y, int w, int h, double a1, double a2) {
+void Fl_GDIplus_Graphics_Driver::arc(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
-  if (!active) return Fl_GDI_Graphics_Driver::arc_unscaled(x, y, w, h, a1, a2);
+  if (!active) return Fl_Scalable_Graphics_Driver::arc(x, y, w, h, a1, a2);
   if (!graphics_) new_graphics();
-  Gdiplus::GraphicsState state = graphics_->Save();
-  graphics_->ScaleTransform(1/scale(), 1/scale());
-  Gdiplus::REAL oldw = pen_->GetWidth();
-  Gdiplus::REAL new_w = (line_width_ <= scale() ? 1 : line_width_) * scale();
-  pen_->SetWidth(new_w);
   graphics_->DrawArc(pen_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
-  pen_->SetWidth(oldw);
-  graphics_->Restore(state);
 }
 
-void Fl_GDIplus_Graphics_Driver::pie_unscaled(int x, int y, int w, int h, double a1, double a2) {
+void Fl_GDIplus_Graphics_Driver::pie(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
-  if (!active) return Fl_GDI_Graphics_Driver::pie_unscaled(x, y, w, h, a1, a2);
+  if (!active) return Fl_Scalable_Graphics_Driver::pie(x, y, w, h, a1, a2);
   if (!graphics_) new_graphics();
-  Gdiplus::GraphicsState state = graphics_->Save();
-  graphics_->ScaleTransform(1/scale(), 1/scale());
   graphics_->FillPie(brush_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
-  graphics_->Restore(state);
 }
 
 #endif

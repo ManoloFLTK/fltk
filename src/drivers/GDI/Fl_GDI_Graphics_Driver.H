@@ -213,8 +213,8 @@ public:
   void polygon(int x0, int y0, int x1, int y1, int x2, int y2) FL_OVERRIDE;
   void polygon(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) FL_OVERRIDE;
   void line_style(int style, int width, char* dashes) FL_OVERRIDE;
-  void arc_unscaled(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
-  void pie_unscaled(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
+  void arc(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
+  void pie(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
   void draw_circle(int x, int y, int d, Fl_Color c) FL_OVERRIDE;
   void transformed_vertex(double xf, double yf) FL_OVERRIDE;
   void vertex(double x,double y) FL_OVERRIDE;
