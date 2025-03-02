@@ -64,17 +64,6 @@ void Fl_GDIplus_Graphics_Driver::gc(void *ctxt) {
 }
 
 
-void Fl_GDIplus_Graphics_Driver::scale(float f) {
-  Fl_Graphics_Driver::scale(f);
-  Fl_GDIplus_Graphics_Driver *dr = this;
-  if (Fl_Display_Device::display_device() == Fl_Surface_Device::surface()) {
-    // important for Fl_Double_Window
-    dr = (Fl_GDIplus_Graphics_Driver*)&Fl_Graphics_Driver::default_driver();
-  }
-  gc((HDC)dr->gc());
-}
-
-
 void Fl_GDIplus_Graphics_Driver::translate_all(int x, int y) {
   delete graphics_; graphics_ = NULL;
   Fl_GDI_Graphics_Driver::translate_all(x, y);
