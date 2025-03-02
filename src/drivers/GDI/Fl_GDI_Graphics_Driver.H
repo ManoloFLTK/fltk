@@ -229,8 +229,6 @@ public:
   
   void gc(void *ctxt) FL_OVERRIDE;
   void *gc() FL_OVERRIDE {return gc_;}
-  void scale(float) FL_OVERRIDE;
-  float scale() { return Fl_Graphics_Driver::scale(); }
   void rect(int x, int y, int w, int h) FL_OVERRIDE;
   void rectf(int x, int y, int w, int h) FL_OVERRIDE;
   void xyline(int x, int y, int x1) FL_OVERRIDE;
