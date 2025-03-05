@@ -318,66 +318,50 @@ void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2,
 
 
 void Fl_GDIplus_Graphics_Driver::rect(int x, int y, int w, int h) {
-  if (!active) return Fl_Scalable_Graphics_Driver::rect(x, y, w, h);
-  if (!graphics_) new_graphics();
-  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
-  graphics_->DrawRectangle(pen_, (Gdiplus::REAL)(x + 0.5), (Gdiplus::REAL)(y + 0.5),
-                           (Gdiplus::REAL)(w - 1), (Gdiplus::REAL)(h - 1));
-  if (antialias()) graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  delete graphics_; graphics_ = NULL;
+  Fl_Scalable_Graphics_Driver::rect(x, y, w, h);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::rectf(int x, int y, int w, int h) {
-  if (!active) return Fl_Scalable_Graphics_Driver::rectf(x, y, w, h);
-  if (!graphics_) new_graphics();
-  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
-  graphics_->FillRectangle(brush_, x, y, w, h);
-  if (antialias()) graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  delete graphics_; graphics_ = NULL;
+  Fl_Scalable_Graphics_Driver::rectf(x, y, w, h);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1) {
-  line(x, y, x1, y);
+  delete graphics_; graphics_ = NULL;
+  Fl_Scalable_Graphics_Driver::xyline(x, y, x1);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1, int y2) {
-  line(x, y, x1, y, x1, y2);
+  delete graphics_; graphics_ = NULL;
+  Fl_Scalable_Graphics_Driver::xyline(x, y, x1, y2);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1, int y2, int x3) {
-  Gdiplus::GraphicsPath path;
-  path.AddLine(x, y, x1, y);
-  path.AddLine(x1, y, x1, y2);
-  path.AddLine(x1, y2, x3, y2);
-  if (!graphics_) new_graphics();
-  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
-  graphics_->DrawPath(pen_, &path);
-  if (antialias()) graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  delete graphics_; graphics_ = NULL;
+  Fl_Scalable_Graphics_Driver::xyline(x, y, x1, y2, x3);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1) {
-  line(x, y, x, y1);
+  delete graphics_; graphics_ = NULL;
+  Fl_Scalable_Graphics_Driver::yxline(x, y, y1);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2) {
-  line(x, y, x, y1, x2, y1);
+  delete graphics_; graphics_ = NULL;
+  Fl_Scalable_Graphics_Driver::yxline(x, y, y1, x2);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2, int y3) {
-  Gdiplus::GraphicsPath path;
-  path.AddLine(x, y, x, y1);
-  path.AddLine(x, y1, x2, y1);
-  path.AddLine(x2, y1, x2, y3);
-  if (!graphics_) new_graphics();
-  graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
-  graphics_->DrawPath(pen_, &path);
-  graphics_->DrawPath(pen_, &path);
-  if (antialias()) graphics_->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  delete graphics_; graphics_ = NULL;
+  Fl_Scalable_Graphics_Driver::yxline(x, y, y1, x2, y3);
 }
 
 // clipping
