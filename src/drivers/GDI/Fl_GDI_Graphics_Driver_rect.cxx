@@ -325,36 +325,42 @@ void Fl_GDIplus_Graphics_Driver::rectf(int x, int y, int w, int h) {
 
 void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1) {
   delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::color(color());
   Fl_Scalable_Graphics_Driver::xyline(x, y, x1);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1, int y2) {
   delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::color(color());
   Fl_Scalable_Graphics_Driver::xyline(x, y, x1, y2);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::xyline(int x, int y, int x1, int y2, int x3) {
   delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::color(color());
   Fl_Scalable_Graphics_Driver::xyline(x, y, x1, y2, x3);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1) {
   delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::color(color());
   Fl_Scalable_Graphics_Driver::yxline(x, y, y1);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2) {
   delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::color(color());
   Fl_Scalable_Graphics_Driver::yxline(x, y, y1, x2);
 }
 
 
 void Fl_GDIplus_Graphics_Driver::yxline(int x, int y, int y1, int x2, int y3) {
   delete graphics_; graphics_ = NULL;
+  Fl_GDI_Graphics_Driver::color(color());
   Fl_Scalable_Graphics_Driver::yxline(x, y, y1, x2, y3);
 }
 
