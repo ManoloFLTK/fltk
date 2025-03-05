@@ -68,13 +68,17 @@ void Fl_GDI_Graphics_Driver::pie_unscaled(int x, int y, int w, int h, double a1,
 void Fl_GDIplus_Graphics_Driver::arc(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
   if (!graphics_) new_graphics();
-  graphics_->DrawArc(pen_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
+  graphics_->DrawArc(pen_,
+                     Gdiplus::REAL(x), Gdiplus::REAL(y), Gdiplus::REAL(w-0.5), Gdiplus::REAL(h-0.5),
+                     Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
 }
 
 void Fl_GDIplus_Graphics_Driver::pie(int x, int y, int w, int h, double a1, double a2) {
   if (w <= 0 || h <= 0) return;
   if (!graphics_) new_graphics();
-  graphics_->FillPie(brush_, x, y, w, h, Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
+  graphics_->FillPie(brush_,
+                     Gdiplus::REAL(x), Gdiplus::REAL(y), Gdiplus::REAL(w-0.5), Gdiplus::REAL(h-0.5),
+                     Gdiplus::REAL(-a1), Gdiplus::REAL(a1-a2));
 }
 
 #endif
