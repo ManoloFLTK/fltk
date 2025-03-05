@@ -64,7 +64,8 @@ void Fl_GDI_Graphics_Driver::line_style_unscaled(int style, int width, char* das
 #if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::line_style(int style, int width, char* dashes) {
-  if (!active) return Fl_Scalable_Graphics_Driver::line_style(style, width, dashes);
+  // set style for both GDI and GDI+
+  Fl_Scalable_Graphics_Driver::line_style(style, width, dashes);
   int gdi_width = (width ? width : 1);
   pen_->SetWidth(Gdiplus::REAL(gdi_width));
   int standard_dash = style & 0x7;
