@@ -105,22 +105,18 @@ void Fl_GDI_Graphics_Driver::ellipse_unscaled(double xt, double yt, double rx, d
 #if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::transformed_vertex(double xf, double yf) {
-  if (!active) return Fl_Scalable_Graphics_Driver::transformed_vertex(xf, yf);
   transformed_vertex0(float(xf) , float(yf) );
 }
 
 void Fl_GDIplus_Graphics_Driver::vertex(double x,double y) {
-  if (!active) return Fl_Scalable_Graphics_Driver::vertex(x, y);
   transformed_vertex0(float(x*m.a + y*m.c + m.x) , float(x*m.b + y*m.d + m.y) );
 }
 
 void Fl_GDIplus_Graphics_Driver::end_points() {
-  if (!active) return Fl_GDI_Graphics_Driver::end_points();
   for (int i = 0; i < n; i++) point(long_point[i].x, long_point[i].y);
 }
 
 void Fl_GDIplus_Graphics_Driver::end_line() {
-  if (!active) return Fl_GDI_Graphics_Driver::end_line();
   if (n < 2) {
     end_points();
     return;
@@ -139,7 +135,6 @@ void Fl_GDIplus_Graphics_Driver::end_line() {
 }
 
 void Fl_GDIplus_Graphics_Driver::end_loop() {
-  if (!active) return Fl_GDI_Graphics_Driver::end_loop();
   fixloop();
   if (n >= 2) {
     Gdiplus::GraphicsPath path;
@@ -156,7 +151,6 @@ void Fl_GDIplus_Graphics_Driver::end_loop() {
 }
 
 void Fl_GDIplus_Graphics_Driver::end_polygon() {
-  if (!active) return Fl_GDI_Graphics_Driver::end_polygon();
   fixloop();
   if (n < 3) {
     end_line();
@@ -177,7 +171,6 @@ void Fl_GDIplus_Graphics_Driver::end_polygon() {
 }
 
 void Fl_GDIplus_Graphics_Driver::end_complex_polygon() {
-  if (!active) return Fl_GDI_Graphics_Driver::end_complex_polygon();
   gap();
   if (n < 3) {
     end_line();
@@ -198,7 +191,6 @@ void Fl_GDIplus_Graphics_Driver::end_complex_polygon() {
 }
 
 void Fl_GDIplus_Graphics_Driver::circle(double x, double y, double r) {
-  if (!active) return Fl_Scalable_Graphics_Driver::circle(x, y, r);
   double xt = transform_x(x,y);
   double yt = transform_y(x,y);
   double rx = r * (m.c ? sqrt(m.a*m.a+m.c*m.c) : fabs(m.a));

@@ -187,6 +187,7 @@ private:
   Gdiplus::SolidBrush *brush_;
   Gdiplus::Graphics *graphics_;
   Gdiplus::Rect *cliprect_;
+  bool do_antialias_;
   // The code below ensures that a connection to GDIplus is only made once, and that the
   // matching connection shutdown is also done exactly once.
   enum {
@@ -201,7 +202,6 @@ private:
 public:
   Fl_GDIplus_Graphics_Driver();
   virtual ~Fl_GDIplus_Graphics_Driver();
-  bool active;
   static void shutdown(void);
   void color(Fl_Color c) FL_OVERRIDE;
   Fl_Color color() FL_OVERRIDE { return color_; }

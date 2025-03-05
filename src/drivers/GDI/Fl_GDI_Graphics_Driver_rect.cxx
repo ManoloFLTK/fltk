@@ -235,7 +235,6 @@ void Fl_GDI_Graphics_Driver::restore_clip() {
 #if USE_GDIPLUS
 
 void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1) {
-  if (!active) return Fl_Scalable_Graphics_Driver::line(x, y, x1, y1);
   bool AA = !(x == x1 || y == y1);
   if (!graphics_) new_graphics();
   if (!AA) graphics_->SetSmoothingMode(Gdiplus::SmoothingModeDefault);
@@ -244,7 +243,6 @@ void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1) {
 }
 
 void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1, int x2, int y2) {
-  if (!active) return Fl_Scalable_Graphics_Driver::line(x, y, x1, y1, x2, y2);
   Gdiplus::GraphicsPath path;
   Gdiplus::Point gdi2_p[3] = {Gdiplus::Point(x, y), Gdiplus::Point(x1, y1), Gdiplus::Point(x2, y2)};
   path.AddLines(gdi2_p, 3);
@@ -256,7 +254,6 @@ void Fl_GDIplus_Graphics_Driver::line(int x, int y, int x1, int y1, int x2, int 
 }
 
 void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, int y2) {
-  if (!active) return Fl_Scalable_Graphics_Driver::loop(x0, y0, x1, y1, x2, y2);
   Gdiplus::GraphicsPath path;
   Gdiplus::Point gdi2_p[3] = {Gdiplus::Point(x0, y0), Gdiplus::Point(x1, y1), Gdiplus::Point(x2, y2)};
   path.AddLines(gdi2_p, 3);
@@ -276,7 +273,6 @@ void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, in
     int bottom = fl_max(y0, fl_max(y1, fl_max(y2, y3)));
     rect(left, top, right-left+1, bottom-top+1);
   } else {
-    if (!active) return Fl_Scalable_Graphics_Driver::loop(x0, y0, x1, y1, x2, y2, x3, y3);
     Gdiplus::GraphicsPath path;
     Gdiplus::PointF gdi2_p[4] = {Gdiplus::PointF(x0+1-line_width_/2.f, y0+1-line_width_/2.f), Gdiplus::PointF(x1+1-line_width_/2.f, y1+1-line_width_/2.f), Gdiplus::PointF(x2+1-line_width_/2.f, y2+1-line_width_/2.f), Gdiplus::PointF(x3+1-line_width_/2.f, y3+1-line_width_/2.f)};
     path.AddLines(gdi2_p, 4);
@@ -287,7 +283,6 @@ void Fl_GDIplus_Graphics_Driver::loop(int x0, int y0, int x1, int y1, int x2, in
 }
 
 void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2, int y2) {
-  if (!active) return Fl_Scalable_Graphics_Driver::polygon(x0, y0, x1, y1, x2, y2);
   Gdiplus::GraphicsPath path;
   path.AddLine(x0, y0, x1, y1);
   path.AddLine(x1, y1, x2, y2);
@@ -305,7 +300,6 @@ void Fl_GDIplus_Graphics_Driver::polygon(int x0, int y0, int x1, int y1, int x2,
     int bottom = fl_max(y0, fl_max(y1, fl_max(y2, y3)));
     rectf(left, top, right-left, bottom-top);
   } else {
-    if (!active) return Fl_Scalable_Graphics_Driver::polygon(x0, y0, x1, y1, x2, y2, x3, y3);
     Gdiplus::GraphicsPath path;
     path.AddLine(x0, y0, x1, y1);
     path.AddLine(x1, y1, x2, y2);

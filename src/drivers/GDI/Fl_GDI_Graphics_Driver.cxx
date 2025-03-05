@@ -34,7 +34,7 @@ Fl_GDIplus_Graphics_Driver::Fl_GDIplus_Graphics_Driver() : Fl_GDI_Graphics_Drive
   pen_->SetStartCap(Gdiplus::LineCapFlat);
   pen_->SetEndCap(Gdiplus::LineCapFlat);
   brush_ = new Gdiplus::SolidBrush(gdiplus_color_);
-  active = true;
+  do_antialias_ = true;
   graphics_ = NULL;
   clip_ = NULL;
   cliprect_ = NULL;
@@ -52,7 +52,7 @@ Fl_GDIplus_Graphics_Driver::~Fl_GDIplus_Graphics_Driver() {
 void Fl_GDIplus_Graphics_Driver::new_graphics() {
   delete graphics_;
   graphics_ = new Gdiplus::Graphics((HDC)gc());
-  antialias(active);
+  antialias(do_antialias_);
   graphics_->ScaleTransform(scale(), scale());
   if (cliprect_) graphics_->SetClip(*cliprect_, Gdiplus::CombineModeReplace);
 }
@@ -77,12 +77,12 @@ void Fl_GDIplus_Graphics_Driver::untranslate_all() {
 
 
 void Fl_GDIplus_Graphics_Driver::antialias(int state) {
-  active = state;
+  do_antialias_ = state;
   if (graphics_) graphics_->SetSmoothingMode(state ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeDefault);
 }
 
 int Fl_GDIplus_Graphics_Driver::antialias() {
-  return active;
+  return do_antialias_;
 }
 
 void Fl_GDIplus_Graphics_Driver::draw_circle(int x, int y, int d, Fl_Color c) {
