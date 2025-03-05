@@ -112,9 +112,9 @@ protected:
   void focus_rect(int x, int y, int w, int h) FL_OVERRIDE;
   void rect_unscaled(int x, int y, int w, int h) FL_OVERRIDE;
   void rectf_unscaled(int x, int y, int w, int h) FL_OVERRIDE;
-#  if USE_COLORMAP
+#if USE_COLORMAP
   void colored_rectf(int x, int y, int w, int h, uchar r, uchar g, uchar b) FL_OVERRIDE;
-#  endif
+#endif
   void line_unscaled(int x, int y, int x1, int y1) FL_OVERRIDE;
   void line_unscaled(int x, int y, int x1, int y1, int x2, int y2) FL_OVERRIDE;
   void xyline_unscaled(int x, int y, int x1) FL_OVERRIDE;
@@ -124,9 +124,9 @@ protected:
   void polygon_unscaled(int x0, int y0, int x1, int y1, int x2, int y2) FL_OVERRIDE;
   void polygon_unscaled(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) FL_OVERRIDE;
   // --- clipping
+  void push_clip(int x, int y, int w, int h) FL_OVERRIDE;
   int clip_box(int x, int y, int w, int h, int &X, int &Y, int &W, int &H) FL_OVERRIDE;
   int not_clipped(int x, int y, int w, int h) FL_OVERRIDE;
-  void push_clip(int x, int y, int w, int h) FL_OVERRIDE;
   void restore_clip() FL_OVERRIDE;
   Fl_Region scale_clip(float f) FL_OVERRIDE;
   // --- implementation is in src/fl_vertex.cxx which includes src/cfg_gfx/xxx_rect.cxx
@@ -136,13 +136,11 @@ protected:
   void end_loop() FL_OVERRIDE;
   void end_polygon() FL_OVERRIDE;
   void end_complex_polygon() FL_OVERRIDE;
+  void gap() FL_OVERRIDE;
   void ellipse_unscaled(double xt, double yt, double rx, double ry) FL_OVERRIDE;
   void arc_unscaled(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
   void pie_unscaled(int x, int y, int w, int h, double a1, double a2) FL_OVERRIDE;
   void line_style_unscaled(int style, int width, char* dashes) FL_OVERRIDE;
-  void* change_pen_width(int width) FL_OVERRIDE;
-  void reset_pen_width(void *data) FL_OVERRIDE;
-  void gap() FL_OVERRIDE;
   void color(Fl_Color c) FL_OVERRIDE;
   Fl_Color color() FL_OVERRIDE { return color_; }
   void color(uchar r, uchar g, uchar b) FL_OVERRIDE;
@@ -156,6 +154,8 @@ protected:
   void global_gc() FL_OVERRIDE;
   void overlay_rect(int x, int y, int w , int h) FL_OVERRIDE;
   void cache_size(Fl_Image *img, int &width, int &height) FL_OVERRIDE;
+  void* change_pen_width(int width) FL_OVERRIDE;
+  void reset_pen_width(void *data) FL_OVERRIDE;
 };
 
 
