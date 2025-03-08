@@ -2,29 +2,14 @@
 //  Fl_Native_Input.cxx
 //
 
-#include <FL/Fl_Native_Input.H>
 #include <FL/Fl_Group.H>
-#include <FL/Fl_Window.H>
-#include <FL/Fl_Input_.H>
 #include "../src/Fl_Native_Input_Driver.H"
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Multiline_Input.H>
-#include <FL/platform.H> // for FLTK_USE_X11
 
 //
 // Section to support platforms that don't implement Fl_Native_Input with a native input widget
 //
-
-#if defined(FLTK_USE_X11) && ! FLTK_USE_CAIRO
-
-Fl_Native_Input_Driver *Fl_Native_Input_Driver::newNativeInputDriver(Fl_Native_Input *n) {
-  Fl_Native_Input_Driver *retval = new Fl_Backup_Native_Input_Driver();
-  retval->widget = n;
-  return retval;
-}
-
-#endif // defined(FLTK_USE_X11) && ! FLTK_USE_CAIRO
-
 
 Fl_Backup_Native_Input_Driver::Fl_Backup_Native_Input_Driver() { input_ = NULL; }
 
