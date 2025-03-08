@@ -2,6 +2,8 @@
 //  Fl_Backup_Native_Input.cxx
 //
 
+#ifndef FL_DOXYGEN
+
 #include "Fl_Native_Input_Driver.H"
 
 
@@ -10,3 +12,5 @@ Fl_Native_Input_Driver *Fl_Native_Input_Driver::newNativeInputDriver(Fl_Native_I
   retval->widget = n;
   return retval;
 }
+
+#endif // ndef FL_DOXYGEN

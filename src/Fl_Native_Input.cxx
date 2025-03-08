@@ -7,6 +7,8 @@
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Multiline_Input.H>
 
+#ifndef FL_DOXYGEN
+
 //
 // Section to support platforms that don't implement Fl_Native_Input with a native input widget
 //
@@ -176,6 +178,8 @@ int Fl_Backup_Native_Input_Driver::copy_cuts()  {
 //
 // End of section to support platforms that don't implement Fl_Native_Input with a native input widget
 //
+
+#endif // ndef FL_DOXYGEN
 
 
 /** Create a new Fl_Native_Input widget.
