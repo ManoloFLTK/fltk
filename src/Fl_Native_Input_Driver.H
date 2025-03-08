@@ -67,6 +67,43 @@ public:
   int byte_pos_to_char_pos(int pos);
 };
 
+
+// Class Fl_Backup_Native_Input_Driver gives a default implementation of
+// Fl_Native_Input_Driver for platforms that don't provide a platform-native text widget.
+// In this implementation, Fl_Native_Input_Driver is an Fl_Group
+// containing an Fl_Input or Fl_Multiline_Input, and focus is managed normally by FLTK.
+class Fl_Backup_Native_Input_Driver : public Fl_Native_Input_Driver {
+private:
+  class Fl_Input *input_;
+public:
+  Fl_Backup_Native_Input_Driver();
+  ~Fl_Backup_Native_Input_Driver();
+  void show_widget() FL_OVERRIDE;
+  void value(const char *t, int len) FL_OVERRIDE;
+  const char *value() FL_OVERRIDE;
+  unsigned index(int i) const FL_OVERRIDE;
+  void replace(int from, int to, const char *text, int len) FL_OVERRIDE;
+  void replace_selection(const char *text, int len) FL_OVERRIDE;
+  int insert_position() FL_OVERRIDE;
+  void insert_position(int pos, int mark) FL_OVERRIDE;
+  int mark() FL_OVERRIDE;
+  int handle_focus(int event) FL_OVERRIDE;
+  int handle_dnd(int event) FL_OVERRIDE;
+  void select_all() FL_OVERRIDE;
+  void paste() FL_OVERRIDE;
+  int copy() FL_OVERRIDE;
+  int undo() FL_OVERRIDE;
+  int redo() FL_OVERRIDE;
+  bool can_undo() const FL_OVERRIDE;
+  bool can_redo() const FL_OVERRIDE;
+  void textcolor() FL_OVERRIDE;
+  void textfontandsize() FL_OVERRIDE;
+  int size() FL_OVERRIDE;
+  void tab_nav(int val) FL_OVERRIDE;
+  int copy_cuts() FL_OVERRIDE;
+};
+
+
 #endif // ndef FL_DOXYGEN
 
 #endif /* FL_NATIVE_INPUT_DRIVER_H */

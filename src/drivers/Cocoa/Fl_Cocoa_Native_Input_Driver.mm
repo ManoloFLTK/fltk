@@ -214,9 +214,15 @@ void Fl_Cocoa_Native_Input_Driver::full_text_size() {
 }
 
 
-Fl_Native_Input_Driver *new_fl_cocoa_native_input_driver() {
-  return (Fl_Darwin_System_Driver::calc_mac_os_version() >= 100700 ?
-          new Fl_Cocoa_Native_Input_Driver() : NULL);
+Fl_Native_Input_Driver *Fl_Native_Input_Driver::newNativeInputDriver(Fl_Native_Input *n) {
+  Fl_Native_Input_Driver *retval = NULL;
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+  retval = (Fl_Darwin_System_Driver::calc_mac_os_version() >= 100700 ?
+            new Fl_Cocoa_Native_Input_Driver() : NULL);
+#endif
+  if (!retval) retval = new Fl_Backup_Native_Input_Driver();
+  retval->widget = n;
+  return retval;
 }
 
 
