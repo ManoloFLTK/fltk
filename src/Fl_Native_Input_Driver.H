@@ -70,7 +70,7 @@ public:
 
 // Class Fl_Backup_Native_Input_Driver gives a default implementation of
 // Fl_Native_Input_Driver for platforms that don't provide a platform-native text widget.
-// In this implementation, Fl_Native_Input_Driver is an Fl_Group
+// In this implementation, Fl_Native_Input is an Fl_Group
 // containing an Fl_Input or Fl_Multiline_Input, and focus is managed normally by FLTK.
 class Fl_Backup_Native_Input_Driver : public Fl_Native_Input_Driver {
 private:
