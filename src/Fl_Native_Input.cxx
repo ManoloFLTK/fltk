@@ -7,158 +7,187 @@
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Input_.H>
 #include "../src/Fl_Native_Input_Driver.H"
+#include <FL/Fl_Input.H>
+#include <FL/Fl_Multiline_Input.H>
 #include <FL/platform.H> // for FLTK_USE_X11
-#if defined(__APPLE__) && !defined(FLTK_USE_X11) && !defined(FLTK_USE_WAYLAND)
-#  define FLTK_MACOS_PLATFORM 1
-#endif
 
 //
 // Section to support platforms that don't implement Fl_Native_Input with a native input widget
 //
 
-// Eliminate platforms implementing Fl_Native_Input with a native input widget
-#if defined(FLTK_MACOS_PLATFORM) || \
-    (!defined(FLTK_USE_CAIRO) && !defined(_WIN32) && !defined(FL_DOXYGEN))
+#if defined(FLTK_USE_X11) && ! FLTK_USE_CAIRO
 
-#include <FL/Fl_Input.H>
-#include <FL/Fl_Multiline_Input.H>
-
-// Class Fl_Backup_Native_Input_Driver gives a default implementation of
-// Fl_Native_Input_Driver for platforms that don't provide a platform-native text widget.
-// In this implementation, Fl_Native_Input_Driver is an Fl_Group
-// containing an Fl_Input or Fl_Multiline_Input, and focus is managed normally by FLTK.
-class Fl_Backup_Native_Input_Driver : public Fl_Native_Input_Driver {
-private:
-  Fl_Input *input_;
-public:
-  Fl_Backup_Native_Input_Driver() { input_ = NULL; }
-  ~Fl_Backup_Native_Input_Driver() { if (input_) delete input_; }
-  void show_widget() FL_OVERRIDE {
-    if (!input_) {
-      Fl_Group *g = Fl_Group::current();
-      Fl_Group::current(widget);
-      if (kind == SINGLE_LINE) input_ = new Fl_Input(widget->x()+Fl::box_dx(widget->box()),
-                                                    widget->y()+Fl::box_dy(widget->box()),
-                                                    widget->w()-Fl::box_dw(widget->box()),
-                                                    widget->h()-Fl::box_dh(widget->box()),
-                                                    NULL);
-      else input_ = new Fl_Multiline_Input(widget->x()+Fl::box_dx(widget->box()),
-                                          widget->y()+Fl::box_dy(widget->box()),
-                                          widget->w()-Fl::box_dw(widget->box()),
-                                          widget->h()-Fl::box_dh(widget->box()),
-                                          NULL);
-      input_->textfont(widget->textfont());
-      input_->textsize(widget->textsize());
-      input_->textcolor(widget->textcolor());
-      input_->color(widget->color());
-      input_->wrap(widget->wrap());
-      input_->box(FL_FLAT_BOX);
-      input_->tab_nav(this->Fl_Native_Input_Driver::tab_nav());
-      Fl_Group::current(g);
-    }
-  }
-  void value(const char *t, int len) FL_OVERRIDE {
-    if (!input_) show_widget();
-    input_->value(t, len);
-  }
-  const char *value() FL_OVERRIDE {
-    return input_ ? input_->value() : "";
-  }
-  unsigned index(int i) const FL_OVERRIDE {
-    return input_ ? input_->index(i) : 0;
-  }
-  void replace(int from, int to, const char *text, int len) FL_OVERRIDE {
-    if (!input_) show_widget();
-    input_->replace(from, to, text, len);
-  }
-  void replace_selection(const char *text, int len) FL_OVERRIDE {
-    if (!input_) show_widget();
-    input_->replace(insert_position(), mark(), text, len);
-  }
-  int insert_position() FL_OVERRIDE {
-    return input_ ? input_->insert_position() : 0;
-  }
-  void insert_position(int pos, int mark) FL_OVERRIDE {
-    if (input_) input_->insert_position(pos, mark);
-  }
-  int mark() FL_OVERRIDE {
-    return input_ ? input_->mark() : 0;
-  }
-  int handle_focus(int event) FL_OVERRIDE {
-    return widget->Fl_Group::handle(event);
-  }
-  int handle_dnd(int event) FL_OVERRIDE {
-    return input_->handle(event);
-  }
-  void select_all() FL_OVERRIDE {
-    if (input_) input_->insert_position(0, input_->size());
-  }
-  void paste() FL_OVERRIDE {
-    if (!input_) show_widget();
-    Fl::paste(*input_, 1);
-  }
-  int copy() FL_OVERRIDE {
-    if (!input_) return 0;
-    int i = input_->insert_position();
-    int m = input_->mark();
-    if (i > m) { int tmp = i; i = m; m = tmp; }
-    if (i < m) {
-      const char *val = input_->value();
-      Fl::copy(val + i, m-i, 1);
-      return 1;
-    }
-    return 0;
-  }
-  int undo() FL_OVERRIDE {
-    return input_ ? input_->undo() : 0;
-  }
-  int redo() FL_OVERRIDE {
-    return input_ ? input_->redo() : 0;
-  }
-  bool can_undo() const FL_OVERRIDE {
-    return input_ ? input_->can_undo() : false;
-  }
-  bool can_redo() const FL_OVERRIDE {
-    return input_ ? input_->can_redo() : false;
-  }
-  void textcolor() FL_OVERRIDE {
-    if (input_) {
-      input_->textcolor(widget->textcolor());
-      input_->redraw();
-    }
-  }
-  void textfontandsize() FL_OVERRIDE {
-    if (input_) {
-      input_->textfont(widget->textfont());
-      input_->textsize(widget->textsize());
-      input_->redraw();
-    }
-  }
-  int size() FL_OVERRIDE {
-    return input_ ? input_->size() : 0;
-  }
-  void tab_nav(int val) FL_OVERRIDE {
-    if (input_) input_->tab_nav(val);
-    Fl_Native_Input_Driver::tab_nav(val);
-  }
-  int copy_cuts() FL_OVERRIDE {
-    return (input_ ? input_->copy_cuts() : 0);
-  }
-};
-
-    
 Fl_Native_Input_Driver *Fl_Native_Input_Driver::newNativeInputDriver(Fl_Native_Input *n) {
-  Fl_Native_Input_Driver *retval = NULL;
-#if defined(FLTK_MACOS_PLATFORM) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
-  extern Fl_Native_Input_Driver *new_fl_cocoa_native_input_driver();
-  retval =  new_fl_cocoa_native_input_driver();
-#endif
-  if (!retval) retval = new Fl_Backup_Native_Input_Driver();
+  Fl_Native_Input_Driver *retval = new Fl_Backup_Native_Input_Driver();
   retval->widget = n;
   return retval;
 }
 
-#endif
+#endif // defined(FLTK_USE_X11) && ! FLTK_USE_CAIRO
+
+
+Fl_Backup_Native_Input_Driver::Fl_Backup_Native_Input_Driver() { input_ = NULL; }
+
+
+Fl_Backup_Native_Input_Driver::~Fl_Backup_Native_Input_Driver() { if (input_) delete input_; }
+
+
+void Fl_Backup_Native_Input_Driver::show_widget() {
+  if (!input_) {
+    Fl_Group *g = Fl_Group::current();
+    Fl_Group::current(widget);
+    if (kind == SINGLE_LINE) input_ = new Fl_Input(widget->x()+Fl::box_dx(widget->box()),
+                                                   widget->y()+Fl::box_dy(widget->box()),
+                                                   widget->w()-Fl::box_dw(widget->box()),
+                                                   widget->h()-Fl::box_dh(widget->box()),
+                                                   NULL);
+    else input_ = new Fl_Multiline_Input(widget->x()+Fl::box_dx(widget->box()),
+                                         widget->y()+Fl::box_dy(widget->box()),
+                                         widget->w()-Fl::box_dw(widget->box()),
+                                         widget->h()-Fl::box_dh(widget->box()),
+                                         NULL);
+    input_->textfont(widget->textfont());
+    input_->textsize(widget->textsize());
+    input_->textcolor(widget->textcolor());
+    input_->color(widget->color());
+    input_->wrap(widget->wrap());
+    input_->box(FL_FLAT_BOX);
+    input_->tab_nav(this->Fl_Native_Input_Driver::tab_nav());
+    Fl_Group::current(g);
+  }
+}
+
+
+void Fl_Backup_Native_Input_Driver::value(const char *t, int len)  {
+  if (!input_) show_widget();
+  input_->value(t, len);
+}
+
+
+const char *Fl_Backup_Native_Input_Driver::value() {
+  return input_ ? input_->value() : "";
+}
+
+
+unsigned Fl_Backup_Native_Input_Driver::index(int i) const  {
+  return input_ ? input_->index(i) : 0;
+}
+
+
+void Fl_Backup_Native_Input_Driver::replace(int from, int to, const char *text, int len)  {
+  if (!input_) show_widget();
+  input_->replace(from, to, text, len);
+}
+
+
+void Fl_Backup_Native_Input_Driver::replace_selection(const char *text, int len)  {
+  if (!input_) show_widget();
+  input_->replace(insert_position(), mark(), text, len);
+}
+
+
+int Fl_Backup_Native_Input_Driver::insert_position()  {
+  return input_ ? input_->insert_position() : 0;
+}
+
+
+void Fl_Backup_Native_Input_Driver::insert_position(int pos, int mark)  {
+  if (input_) input_->insert_position(pos, mark);
+}
+
+
+int Fl_Backup_Native_Input_Driver::mark()  {
+  return input_ ? input_->mark() : 0;
+}
+
+
+int Fl_Backup_Native_Input_Driver::handle_focus(int event)  {
+  return widget->Fl_Group::handle(event);
+}
+
+
+int Fl_Backup_Native_Input_Driver::handle_dnd(int event)  {
+  return input_->handle(event);
+}
+
+
+void Fl_Backup_Native_Input_Driver::select_all()  {
+  if (input_) input_->insert_position(0, input_->size());
+}
+
+
+void Fl_Backup_Native_Input_Driver::paste()  {
+  if (!input_) show_widget();
+  Fl::paste(*input_, 1);
+}
+
+
+int Fl_Backup_Native_Input_Driver::copy()  {
+  if (!input_) return 0;
+  int i = input_->insert_position();
+  int m = input_->mark();
+  if (i > m) { int tmp = i; i = m; m = tmp; }
+  if (i < m) {
+    const char *val = input_->value();
+    Fl::copy(val + i, m-i, 1);
+    return 1;
+  }
+  return 0;
+}
+
+
+int Fl_Backup_Native_Input_Driver::undo()  {
+  return input_ ? input_->undo() : 0;
+}
+
+
+int Fl_Backup_Native_Input_Driver::redo()  {
+  return input_ ? input_->redo() : 0;
+}
+
+
+bool Fl_Backup_Native_Input_Driver::can_undo() const  {
+  return input_ ? input_->can_undo() : false;
+}
+
+
+bool Fl_Backup_Native_Input_Driver::can_redo() const  {
+  return input_ ? input_->can_redo() : false;
+}
+
+
+void Fl_Backup_Native_Input_Driver::textcolor()  {
+  if (input_) {
+    input_->textcolor(widget->textcolor());
+    input_->redraw();
+  }
+}
+
+
+void Fl_Backup_Native_Input_Driver::textfontandsize()  {
+  if (input_) {
+    input_->textfont(widget->textfont());
+    input_->textsize(widget->textsize());
+    input_->redraw();
+  }
+}
+
+
+int Fl_Backup_Native_Input_Driver::size()  {
+  return input_ ? input_->size() : 0;
+}
+
+
+void Fl_Backup_Native_Input_Driver::tab_nav(int val)  {
+  if (input_) input_->tab_nav(val);
+  Fl_Native_Input_Driver::tab_nav(val);
+}
+
+
+int Fl_Backup_Native_Input_Driver::copy_cuts()  {
+  return (input_ ? input_->copy_cuts() : 0);
+}
+
 //
 // End of section to support platforms that don't implement Fl_Native_Input with a native input widget
 //
