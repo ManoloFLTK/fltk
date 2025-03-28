@@ -88,6 +88,7 @@ public:
   // next length of marked text after current marked text will have been replaced
   static int next_marked_length;
   static compositor_name compositor; // identifies the used Wayland compositor
+  static const struct wl_data_source_listener *p_data_source_listener;
 
 // static member functions
   static void insertion_point_location(int x, int y, int height);
@@ -106,6 +107,7 @@ public:
   struct libdecor *libdecor_context;
   struct xdg_wm_base *xdg_wm_base;
   struct zwp_text_input_manager_v3 *text_input_base;
+  struct xdg_toplevel_drag_manager_v1 *xdg_toplevel_drag;
 
 // constructor
   Fl_Wayland_Screen_Driver();
