@@ -370,3 +370,9 @@
  */
 
 #cmakedefine FLTK_HAVE_PEN_SUPPORT 1
+
+/*
+ * Do we want to use the "XDG TOPLEVEL DRAG" Wayland protocol?
+ */
+ 
+#cmakedefine HAVE_XDG_TOPLEVEL_DRAG 1
