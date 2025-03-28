@@ -1,7 +1,7 @@
 //
 // Wayland-specific code for clipboard and drag-n-drop support.
 //
-// Copyright 1998-2024 by Bill Spitzak and others.
+// Copyright 1998-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -25,6 +25,7 @@
 #  include "Fl_Wayland_Window_Driver.H"
 #  include "../Unix/Fl_Unix_System_Driver.H"
 #  include "Fl_Wayland_Graphics_Driver.H"
+#  include "../../Fl_Dockable_Group_Driver.H"
 #  include "../../flstring.h" // includes <string.h>
 
 #  include <errno.h>
@@ -97,6 +98,7 @@ static Fl_Window *fl_dnd_target_window = 0;
 static wl_surface *fl_dnd_target_surface = 0;
 static bool doing_dnd = false; // true when DnD is in action
 static wl_surface *dnd_icon = NULL; // non null when DnD uses text as cursor
+wl_surface **Fl_Wayland_Screen_Driver::fl_dnd_icon = &dnd_icon;
 static wl_cursor* save_cursor = NULL; // non null when DnD uses "dnd-copy" cursor
 
 
@@ -190,6 +192,9 @@ static const struct wl_data_source_listener data_source_listener = {
 };
 
 
+const struct wl_data_source_listener *Fl_Wayland_Screen_Driver::p_data_source_listener = &data_source_listener;
+
+
 static struct Fl_Wayland_Graphics_Driver::wld_buffer *offscreen_from_text(const char *text,
                                                                           int scale) {
   const char *p, *q;
@@ -280,6 +285,10 @@ int Fl_Wayland_Screen_Driver::dnd(int use_selection) {
 }
 
 
+static struct wl_data_offer *current_drag_offer = NULL;
+static uint32_t fl_dnd_serial;
+
+
 static void data_offer_handle_offer(void *data, struct wl_data_offer *offer,
                                     const char *mime_type) {
   // runs when app becomes active and lists possible clipboard types
@@ -303,6 +312,10 @@ static void data_offer_handle_offer(void *data, struct wl_data_offer *offer,
   } else if (strcmp(mime_type, "UTF8_STRING") == 0 && !fl_selection_type[1]) {
     fl_selection_type[1] = Fl::clipboard_plain_text;
     fl_selection_offer_type = "text/plain";
+  } else if (strcmp(mime_type, Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime) == 0) {
+    fl_selection_type[1] = mime_type;
+    fl_selection_offer_type = mime_type;
+    //printf("set fl_selection_offer_type=%s\n",mime_type);
   }
 }
 
@@ -434,8 +447,6 @@ way_out:
 }
 
 
-static struct wl_data_offer *current_drag_offer = NULL;
-static uint32_t fl_dnd_serial;
 
 
 static void data_device_handle_enter(void *data, struct wl_data_device *data_device,
@@ -485,7 +496,8 @@ static void data_device_handle_motion(void *data, struct wl_data_device *data_de
     Fl::e_x_root = Fl::e_x + fl_dnd_target_window->x();
     Fl::e_y_root = Fl::e_y + fl_dnd_target_window->y();
     ret = Fl::handle(FL_DND_DRAG, fl_dnd_target_window);
-    if (Fl::belowmouse()) Fl::belowmouse()->take_focus();
+    if (Fl::belowmouse() && Fl::clipboard_contains(Fl::clipboard_plain_text))
+      Fl::belowmouse()->take_focus();
   }
   uint32_t supported_actions =  ret && (Fl::pushed() || !doing_dnd) ?
     WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY : WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
