@@ -1,7 +1,7 @@
 //
 // Wayland-specific code for clipboard and drag-n-drop support.
 //
-// Copyright 1998-2024 by Bill Spitzak and others.
+// Copyright 1998-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -190,6 +190,9 @@ static const struct wl_data_source_listener data_source_listener = {
 };
 
 
+const struct wl_data_source_listener *Fl_Wayland_Screen_Driver::p_data_source_listener = &data_source_listener;
+
+
 static struct Fl_Wayland_Graphics_Driver::wld_buffer *offscreen_from_text(const char *text,
                                                                           int scale) {
   const char *p, *q;
@@ -280,6 +283,10 @@ int Fl_Wayland_Screen_Driver::dnd(int use_selection) {
 }
 
 
+static struct wl_data_offer *current_drag_offer = NULL;
+static uint32_t fl_dnd_serial;
+
+
 static void data_offer_handle_offer(void *data, struct wl_data_offer *offer,
                                     const char *mime_type) {
   // runs when app becomes active and lists possible clipboard types
@@ -303,6 +310,10 @@ static void data_offer_handle_offer(void *data, struct wl_data_offer *offer,
   } else if (strcmp(mime_type, "UTF8_STRING") == 0 && !fl_selection_type[1]) {
     fl_selection_type[1] = Fl::clipboard_plain_text;
     fl_selection_offer_type = "text/plain";
+  } else if (strcmp(mime_type, "xdg_toplevel_drag_manager") == 0 && !fl_selection_type[1]) {
+    fl_selection_type[1] = Fl::clipboard_plain_text;
+    fl_selection_offer_type = "xdg_toplevel_drag_manager";
+    if (current_drag_offer) wl_data_offer_accept(current_drag_offer, fl_dnd_serial, mime_type);
   }
 }
 
@@ -434,8 +445,6 @@ way_out:
 }
 
 
-static struct wl_data_offer *current_drag_offer = NULL;
-static uint32_t fl_dnd_serial;
 
 
 static void data_device_handle_enter(void *data, struct wl_data_device *data_device,

@@ -47,6 +47,7 @@ set(CPPFILES
   Fl_Counter.cxx
   Fl_Device.cxx
   Fl_Dial.cxx
+  Fl_Dockable_Window.cxx
   Fl_Double_Window.cxx
   Fl_File_Browser.cxx
   Fl_File_Chooser.cxx
@@ -756,6 +757,18 @@ if(UNIX AND FLTK_BACKEND_WAYLAND)
   )
   list(APPEND STATIC_FILES "xdg-shell-protocol.c")
   list(APPEND SHARED_FILES "xdg-shell-protocol.c")
+
+  set(INFILE ${PROTOCOLS}/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1.xml)
+  fl_check_required_file(STOP_REQUIRED ${INFILE})
+  add_custom_command(
+    OUTPUT xdg-toplevel-drag-protocol.c xdg-toplevel-drag-client-protocol.h
+    COMMAND wayland-scanner private-code  ${INFILE} xdg-toplevel-drag-protocol.c
+    COMMAND wayland-scanner client-header ${INFILE} xdg-toplevel-drag-client-protocol.h
+    DEPENDS ${INFILE}
+    VERBATIM
+  )
+  list(APPEND STATIC_FILES "xdg-toplevel-drag-protocol.c")
+  list(APPEND SHARED_FILES "xdg-toplevel-drag-protocol.c")
 
   if(NOT USE_SYSTEM_LIBDECOR)
     set(INFILE ${PROTOCOLS}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml)
