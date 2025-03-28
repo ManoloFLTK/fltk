@@ -190,6 +190,7 @@ protected:
         AUTO_DELETE_USER_DATA = 1<<23, ///< automatically call `delete` on the user_data pointer when destroying this widget; if set, user_data must point to a class derived from the class Fl_Callback_User_Data
         MAXIMIZED       = 1<<24,  ///< a maximized Fl_Window
         POPUP           = 1<<25,  ///< popup window (i.e., positioned relatively to another mapped window)
+        DROP_ANY_DATA   = 1<<26,  ///< a widget susceptible to receive non-textual drag-n-drop data
         // Note to devs: add new FLTK core flags above this line (up to 1<<28).
 
         // Three more flags, reserved for user code
@@ -1278,6 +1279,16 @@ public:
   /** Returns whether the widget's label uses '&' to indicate shortcuts.
    \see void shortcut_label(int value) */
   int shortcut_label() const { return flags_ & SHORTCUT_LABEL; }
+  
+  /** Set whether the widget is susceptible to receive non-text drag-n-drop data.
+   By default, the widget doesn't receive non-text drag-n-drop data.
+   */
+  void can_drop_any_data(bool yes_no) {
+    if (yes_no)
+      set_flag(DROP_ANY_DATA);
+    else
+      clear_flag(DROP_ANY_DATA);
+  }
 };
 
 /**

@@ -29,6 +29,12 @@
 
 Fl_Group* Fl_Group::current_;
 
+// The value of fl_dnd_content can be changed in situations involving drag-and-drop
+// of other data than text or filenames. Usual widgets won't be sent non-text DnD data.
+// Only widgets with flag Fl_Widget::DROP_ANY_DATA set receive the FL_DND_ENTER event
+// when non-text data is being dragged and have a chance to return 1 to this event.
+const char *fl_dnd_content = Fl::clipboard_plain_text; // indicates text is being dragged
+
 /**
   Returns a pointer to the internal array of children.
 
@@ -212,9 +218,16 @@ int Fl_Group::handle(int event) {
       if (o->takesevents() && Fl::event_inside(o)) {
         if (o->contains(Fl::belowmouse())) {
           return send(o,FL_DND_DRAG);
-        } else if (send(o,FL_DND_ENTER)) {
-          if (!o->contains(Fl::belowmouse())) Fl::belowmouse(o);
-          return 1;
+        } else {
+          // Send FL_DND_ENTER if the child is an Fl_Group, or has flag DROP_ANY_DATA,
+          // or text is being dragged. Otherwise, return 0.
+          int r = 0;
+          if (o->as_group() || (o->flags() & DROP_ANY_DATA) || !strcmp(fl_dnd_content, Fl::clipboard_plain_text))
+            r = send(o,FL_DND_ENTER);
+          if (r) {
+            if (!o->contains(Fl::belowmouse())) Fl::belowmouse(o);
+            return 1;
+          }
         }
       }
     }

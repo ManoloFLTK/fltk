@@ -245,6 +245,7 @@ if(OPENGL_FOUND)
   endif()
   fl_create_example(gl_overlay gl_overlay.cxx "${GLDEMO_LIBS}")
   fl_create_example(shape shape.cxx "${GLDEMO_LIBS}")
+  fl_create_example(dock_undock dock_undock.cxx "${GLDEMO_LIBS}")
 endif(OPENGL_FOUND)
 
 # Test FLTK headers for variable shadowing [-Wshadow] (STR 2728)

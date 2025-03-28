@@ -2,7 +2,7 @@
 // Definition of the Wayland Screen interface
 // for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 2010-2024 by Bill Spitzak and others.
+// Copyright 2010-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -88,6 +88,7 @@ public:
   // next length of marked text after current marked text will have been replaced
   static int next_marked_length;
   static compositor_name compositor; // identifies the used Wayland compositor
+  static const struct wl_data_source_listener *p_data_source_listener;
 
 // static member functions
   static void insertion_point_location(int x, int y, int height);
