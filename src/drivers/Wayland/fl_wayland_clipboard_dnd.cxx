@@ -1,7 +1,7 @@
 //
 // Wayland-specific code for clipboard and drag-n-drop support.
 //
-// Copyright 1998-2024 by Bill Spitzak and others.
+// Copyright 1998-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -31,6 +31,7 @@
 #  include <stdio.h>
 #  include <stdlib.h>
 
+extern const char *fl_dnd_content; // declared in Fl_Group.cxx
 
 ////////////////////////////////////////////////////////////////
 // Code used for copy and paste and DnD into the program:
@@ -190,6 +191,9 @@ static const struct wl_data_source_listener data_source_listener = {
 };
 
 
+const struct wl_data_source_listener *Fl_Wayland_Screen_Driver::p_data_source_listener = &data_source_listener;
+
+
 static struct Fl_Wayland_Graphics_Driver::wld_buffer *offscreen_from_text(const char *text,
                                                                           int scale) {
   const char *p, *q;
@@ -304,6 +308,7 @@ static void data_offer_handle_offer(void *data, struct wl_data_offer *offer,
     fl_selection_type[1] = Fl::clipboard_plain_text;
     fl_selection_offer_type = "text/plain";
   }
+  fl_dnd_content = (fl_selection_type[1] ? fl_selection_type[1] : "");
 }
 
 
@@ -485,7 +490,8 @@ static void data_device_handle_motion(void *data, struct wl_data_device *data_de
     Fl::e_x_root = Fl::e_x + fl_dnd_target_window->x();
     Fl::e_y_root = Fl::e_y + fl_dnd_target_window->y();
     ret = Fl::handle(FL_DND_DRAG, fl_dnd_target_window);
-    if (Fl::belowmouse()) Fl::belowmouse()->take_focus();
+    if (Fl::belowmouse() && Fl::clipboard_contains(Fl::clipboard_plain_text))
+      Fl::belowmouse()->take_focus();
   }
   uint32_t supported_actions =  ret && (Fl::pushed() || !doing_dnd) ?
     WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY : WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
