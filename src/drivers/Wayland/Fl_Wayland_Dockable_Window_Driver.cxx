@@ -116,8 +116,9 @@ int Fl_Wayland_Dockable_Window_Driver::target_box_class::handle(int event) {
 
 
 int Fl_Wayland_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_box_out *box, int event) {
+  if (event != FL_PUSH || !(Fl::event_state() & FL_BUTTON1)) return box->Fl_Box::handle(event);
   Fl_Dockable_Window *dock = (Fl_Dockable_Window*)box->window();
-  if (event == FL_PUSH && (Fl::event_state() & FL_BUTTON1) && dock->parent()) {
+  if (dock->parent()) {
     Fl_Window *top = dock->top_window();
     struct wld_window *xid = fl_wl_xid(dock);
     Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
@@ -134,7 +135,6 @@ int Fl_Wayland_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_bo
                               scr_driver->seat->serial);
     Fl_Wayland_Window_Driver::driver(dock)->unmap();
     top->remove(dock);
-    Fl_Dockable_Window *old = dock;
     dock = Fl_Wayland_Dockable_Window_Driver::copy_(dock, "dragged");
     dock->callback((Fl_Callback0*)Fl_Dockable_Window_Driver::delete_win_cb);
     box->label("Drag");
@@ -146,8 +146,7 @@ int Fl_Wayland_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_bo
     dr = (Fl_Wayland_Dockable_Window_Driver*)Fl_Dockable_Window_Driver::driver(dock);
     xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x() - box->x(), Fl::event_y() - box->y());
     //printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
-    return 1;
-  } else if (event == FL_PUSH && (Fl::event_state() & FL_BUTTON1)) {
+  } else {
     // catch again a draggable window
     Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
     Fl_Wayland_Dockable_Window_Driver *dr = (Fl_Wayland_Dockable_Window_Driver*)Fl_Dockable_Window_Driver::driver(dock);
@@ -164,7 +163,6 @@ int Fl_Wayland_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_bo
     //printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
     // need to attach AFTER start_drag even though xdg_toplevel_drag protocol doc says opposite!
     xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x() - box->x(), Fl::event_y() - box->y());
-    return 1;
   }
-  return box->Fl_Box::handle(event);
+  return 1;
 }
