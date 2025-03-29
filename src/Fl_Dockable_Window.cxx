@@ -33,7 +33,7 @@ Fl_Dockable_Window::Fl_Dockable_Window(int x, int y, int w, int h, const char *t
 }
 
 
-void Fl_Dockable_Window_Driver::delete_win_cb(Fl_Dockable_Window *w, void *) {
+void Fl_Dockable_Window_Driver::delete_win_cb(Fl_Dockable_Window *w) {
   w->driver_->delete_win(w);
 }
 
@@ -71,7 +71,7 @@ int Fl_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_box_out *b
       top->remove(dock);
       dock->position(top->x() + dock->x() , top->y() + dock->y() );
     
-    dock->callback((Fl_Callback*)Fl_Dockable_Window_Driver::delete_win_cb);
+    dock->callback((Fl_Callback0*)Fl_Dockable_Window_Driver::delete_win_cb);
     box->label("Drag");
     dock->border(0);
     box->can_dock_ = false;
