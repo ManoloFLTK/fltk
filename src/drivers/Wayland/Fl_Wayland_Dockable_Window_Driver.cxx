@@ -144,7 +144,7 @@ int Fl_Wayland_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_bo
     xid = fl_wl_xid(dock);
     //xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
     dr = (Fl_Wayland_Dockable_Window_Driver*)Fl_Dockable_Window_Driver::driver(dock);
-    xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x() - box->x(), Fl::event_y() - box->y());
+    xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x(), Fl::event_y());
     //printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
   } else {
     // catch again a draggable window
@@ -162,7 +162,7 @@ int Fl_Wayland_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_bo
                               scr_driver->seat->pointer_focus, NULL, scr_driver->seat->serial);
     //printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
     // need to attach AFTER start_drag even though xdg_toplevel_drag protocol doc says opposite!
-    xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x() - box->x(), Fl::event_y() - box->y());
+    xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x(), Fl::event_y());
   }
   return 1;
 }
