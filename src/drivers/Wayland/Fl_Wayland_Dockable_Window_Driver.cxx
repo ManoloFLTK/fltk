@@ -34,9 +34,8 @@ Fl_Wayland_Dockable_Window_Driver::Fl_Wayland_Dockable_Window_Driver() {
 
 
 void Fl_Wayland_Dockable_Window_Driver::delete_win(Fl_Dockable_Window *dock) {
-  Fl_Wayland_Dockable_Window_Driver *dr = (Fl_Wayland_Dockable_Window_Driver*)Fl_Dockable_Window_Driver::driver(dock);
-  delete dr->old_dock_;
-  if (dr->drag_) xdg_toplevel_drag_v1_destroy(dr->drag_);
+  delete old_dock_;
+  if (drag_) xdg_toplevel_drag_v1_destroy(drag_);
   delete dock;
 }
 
@@ -52,7 +51,7 @@ void Fl_Wayland_Dockable_Window_Driver::command_box(Fl_Box *b) {
 }
 
 
-Fl_Dockable_Window *Fl_Wayland_Dockable_Window_Driver::copy(Fl_Dockable_Window *from, const char *t) {
+Fl_Dockable_Window *Fl_Wayland_Dockable_Window_Driver::copy_(Fl_Dockable_Window *from, const char *t) {
   Fl_Dockable_Window *dock2 = new Fl_Dockable_Window(from->x(), from->y(), from->w(), from->h(), t);
   while (from->children()) {
     Fl_Widget *wid = from->child(0);
@@ -136,8 +135,8 @@ int Fl_Wayland_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_bo
     Fl_Wayland_Window_Driver::driver(dock)->unmap();
     top->remove(dock);
     Fl_Dockable_Window *old = dock;
-    dock = Fl_Wayland_Dockable_Window_Driver::copy(dock, "dragged");
-    dock->callback((Fl_Callback*)Fl_Dockable_Window_Driver::delete_win_cb);
+    dock = Fl_Wayland_Dockable_Window_Driver::copy_(dock, "dragged");
+    dock->callback((Fl_Callback0*)Fl_Dockable_Window_Driver::delete_win_cb);
     box->label("Drag");
     dock->border(0);
     box->can_dock_ = false;

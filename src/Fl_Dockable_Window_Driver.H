@@ -18,7 +18,7 @@
 
 class Fl_Dockable_Window_Driver {
 protected:
-  static void delete_win_cb(Fl_Dockable_Window *, void *);
+  static void delete_win_cb(Fl_Dockable_Window *);
 public:
   class drag_box_out : public Fl_Box {
   public:
@@ -42,17 +42,18 @@ public:
 #ifdef FLTK_USE_WAYLAND
 
 class Fl_Wayland_Dockable_Window_Driver : public Fl_Dockable_Window_Driver {
+private:
+  Fl_Dockable_Window *old_dock_;
+  Fl_Box *command_box_;
+  struct xdg_toplevel_drag_v1 *drag_;
+  static Fl_Dockable_Window *copy_(Fl_Dockable_Window *from, const char *t);
 public:
   class target_box_class : public Fl_Box {
     public:
       target_box_class(Fl_Boxtype bt, int x, int y, int w, int h, const char *t) : Fl_Box(bt,x,y,w,h,t) {}
       int handle(int event) FL_OVERRIDE;
   };
-  Fl_Dockable_Window *old_dock_;
-  struct xdg_toplevel_drag_v1 *drag_;
-  Fl_Box *command_box_;
   Fl_Wayland_Dockable_Window_Driver();
-  static Fl_Dockable_Window *copy(Fl_Dockable_Window *from, const char *t);
   void delete_win(Fl_Dockable_Window *dock) FL_OVERRIDE;
   Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t) FL_OVERRIDE;
   void command_box(Fl_Box *b) FL_OVERRIDE;
