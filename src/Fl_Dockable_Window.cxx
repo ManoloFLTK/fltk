@@ -64,48 +64,58 @@ int Fl_Dockable_Window_Driver::drag_box_out::handle(int event) {
 int Fl_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_box_out *box, int event) {
   static int fromx, fromy, winx, winy;
   Fl_Dockable_Window *dock = (Fl_Dockable_Window*)box->window();
-  if (event == FL_PUSH && (Fl::event_state() & FL_BUTTON1) && dock->parent()) {
-    Fl_Window *top = dock->top_window();
-    
-      dock->hide();
-      top->remove(dock);
-      dock->position(top->x() + dock->x() , top->y() + dock->y() );
-    
-    dock->callback((Fl_Callback0*)Fl_Dockable_Window_Driver::delete_win_cb);
-    box->label("Drag");
-    dock->border(0);
-    box->can_dock_ = false;
-    dock->show();
-    return 1;
-  } else if (event == FL_PUSH && (Fl::event_state() & FL_BUTTON1)) {
+  if (event == FL_PUSH && (Fl::event_state() & FL_BUTTON1) ) {
     fromx = Fl::event_x_root();
     fromy = Fl::event_y_root();
     winx = dock->x_root();
     winy = dock->y_root();
+    if (dock->parent()) {
+      // transform the dockable subwindow into a draggable, borderless toplevel window
+      Fl_Window *top = dock->top_window();
+      dock->hide();
+      top->remove(dock);
+      dock->position(winx, winy);
+      dock->callback((Fl_Callback0*)Fl_Dockable_Window_Driver::delete_win_cb);
+      box->label("Drag");
+      dock->border(0);
+      box->can_dock_ = false;
+      dock->show();
+    }
     return 1;
-  } else if (event == FL_DRAG && !dock->parent()) {
+  } else if (event == FL_DRAG && !dock->parent()) { // Drag dockable around
     int deltax = Fl::event_x_root() - fromx;
     int deltay = Fl::event_y_root() - fromy;
     dock->position(winx + deltax, winy + deltay);
     Fl_Box *target = dock->target_box();
     if (target) {
-      int target_x = target->window()->x() + target->x();
-      int target_y = target->window()->y() + target->y();
-      box->can_dock_ = (dock->x() + dock->w() >= target_x &&
-                   dock->x() < target_x + target->w() &&
-                   dock->y() >= target_y && dock->y() < target_y + target->h());
-      if (box->can_dock_){
-        box->label("Dock");
-        target->color(FL_RED);
-        target->redraw();
-      } else {
-        box->label("Drag");
-        target->color(FL_BACKGROUND_COLOR);
-        target->redraw();
+      int target_x, target_y;
+      Fl_Window *top = target->top_window_offset(target_x, target_y);
+      target_x += top->x();
+      target_y += top->y();
+      // does dockable partially cover target ?
+      bool new_can_dock = (dock->x() + dock->w() >= target_x &&
+                        dock->x() < target_x + target->w() &&
+                        dock->y() + dock->h() >= target_y &&
+                        dock->y() < target_y + target->h());
+      if (box->can_dock_ != new_can_dock) {
+        box->can_dock_ = new_can_dock;
+        if (box->can_dock_){
+          box->label("Dock");
+          box->color(FL_RED);
+          box->redraw();
+          target->color(FL_RED);
+          target->redraw();
+        } else {
+          box->label("Drag");
+          box->color(FL_BACKGROUND_COLOR);
+          box->redraw();
+          target->color(FL_BACKGROUND_COLOR);
+          target->redraw();
+        }
       }
     }
     return 1;
-  } else if (event == FL_RELEASE && !dock->parent() && box->can_dock_) {
+  } else if (event == FL_RELEASE && !dock->parent() && box->can_dock_) { // Dock dockable in place
     Fl_Box *target = dock->target_box();
     Fl_Window *parent = target->window();
     target->hide();
@@ -113,7 +123,9 @@ int Fl_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_box_out *b
     parent->add(dock);
     dock->position(target->x(), target->y());
     box->label("Undock");
+    box->color(FL_BACKGROUND_COLOR);
     dock->target_box(FL_NO_BOX, 0, 0, 0, 0, NULL, NULL);
+    box->can_dock_ = false;
     delete target;
     dock->show();
     return 1;

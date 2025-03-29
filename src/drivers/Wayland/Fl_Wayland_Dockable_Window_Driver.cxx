@@ -80,7 +80,9 @@ int Fl_Wayland_Dockable_Window_Driver::target_box_class::handle(int event) {
   Fl_Wayland_Dockable_Window_Driver *dr = (Fl_Wayland_Dockable_Window_Driver*)Fl_Dockable_Window_Driver::driver(dock);
   if (event == FL_DND_ENTER) {
     //puts("FL_DND_ENTER");
-    dr->command_box_->label("Dock"); dr->command_box_->redraw_label();
+    dr->command_box_->label("Dock");
+    dr->command_box_->color(FL_RED);
+    dr->command_box_->redraw();
     color(FL_RED); redraw();
     return 1;
   } else if (event == FL_DND_DRAG) {
@@ -88,7 +90,9 @@ int Fl_Wayland_Dockable_Window_Driver::target_box_class::handle(int event) {
     return 1;
   } else if (event == FL_DND_LEAVE) {
     //puts("FL_DND_LEAVE");
-    dr->command_box_->label("Drag"); dr->command_box_->redraw_label();
+    dr->command_box_->label("Drag");
+    dr->command_box_->color(FL_BACKGROUND_COLOR);
+    dr->command_box_->redraw();
     color(FL_BACKGROUND_COLOR); redraw();
     return 1;
   } else if (event == FL_DND_RELEASE) {
