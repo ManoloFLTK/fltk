@@ -20,49 +20,19 @@
 #ifndef Fl_Dockable_Window_H
 #define Fl_Dockable_Window_H
 
-#include <FL/platform.H>
 #include <FL/Fl_Double_Window.H>
 #include <FL/Fl_Box.H>
 
+class Fl_Dockable_Window_Driver;
 
 /** A window that can be detached from its parent, dragged with the mouse to some destination, and docked there. */
 class Fl_Dockable_Window : public Fl_Double_Window {
-  
+  friend class Fl_Dockable_Window_Driver;
 private:
   Fl_Box *target_box_;
-#ifdef FLTK_USE_WAYLAND
-  Fl_Dockable_Window *old_dock_;
-  struct xdg_toplevel_drag_v1 *drag_;
-  Fl_Box *command_box_;
-  Fl_Dockable_Window *copy(const char *t);
-
-  class target_box_class : public Fl_Box {
-  public:
-    target_box_class(Fl_Boxtype bt, int x, int y, int w, int h, const char *t) : Fl_Box(bt,x,y,w,h,t) {}
-    int handle(int event) FL_OVERRIDE;
-  };
-#endif
-  
-  static void delete_win(Fl_Dockable_Window *w, void *);
-  class drag_box_out : public Fl_Box {
-  private:
-    bool can_dock_;
-  public:
-    drag_box_out(Fl_Boxtype b, int x, int y, int w, int h, const char *l) : Fl_Box(b, x, y, w, h, l) {
-      can_dock_ = false;
-    }
-    int handle(int event) FL_OVERRIDE;
-  };
-  
+  Fl_Dockable_Window_Driver *driver_;
 public:
-  Fl_Dockable_Window(int x, int y, int w, int h, const char *t=0) : Fl_Double_Window(x,y,w,h,t) {
-    target_box_ = NULL;
-#ifdef FLTK_USE_WAYLAND
-    old_dock_ = NULL;
-    drag_ = NULL;
-    command_box_ = NULL;
-#endif
-  }
+  Fl_Dockable_Window(int x, int y, int w, int h, const char *t=0);
   void command_box(int x, int y, int w, int h, const char *t);
   void target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Group *g);
   Fl_Box *target_box() { return target_box_; }
