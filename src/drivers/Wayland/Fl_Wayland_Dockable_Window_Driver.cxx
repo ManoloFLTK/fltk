@@ -95,7 +95,7 @@ int Fl_Wayland_Dockable_Window_Driver::target_box_class::handle(int event) {
     dr->command_box_->redraw();
     color(FL_BACKGROUND_COLOR); redraw();
     return 1;
-  } else if (event == FL_DND_RELEASE) {
+  } else if (event == FL_DND_RELEASE && color() == FL_RED) {
     //puts("FL_DND_RELEASE");
     Fl_Wayland_Dockable_Window_Driver *dr = (Fl_Wayland_Dockable_Window_Driver*)Fl_Dockable_Window_Driver::driver(dock);
     xdg_toplevel_drag_v1_destroy(dr->drag_);
@@ -122,11 +122,11 @@ int Fl_Wayland_Dockable_Window_Driver::target_box_class::handle(int event) {
 int Fl_Wayland_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_box_out *box, int event) {
   if (event != FL_PUSH || !(Fl::event_state() & FL_BUTTON1)) return box->Fl_Box::handle(event);
   Fl_Dockable_Window *dock = (Fl_Dockable_Window*)box->window();
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+  static bool delay_start_drag = false; // useful for KWIN compositor
   if (dock->parent()) {
     Fl_Window *top = dock->top_window();
     struct wld_window *xid = fl_wl_xid(dock);
-    Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-    xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
     scr_driver->seat->data_source = wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
     wl_data_source_add_listener(scr_driver->seat->data_source, Fl_Wayland_Screen_Driver::p_data_source_listener, (void*)0);
     wl_data_source_offer(scr_driver->seat->data_source, "xdg_toplevel_drag_manager");
@@ -134,9 +134,11 @@ int Fl_Wayland_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_bo
     Fl_Wayland_Dockable_Window_Driver *dr = (Fl_Wayland_Dockable_Window_Driver*)Fl_Dockable_Window_Driver::driver(dock);
     dr->drag_ =
     xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag(scr_driver->xdg_toplevel_drag, scr_driver->seat->data_source);
-    //printf("start_drag surface=%p serial=%u\n",xid->wl_surface, scr_driver->seat->serial);
-    wl_data_device_start_drag(scr_driver->seat->data_device, scr_driver->seat->data_source, xid->wl_surface, NULL,
-                              scr_driver->seat->serial);
+    if (Fl_Wayland_Screen_Driver::compositor != Fl_Wayland_Screen_Driver::KWIN) {
+      //printf("start_drag surface=%p serial=%u\n",xid->wl_surface, scr_driver->seat->serial);
+      wl_data_device_start_drag(scr_driver->seat->data_device, scr_driver->seat->data_source,
+                                xid->wl_surface, NULL, scr_driver->seat->serial);
+    }
     Fl_Wayland_Window_Driver::driver(dock)->unmap();
     top->remove(dock);
     dock = Fl_Wayland_Dockable_Window_Driver::copy_(dock, "dragged");
@@ -146,10 +148,17 @@ int Fl_Wayland_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_bo
     box->can_dock_ = false;
     dock->show();
     xid = fl_wl_xid(dock);
-    //xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
+    xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
     dr = (Fl_Wayland_Dockable_Window_Driver*)Fl_Dockable_Window_Driver::driver(dock);
     xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x(), Fl::event_y());
     //printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
+    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::KWIN) delay_start_drag = true;
+  } else if (delay_start_drag) {
+    struct wld_window *xid = fl_wl_xid(dock);
+    //printf("start_drag surface=%p serial=%u\n",scr_driver->seat->pointer_focus, scr_driver->seat->serial);
+    wl_data_device_start_drag(scr_driver->seat->data_device, scr_driver->seat->data_source,
+                              scr_driver->seat->pointer_focus, NULL, scr_driver->seat->serial);
+    delay_start_drag = false;
   } else {
     // catch again a draggable window
     Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
@@ -167,6 +176,7 @@ int Fl_Wayland_Dockable_Window_Driver::handle(Fl_Dockable_Window_Driver::drag_bo
     //printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
     // need to attach AFTER start_drag even though xdg_toplevel_drag protocol doc says opposite!
     xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x(), Fl::event_y());
+    delay_start_drag = false;
   }
   return 1;
 }
