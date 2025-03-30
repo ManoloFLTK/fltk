@@ -36,6 +36,7 @@ public:
   void command_box(int x, int y, int w, int h, const char *t);
   void target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Group *g);
   Fl_Box *target_box() { return target_box_; }
+  enum {UNDOCK, DRAG, DOCK, DOCKED} state;
 };
 
 #endif // Fl_Dockable_Group_H

@@ -34,6 +34,7 @@ Fl_Wayland_Dockable_Group_Driver::Fl_Wayland_Dockable_Group_Driver() {
 
 void Fl_Wayland_Dockable_Group_Driver::delete_win(Fl_Dockable_Group *dock) {
   if (drag_) xdg_toplevel_drag_v1_destroy(drag_);
+  drag_ = NULL;
   delete dock->window();
 }
 
@@ -63,6 +64,7 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(Fl_Dockable_Group *from, drag
   win->add(from);
   win->end();
   win->callback((Fl_Callback0*)Fl_Dockable_Group_Driver::delete_win_cb);
+  from->state = Fl_Dockable_Group::DRAG;
   box->label("Drag");
   win->border(0);
   box->can_dock_ = false;
@@ -76,6 +78,7 @@ int Fl_Wayland_Dockable_Group_Driver::target_box_class::handle(int event) {
   Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
   if (event == FL_DND_ENTER) {
     //puts("FL_DND_ENTER");
+    dock->state = Fl_Dockable_Group::DOCK;
     dr->command_box_->label("Dock");
     dr->command_box_->color(FL_RED);
     dr->command_box_->redraw();
@@ -86,27 +89,30 @@ int Fl_Wayland_Dockable_Group_Driver::target_box_class::handle(int event) {
     return 1;
   } else if (event == FL_DND_LEAVE) {
     //puts("FL_DND_LEAVE");
+    dock->state = Fl_Dockable_Group::DRAG;
     dr->command_box_->label("Drag");
     dr->command_box_->color(FL_BACKGROUND_COLOR);
     dr->command_box_->redraw();
     color(FL_BACKGROUND_COLOR); redraw();
     return 1;
-  } else if (event == FL_DND_RELEASE && color() == FL_RED) {
+  } else if (event == FL_DND_RELEASE && dock->state == Fl_Dockable_Group::DOCK) {
     //puts("FL_DND_RELEASE");
     Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
     xdg_toplevel_drag_v1_destroy(dr->drag_);
+    dr->drag_ = NULL;
     Fl_Box *target = this;
     Fl_Window *parent = target->window();
     target->hide();
-    user_data(NULL); // useful?
+    user_data(NULL);
     Fl_Window *top = dock->window();
     top->hide();
     top->remove(dock);
     delete top;
     parent->add(dock);
     dock->position(target->x(), target->y());
-    label("Undock");
+    dock->state = Fl_Dockable_Group::DOCKED;
     delete target;
+    dock->clear_visible();
     dock->show();
     dr->command_box_->label("Docked");
     dr->command_box_->color(FL_BACKGROUND_COLOR);
@@ -120,7 +126,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
   if (event != FL_PUSH || !(Fl::event_state() & FL_BUTTON1)) return box->Fl_Box::handle(event);
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)box->parent();
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-  if (strcmp(box->label(), "Undock") == 0) {
+  if (dock->state == Fl_Dockable_Group::UNDOCK) {
     Fl_Window *top = dock->top_window();
     struct wld_window *xid = fl_wl_xid(dock->window());
     scr_driver->seat->data_source = wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
@@ -140,7 +146,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
     xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
     xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x() - dock_x, Fl::event_y() - dock_y);
     printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
-  } else {
+  } else if (dock->state == Fl_Dockable_Group::DRAG) {
     // catch again a draggable window
     Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
     Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
