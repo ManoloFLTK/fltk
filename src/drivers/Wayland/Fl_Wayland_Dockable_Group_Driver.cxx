@@ -127,6 +127,8 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   if (dock->state == Fl_Dockable_Group::UNDOCK) {
     Fl_Window *top = dock->top_window();
+    // It seems that while MUTTER accepts to apply the xdg_toplevel_drag protocol
+    // to a subwindow, KWIN doesn't accept it and works OK only when dragging inside a toplevel.
     struct wld_window *xid = fl_wl_xid(dock->window());
     scr_driver->seat->data_source = wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
     wl_data_source_add_listener(scr_driver->seat->data_source, Fl_Wayland_Screen_Driver::p_data_source_listener, (void*)0);

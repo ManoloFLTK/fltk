@@ -22,7 +22,6 @@
 
 
 Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) : Fl_Group(x,y,w,h,t) {
-  target_box_ = NULL;
   state = UNDOCK;
 #ifdef FLTK_USE_WAYLAND
   if (fl_wl_display()) {
@@ -31,8 +30,19 @@ Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) 
   }
 #endif
   driver_ = new Fl_Dockable_Group_Driver();
+  target_index_ = -1;
 }
 
+
+Fl_Dockable_Group::~Fl_Dockable_Group() {
+  while (target_.size()) {
+    Fl_Group *g = target_[0]->parent();
+    g->remove(target_[0]);
+    g->redraw();
+    delete target_[0];
+    target_.erase(target_.begin());
+  }
+}
 
 void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
   Fl_Dockable_Group *w = (Fl_Dockable_Group*)win->child(0);
@@ -40,14 +50,20 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
 }
 
 
-void Fl_Dockable_Group::target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Group *g) {
-  if (w == 0 || h == 0) target_box_ = NULL;
-  else {
+Fl_Box *Fl_Dockable_Group::target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Group *g) {
+  if (w == 0 || h == 0) {
+    delete target_[target_index_];
+    target_.erase(target_.begin() + target_index_);
+    return NULL;
+  } else {
     Fl_Group *save = Fl_Group::current();
     Fl_Group::current(NULL);
-    target_box_ = driver_->new_target_box(bt, x, y, w, h, t, this);
-    g->add(target_box_);
+    Fl_Box *target_box = driver_->new_target_box(bt, x, y, w, h, t, this);
+    target_box->labelfont(FL_ITALIC);
+    g->add(target_box);
+    target_.insert(target_.begin(), target_box);
     Fl_Group::current(save);
+    return target_box;
   }
 }
 
@@ -97,8 +113,8 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
     int deltax = Fl::event_x_root() - fromx;
     int deltay = Fl::event_y_root() - fromy;
     dock->window()->position(winx + deltax, winy + deltay);
-    Fl_Box *target = dock->target_box();
-    if (target) {
+    for (int i = 0; i < dock->target_count(); i++) {
+      Fl_Box *target = dock->target_[i];
       int target_x, target_y;
       Fl_Window *top = target->top_window_offset(target_x, target_y);
       target_x += top->x();
@@ -119,6 +135,8 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
           box->redraw();
           target->color(FL_RED);
           target->redraw();
+          dock->target_index_ = i;
+          break;
         } else {
           dock->state = Fl_Dockable_Group::DRAG;
           box->label("Drag");
@@ -126,12 +144,13 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
           box->redraw();
           target->color(FL_BACKGROUND_COLOR);
           target->redraw();
+          dock->target_index_ = -1;
         }
       }
     }
     return 1;
   } else if (event == FL_RELEASE && dock->state == Fl_Dockable_Group::DOCK) { // Dock dockable in place
-    Fl_Box *target = dock->target_box();
+    Fl_Box *target = dock->target_box(dock->target_index_);
     Fl_Window *parent = target->window();
     target->hide();
     Fl_Window *top = dock->window();
@@ -144,7 +163,6 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
     dock->state = Fl_Dockable_Group::DOCKED;
     box->color(FL_BACKGROUND_COLOR);
     dock->target_box(FL_NO_BOX, 0, 0, 0, 0, NULL, NULL);
-    delete target;
     dock->clear_visible();
     dock->show();
     return 1;

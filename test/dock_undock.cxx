@@ -17,7 +17,6 @@ int main(int argc, char **argv) {
   Fl_Window *destination = new Fl_Window(source->x(), source->y() + source->h() + 50, 340, 180, "destination");
   destination->end();
   dock->target_box(FL_DOWN_BOX, 20, 40, 60, 30, "Target", destination);
-  dock->target_box()->labelfont(FL_ITALIC);
   
   destination->show(argc, argv);
   source->show();

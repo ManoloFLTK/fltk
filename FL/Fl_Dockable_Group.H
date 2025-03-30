@@ -29,13 +29,17 @@ class Fl_Dockable_Group_Driver;
 class Fl_Dockable_Group : public Fl_Group {
   friend class Fl_Dockable_Group_Driver;
 private:
-  Fl_Box *target_box_;
   Fl_Dockable_Group_Driver *driver_;
+  std::vector<Fl_Box *>target_; // vector of target boxes
+  int target_index_; // index in vector to target where docking will occur
 public:
   Fl_Dockable_Group(int x, int y, int w, int h, const char *t=0);
+  virtual ~Fl_Dockable_Group();
   void command_box(int x, int y, int w, int h, const char *t);
-  void target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Group *g);
-  Fl_Box *target_box() { return target_box_; }
+  Fl_Box *target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Group *g);
+  Fl_Box *target_box(int n) { return target_[n]; }
+  int target_count() { return (int)target_.size(); }
+  int target_index() { return target_index_; }
   enum {UNDOCK, DRAG, DOCK, DOCKED} state;
 };
 
