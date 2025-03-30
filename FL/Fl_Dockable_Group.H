@@ -17,8 +17,8 @@
 /* \file
    Fl_Dockable_Group widget . */
 
-#ifndef Fl_Dockable_Window_H
-#define Fl_Dockable_Window_H
+#ifndef Fl_Dockable_Group_H
+#define Fl_Dockable_Group_H
 
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Box.H>
@@ -38,4 +38,4 @@ public:
   Fl_Box *target_box() { return target_box_; }
 };
 
-#endif // Fl_Dockable_Window_H
+#endif // Fl_Dockable_Group_H
