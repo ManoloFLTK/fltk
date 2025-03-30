@@ -16,9 +16,9 @@
 
 #include <FL/platform.H>
 
-class Fl_Dockable_Window_Driver {
+class Fl_Dockable_Group_Driver {
 protected:
-  static void delete_win_cb(Fl_Dockable_Window *);
+  static void delete_win_cb(Fl_Window *);
 public:
   class drag_box_out : public Fl_Box {
   public:
@@ -28,34 +28,33 @@ public:
     }
     int handle(int event) FL_OVERRIDE;
   };
-  virtual void delete_win(Fl_Dockable_Window *dock);
-  virtual Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t) {
+  virtual void delete_win(Fl_Dockable_Group *dock);
+  virtual Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Dockable_Group*) {
     return new Fl_Box(bt, x, y, w, h, t);
   }
   virtual void command_box(Fl_Box *) {}
   virtual int handle(drag_box_out *, int event);
-  static Fl_Box **target_box_address(Fl_Dockable_Window *dock) { return &dock->target_box_; }
-  static Fl_Dockable_Window_Driver *driver(Fl_Dockable_Window *dock) { return dock->driver_; }
+  static Fl_Box **target_box_address(Fl_Dockable_Group *dock) { return &dock->target_box_; }
+  static Fl_Dockable_Group_Driver *driver(Fl_Dockable_Group *dock) { return dock->driver_; }
 };
 
 
 #ifdef FLTK_USE_WAYLAND
 
-class Fl_Wayland_Dockable_Window_Driver : public Fl_Dockable_Window_Driver {
+class Fl_Wayland_Dockable_Group_Driver : public Fl_Dockable_Group_Driver {
 private:
-  Fl_Dockable_Window *old_dock_;
   Fl_Box *command_box_;
   struct xdg_toplevel_drag_v1 *drag_;
-  static Fl_Dockable_Window *copy_(Fl_Dockable_Window *from, const char *t);
+  static Fl_Window *copy_(Fl_Dockable_Group *from, drag_box_out *box, const char *t);
 public:
   class target_box_class : public Fl_Box {
     public:
       target_box_class(Fl_Boxtype bt, int x, int y, int w, int h, const char *t) : Fl_Box(bt,x,y,w,h,t) {}
       int handle(int event) FL_OVERRIDE;
   };
-  Fl_Wayland_Dockable_Window_Driver();
-  void delete_win(Fl_Dockable_Window *dock) FL_OVERRIDE;
-  Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t) FL_OVERRIDE;
+  Fl_Wayland_Dockable_Group_Driver();
+  void delete_win(Fl_Dockable_Group *dock) FL_OVERRIDE;
+  Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Dockable_Group*) FL_OVERRIDE;
   void command_box(Fl_Box *b) FL_OVERRIDE;
   int handle(drag_box_out *, int event) FL_OVERRIDE;
 };
