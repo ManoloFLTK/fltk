@@ -33,7 +33,6 @@ public:
   }
   virtual void command_box(Fl_Box *) {}
   virtual int handle(drag_box_out *, int event);
-  static Fl_Box **target_box_address(Fl_Dockable_Group *dock) { return &dock->target_box_; }
   static Fl_Dockable_Group_Driver *driver(Fl_Dockable_Group *dock) { return dock->driver_; }
 };
 
