@@ -23,6 +23,7 @@
 
 Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) : Fl_Group(x,y,w,h,t) {
   target_box_ = NULL;
+  state = UNDOCK;
 #ifdef FLTK_USE_WAYLAND
   if (fl_wl_display()) {
     driver_ = new Fl_Wayland_Dockable_Group_Driver();
@@ -65,7 +66,7 @@ int Fl_Dockable_Group_Driver::drag_box_out::handle(int event) {
 int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box, int event) {
   static int fromx, fromy, winx, winy;
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)box->parent();
-  if (event == FL_PUSH && (Fl::event_state() & FL_BUTTON1) && strcmp(box->label(), "Undock")==0) {
+  if (event == FL_PUSH && (Fl::event_state() & FL_BUTTON1) && dock->state == Fl_Dockable_Group::UNDOCK) {
     Fl_Group *top = dock->parent();
     Fl_Window *top_win = top->top_window();
     fromx = Fl::event_x_root();
@@ -87,10 +88,12 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
     win->border(0);
     box->can_dock_ = false;
     win->show();
+    dock->state = Fl_Dockable_Group::DRAG;
     return 1;
-  } else if (event == FL_PUSH && !dock->window()->parent()) {
+  } else if (event == FL_PUSH && dock->state == Fl_Dockable_Group::DRAG) {
     return 1;
-  } else if (event == FL_DRAG && !dock->window()->parent()) { // Drag dockable around
+  } else if (event == FL_DRAG &&
+             (dock->state == Fl_Dockable_Group::DRAG || dock->state == Fl_Dockable_Group::DOCK)) { // Drag dockable around
     int deltax = Fl::event_x_root() - fromx;
     int deltay = Fl::event_y_root() - fromy;
     dock->window()->position(winx + deltax, winy + deltay);
@@ -111,11 +114,13 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
         box->can_dock_ = new_can_dock;
         if (box->can_dock_){
           box->label("Dock");
+          dock->state = Fl_Dockable_Group::DOCK;
           box->color(FL_RED);
           box->redraw();
           target->color(FL_RED);
           target->redraw();
         } else {
+          dock->state = Fl_Dockable_Group::DRAG;
           box->label("Drag");
           box->color(FL_BACKGROUND_COLOR);
           box->redraw();
@@ -125,7 +130,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
       }
     }
     return 1;
-  } else if (event == FL_RELEASE && !dock->window()->parent() && box->can_dock_) { // Dock dockable in place
+  } else if (event == FL_RELEASE && dock->state == Fl_Dockable_Group::DOCK) { // Dock dockable in place
     Fl_Box *target = dock->target_box();
     Fl_Window *parent = target->window();
     target->hide();
@@ -135,11 +140,13 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
     delete top;
     parent->add(dock);
     dock->position(target->x(), target->y());
-    box->label("Undock");
+    box->label("Docked");
+    dock->state = Fl_Dockable_Group::DOCKED;
     box->color(FL_BACKGROUND_COLOR);
     dock->target_box(FL_NO_BOX, 0, 0, 0, 0, NULL, NULL);
     box->can_dock_ = false;
     delete target;
+    dock->clear_visible();
     dock->show();
     return 1;
   }
