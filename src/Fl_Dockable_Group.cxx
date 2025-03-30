@@ -17,8 +17,8 @@
  Fl_Dockable_Group implementation.
  */
 
-#include <FL/Fl_Dockable_Window.H>
-#include "Fl_Dockable_Window_Driver.H"
+#include <FL/Fl_Dockable_Group.H>
+#include "Fl_Dockable_Group_Driver.H"
 
 
 Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) : Fl_Group(x,y,w,h,t) {

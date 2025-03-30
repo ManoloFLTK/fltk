@@ -18,8 +18,8 @@
  */
 
 
-#include <FL/Fl_Dockable_Window.H>
-#include "../../Fl_Dockable_Window_Driver.H"
+#include <FL/Fl_Dockable_Group.H>
+#include "../../Fl_Dockable_Group_Driver.H"
 #include "Fl_Wayland_Screen_Driver.H"
 #include "Fl_Wayland_Window_Driver.H"
 #include "xdg-shell-client-protocol.h"

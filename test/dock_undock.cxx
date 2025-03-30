@@ -1,4 +1,4 @@
-#include <FL/Fl_Dockable_Window.H>
+#include <FL/Fl_Dockable_Group.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Round_Clock.H>
 

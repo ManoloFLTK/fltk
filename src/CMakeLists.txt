@@ -47,7 +47,7 @@ set(CPPFILES
   Fl_Counter.cxx
   Fl_Device.cxx
   Fl_Dial.cxx
-  Fl_Dockable_Window.cxx
+  Fl_Dockable_Group.cxx
   Fl_Double_Window.cxx
   Fl_File_Browser.cxx
   Fl_File_Chooser.cxx
@@ -300,7 +300,7 @@ elseif(FLTK_BACKEND_WAYLAND)
     drivers/Unix/Fl_Unix_Screen_Driver.cxx
     drivers/Wayland/Fl_Wayland_Screen_Driver.cxx
     drivers/Wayland/Fl_Wayland_Window_Driver.cxx
-    drivers/Wayland/Fl_Wayland_Dockable_Window_Driver.cxx
+    drivers/Wayland/Fl_Wayland_Dockable_Group_Driver.cxx
     drivers/Unix/Fl_Unix_System_Driver.cxx
     drivers/Wayland/Fl_Wayland_Graphics_Driver.cxx
     drivers/Wayland/Fl_Wayland_Copy_Surface_Driver.cxx
