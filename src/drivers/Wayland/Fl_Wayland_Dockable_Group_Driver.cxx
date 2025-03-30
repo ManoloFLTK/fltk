@@ -67,7 +67,6 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(Fl_Dockable_Group *from, drag
   from->state = Fl_Dockable_Group::DRAG;
   box->label("Drag");
   win->border(0);
-  box->can_dock_ = false;
   return win;
 }
 

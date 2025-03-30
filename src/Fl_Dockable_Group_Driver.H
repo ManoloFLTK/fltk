@@ -22,9 +22,8 @@ protected:
 public:
   class drag_box_out : public Fl_Box {
   public:
-    bool can_dock_;
     drag_box_out(Fl_Boxtype b, int x, int y, int w, int h, const char *l) : Fl_Box(b, x, y, w, h, l) {
-      can_dock_ = false;
+      labelsize(12);
     }
     int handle(int event) FL_OVERRIDE;
   };
