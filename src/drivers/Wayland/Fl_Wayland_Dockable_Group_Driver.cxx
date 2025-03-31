@@ -28,6 +28,8 @@
 
 const char *Fl_Wayland_Dockable_Group_Driver::xdg_toplevel_drag_pseudo_mime = "xdg_toplevel_drag_manager";
 
+Fl_Dockable_Group *Fl_Wayland_Dockable_Group_Driver::active_dock = NULL;
+
 
 Fl_Wayland_Dockable_Group_Driver::Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_Group *from) :
   Fl_Dockable_Group_Driver(from) {
@@ -38,9 +40,7 @@ Fl_Wayland_Dockable_Group_Driver::Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_G
 Fl_Box *Fl_Wayland_Dockable_Group_Driver::new_target_box(Fl_Boxtype bt,
                                                           int x, int y, int w, int h, const char *t,
                                                           Fl_Dockable_Group *dock) {
-  Fl_Box *box = new target_box_class(bt, x, y, w, h, t);
-  box->user_data(dock);
-  return box;
+  return new target_box_class(bt, x, y, w, h, t);
 }
 
 
@@ -62,7 +62,7 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(drag_box_out *box, const char
 
 
 int Fl_Wayland_Dockable_Group_Driver::target_box_class::handle(int event) {
-  Fl_Dockable_Group *dock = (Fl_Dockable_Group*)user_data();
+  Fl_Dockable_Group *dock = active_dock;
   if (!dock) return 0;
   Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
   if (event == FL_DND_ENTER) {
@@ -88,7 +88,7 @@ int Fl_Wayland_Dockable_Group_Driver::target_box_class::handle(int event) {
     Fl_Box *target = this;
     Fl_Window *parent = target->window();
     target->hide();
-    user_data(NULL);
+    active_dock = NULL;
     Fl_Window *top = dock->window();
     top->hide();
     top->remove(dock);
@@ -135,6 +135,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
     xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
     xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x() - dock_x, Fl::event_y() - dock_y);
     printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
+    active_dock = dock;
   } else if (event == FL_PUSH && dock->state == Fl_Dockable_Group::DRAG) {
     // catch again a draggable window
     Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
@@ -152,6 +153,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
     printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
     // need to attach AFTER start_drag even though xdg_toplevel_drag protocol doc says opposite!
     xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x(), Fl::event_y());
+    active_dock = dock;
   }
   return 1;
 }
