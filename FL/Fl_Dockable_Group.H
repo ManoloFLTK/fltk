@@ -40,7 +40,7 @@ public:
   virtual ~Fl_Dockable_Group();
   void command_box(int x, int y, int w, int h);
   Fl_Box *command_box() { return command_box_; }
-  Fl_Box *target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Group *g);
+  Fl_Box *target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Group *g);
   Fl_Box *target_box(int n) { return target_[n]; }
   int target_count() { return (int)target_.size(); }
   int target_index() { return target_index_; }

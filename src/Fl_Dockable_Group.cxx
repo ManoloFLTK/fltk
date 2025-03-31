@@ -58,15 +58,14 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
 }
 
 
-Fl_Box *Fl_Dockable_Group::target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Group *g) {
+Fl_Box *Fl_Dockable_Group::target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Group *g) {
   if (w == 0 || h == 0) {
     if (target_index_ >= 0) target_.erase(target_.begin() + target_index_);
     return NULL;
   } else {
     Fl_Group *save = Fl_Group::current();
     Fl_Group::current(NULL);
-    Fl_Box *target_box = driver_->new_target_box(bt, x, y, w, h, t, this);
-    target_box->labelfont(FL_ITALIC);
+    Fl_Box *target_box = driver_->new_target_box(bt, x, y, w, h, this);
     g->add(target_box);
     target_.insert(target_.begin(), target_box);
     Fl_Group::current(save);
@@ -136,22 +135,23 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
         if (new_can_dock){
           Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCK);
           box->redraw();
-          target->color(FL_RED);
-          target->redraw();
           dock->target_index_ = i;
+          target_box_class *target = (target_box_class*)dock->target_box(i);
+          target->state(DOCK_HERE);
           break;
         } else {
           Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DRAG);
           box->redraw();
-          target->color(FL_BACKGROUND_COLOR);
-          target->redraw();
           dock->target_index_ = -1;
+          target_box_class *target = (target_box_class*)dock->target_box(i);
+          target->state(MAY_RECEIVE);
         }
       }
     }
     return 1;
   } else if (event == FL_RELEASE && dock->state == Fl_Dockable_Group::DOCK) { // Dock dockable in place
-    Fl_Box *target = dock->target_box(dock->target_index_);
+    target_box_class *target = (target_box_class*)dock->target_box(dock->target_index_);
+    target->state(INACTIVE);
     Fl_Window *parent = target->window();
     target->hide();
     Fl_Window *top = dock->window();
@@ -161,7 +161,8 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
     parent->add(dock);
     dock->position(target->x(), target->y());
     Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCKED);
-    dock->target_box(FL_NO_BOX, 0, 0, 0, 0, NULL, NULL);
+    dock->target_box(FL_NO_BOX, 0, 0, 0, 0, NULL);
+    target->state(INACTIVE);
     dock->clear_visible();
     dock->show();
     return 1;
@@ -214,4 +215,18 @@ void Fl_Dockable_Group_Driver::state(enum Fl_Dockable_Group::states state) {
   dockable_->command_box()->color(c);
   dockable_->command_box()->labelcolor(fl_contrast(FL_FOREGROUND_COLOR, c));
   dockable_->command_box()->label(t);
+}
+
+
+void Fl_Dockable_Group_Driver::target_box_class::state(enum Fl_Dockable_Group_Driver::target_states s) {
+  state_ = s;
+  Fl_Color c;
+  const char *t = NULL;
+  if (s == Fl_Dockable_Group_Driver::MAY_RECEIVE)  { c = FL_BACKGROUND2_COLOR; t = "Dock target"; }
+  else if (s == Fl_Dockable_Group_Driver::DOCK_HERE) { c = FL_SELECTION_COLOR; t = "Accept"; }
+  else hide();
+  color(c);
+  labelcolor(fl_contrast(FL_FOREGROUND_COLOR, c));
+  label(t);
+  redraw();
 }

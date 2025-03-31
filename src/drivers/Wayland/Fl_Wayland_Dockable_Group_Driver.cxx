@@ -38,9 +38,9 @@ Fl_Wayland_Dockable_Group_Driver::Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_G
 
 
 Fl_Box *Fl_Wayland_Dockable_Group_Driver::new_target_box(Fl_Boxtype bt,
-                                                          int x, int y, int w, int h, const char *t,
+                                                          int x, int y, int w, int h,
                                                           Fl_Dockable_Group *dock) {
-  return new target_box_class(bt, x, y, w, h, t);
+  return new wld_target_box_class(bt, x, y, w, h);
 }
 
 
@@ -61,7 +61,7 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(drag_box_out *box, const char
 }
 
 
-int Fl_Wayland_Dockable_Group_Driver::target_box_class::handle(int event) {
+int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
   Fl_Dockable_Group *dock = active_dock;
   if (!dock) return 0;
   Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
@@ -69,7 +69,7 @@ int Fl_Wayland_Dockable_Group_Driver::target_box_class::handle(int event) {
     //puts("FL_DND_ENTER");
     Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCK);
     dock->command_box()->redraw();
-    color(FL_RED); redraw();
+    state(DOCK_HERE);
     return 1;
   } else if (event == FL_DND_DRAG) {
     //puts("FL_DND_DRAG");
@@ -78,24 +78,22 @@ int Fl_Wayland_Dockable_Group_Driver::target_box_class::handle(int event) {
     //puts("FL_DND_LEAVE");
     Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DRAG);
     dock->command_box()->redraw();
-    color(FL_BACKGROUND_COLOR); redraw();
+    state(MAY_RECEIVE);
     return 1;
   } else if (event == FL_DND_RELEASE && dock->state == Fl_Dockable_Group::DOCK) {
     //puts("FL_DND_RELEASE");
     Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
     xdg_toplevel_drag_v1_destroy(dr->drag_);
     dr->drag_ = NULL;
-    Fl_Box *target = this;
-    Fl_Window *parent = target->window();
-    target->hide();
+    Fl_Window *parent = window();
+    state(Fl_Dockable_Group_Driver::INACTIVE);
     active_dock = NULL;
     Fl_Window *top = dock->window();
     top->hide();
     top->remove(dock);
     delete top;
     parent->add(dock);
-    dock->position(target->x(), target->y());
-    delete target;
+    dock->position(x(), y());
     dock->clear_visible();
     Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCKED);
     dock->show();
