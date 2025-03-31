@@ -36,10 +36,6 @@ Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) 
 
 Fl_Dockable_Group::~Fl_Dockable_Group() {
   while (target_.size()) {
-    Fl_Group *g = target_[0]->parent();
-    g->remove(target_[0]);
-    g->redraw();
-    delete target_[0];
     target_.erase(target_.begin());
   }
 }
@@ -52,7 +48,6 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
 
 Fl_Box *Fl_Dockable_Group::target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Group *g) {
   if (w == 0 || h == 0) {
-    delete target_[target_index_];
     target_.erase(target_.begin() + target_index_);
     return NULL;
   } else {
