@@ -38,13 +38,17 @@ private:
 public:
   Fl_Dockable_Group(int x, int y, int w, int h, const char *t=0);
   virtual ~Fl_Dockable_Group();
-  void command_box(int x, int y, int w, int h, const char *t);
+  void command_box(int x, int y, int w, int h);
   Fl_Box *command_box() { return command_box_; }
   Fl_Box *target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Group *g);
   Fl_Box *target_box(int n) { return target_[n]; }
   int target_count() { return (int)target_.size(); }
   int target_index() { return target_index_; }
-  enum {UNDOCK, DRAG, DOCK, DOCKED} state;
+  void color_for_states(Fl_Color undock = FL_BACKGROUND_COLOR, Fl_Color drag = FL_BACKGROUND2_COLOR,
+                        Fl_Color dock = FL_SELECTION_COLOR, Fl_Color docked = FL_INACTIVE_COLOR);
+  void label_for_states(const char *undock = "Undock", const char *drag = "Drag",
+                        const char *dock = "Dock", const char *docked = "Docked");
+  enum states {UNDOCK, DRAG, DOCK, DOCKED} state;
 };
 
 #endif // Fl_Dockable_Group_H
