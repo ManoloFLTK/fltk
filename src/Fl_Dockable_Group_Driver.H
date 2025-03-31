@@ -19,11 +19,11 @@
 class Fl_Dockable_Group_Driver {
   friend class Fl_Dockable_Group;
 private:
-  Fl_Dockable_Group *dockable_;
   Fl_Color undock_color_, drag_color_, dock_color_, docked_color_;
   const char *undock_label_, *drag_label_, *dock_label_, *docked_label_;
 protected:
   static void delete_win_cb(Fl_Window *);
+  Fl_Dockable_Group *dockable_;
 public:
   class drag_box_out : public Fl_Box {
   public:
@@ -48,7 +48,7 @@ public:
 class Fl_Wayland_Dockable_Group_Driver : public Fl_Dockable_Group_Driver {
 private:
   struct xdg_toplevel_drag_v1 *drag_;
-  static Fl_Window *copy_(Fl_Dockable_Group *from, drag_box_out *box, const char *t);
+  Fl_Window *copy_(drag_box_out *box, const char *t);
   static const char *xdg_toplevel_drag_pseudo_mime;
 public:
   class target_box_class : public Fl_Box {

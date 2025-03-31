@@ -60,7 +60,7 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
 
 Fl_Box *Fl_Dockable_Group::target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Group *g) {
   if (w == 0 || h == 0) {
-    target_.erase(target_.begin() + target_index_);
+    if (target_index_ >= 0) target_.erase(target_.begin() + target_index_);
     return NULL;
   } else {
     Fl_Group *save = Fl_Group::current();
