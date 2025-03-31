@@ -310,10 +310,6 @@ static void data_offer_handle_offer(void *data, struct wl_data_offer *offer,
   } else if (strcmp(mime_type, "UTF8_STRING") == 0 && !fl_selection_type[1]) {
     fl_selection_type[1] = Fl::clipboard_plain_text;
     fl_selection_offer_type = "text/plain";
-  } else if (strcmp(mime_type, "xdg_toplevel_drag_manager") == 0 && !fl_selection_type[1]) {
-    fl_selection_type[1] = Fl::clipboard_plain_text;
-    fl_selection_offer_type = "xdg_toplevel_drag_manager";
-    if (current_drag_offer) wl_data_offer_accept(current_drag_offer, fl_dnd_serial, mime_type);
   }
 }
 

@@ -44,6 +44,7 @@ private:
   Fl_Box *command_box_;
   struct xdg_toplevel_drag_v1 *drag_;
   static Fl_Window *copy_(Fl_Dockable_Group *from, drag_box_out *box, const char *t);
+  static const char *xdg_toplevel_drag_pseudo_mime;
 public:
   class target_box_class : public Fl_Box {
     public:
