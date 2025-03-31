@@ -10,6 +10,7 @@ int main(int argc, char **argv) {
   dock->box(FL_THIN_UP_BOX);
   new Fl_Round_Clock(105, 70, 80, 80);
   new Fl_Clock(205, 70, 80, 80);
+  new Fl_Box(FL_FLAT_BOX, 25, 140, 50, 10, "");
   dock->end();
   source->end();
   dock->command_box(22, 42, 306, 20, "Undock");

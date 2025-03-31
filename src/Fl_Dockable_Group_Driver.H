@@ -27,11 +27,11 @@ public:
     }
     int handle(int event) FL_OVERRIDE;
   };
+  void store_docked_position(Fl_Dockable_Group *dock);
   virtual void delete_win(Fl_Dockable_Group *dock);
   virtual Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Dockable_Group*) {
     return new Fl_Box(bt, x, y, w, h, t);
   }
-  virtual void command_box(Fl_Box *) {}
   virtual int handle(drag_box_out *, int event);
   static Fl_Dockable_Group_Driver *driver(Fl_Dockable_Group *dock) { return dock->driver_; }
 };
@@ -41,7 +41,6 @@ public:
 
 class Fl_Wayland_Dockable_Group_Driver : public Fl_Dockable_Group_Driver {
 private:
-  Fl_Box *command_box_;
   struct xdg_toplevel_drag_v1 *drag_;
   static Fl_Window *copy_(Fl_Dockable_Group *from, drag_box_out *box, const char *t);
   static const char *xdg_toplevel_drag_pseudo_mime;
@@ -54,7 +53,6 @@ public:
   Fl_Wayland_Dockable_Group_Driver();
   void delete_win(Fl_Dockable_Group *dock) FL_OVERRIDE;
   Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, const char *t, Fl_Dockable_Group*) FL_OVERRIDE;
-  void command_box(Fl_Box *b) FL_OVERRIDE;
   int handle(drag_box_out *, int event) FL_OVERRIDE;
 };
 
