@@ -103,7 +103,6 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
       top->remove(dock);
       top->redraw();
       Fl_Window *win = new Fl_Window(winx, winy, dock->w(), dock->h(), "Drag");
-      // TODO fix position of dock's widgets
       dock->position(0,0);
       win->add(dock);
       win->end();
