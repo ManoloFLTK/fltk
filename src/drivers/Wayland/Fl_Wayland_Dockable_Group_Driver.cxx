@@ -44,18 +44,18 @@ Fl_Box *Fl_Wayland_Dockable_Group_Driver::new_target_box(Fl_Boxtype bt,
 }
 
 
-Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(Fl_Dockable_Group *from, drag_box_out *box, const char *t) {
+Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(drag_box_out *box, const char *t) {
   // transform the dockable group into a draggable, borderless toplevel window
-  Fl_Group *top = from->parent();
-  driver(from)->store_docked_position(from);
-  top->remove(from);
+  Fl_Group *top = dockable_->parent();
+  store_docked_position(dockable_);
+  top->remove(dockable_);
   top->redraw();
-  Fl_Window *win = new Fl_Window(0, 0, from->w(), from->h(), t);
-  from->position(0,0);
-  win->add(from);
+  Fl_Window *win = new Fl_Window(dockable_->w(), dockable_->h(), t);
+  dockable_->position(0,0);
+  win->add(dockable_);
   win->end();
   win->callback((Fl_Callback0*)Fl_Dockable_Group_Driver::delete_win_cb);
-  Fl_Dockable_Group_Driver::driver(from)->state(Fl_Dockable_Group::DRAG);
+  state(Fl_Dockable_Group::DRAG);
   win->border(0);
   return win;
 }
@@ -129,7 +129,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
     wl_data_device_start_drag(scr_driver->seat->data_device, scr_driver->seat->data_source,
                               xid->wl_surface, NULL, scr_driver->seat->serial);
     int dock_x = dock->x(), dock_y = dock->y();
-    Fl_Window *new_win = Fl_Wayland_Dockable_Group_Driver::copy_(dock, box, "dragged");
+    Fl_Window *new_win = copy_(box, "dragged");
     new_win->show();
     xid = fl_wl_xid(new_win);
     xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
