@@ -119,10 +119,14 @@ int Fl_Wayland_Dockable_Group_Driver::target_box_class::handle(int event) {
 
 
 int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box, int event) {
-  if (event != FL_PUSH || !(Fl::event_state() & FL_BUTTON1)) return box->Fl_Box::handle(event);
+  static int drag_count;
+  if ((event != FL_PUSH && event != FL_DRAG) || !(Fl::event_state() & FL_BUTTON1))
+    return box->Fl_Box::handle(event);
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)box->parent();
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-  if (dock->state == Fl_Dockable_Group::UNDOCK) {
+  if (event == FL_PUSH && dock->state == Fl_Dockable_Group::UNDOCK) {
+    drag_count = 0;
+  } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && ++drag_count < 5) {
     Fl_Window *top = dock->top_window();
     // It seems that while MUTTER accepts to apply the xdg_toplevel_drag protocol
     // to a subwindow, KWIN doesn't accept it and works OK only when dragging inside a toplevel.
@@ -144,7 +148,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
     xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
     xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x() - dock_x, Fl::event_y() - dock_y);
     printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
-  } else if (dock->state == Fl_Dockable_Group::DRAG) {
+  } else if (event == FL_PUSH && dock->state == Fl_Dockable_Group::DRAG) {
     // catch again a draggable window
     Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
     Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);

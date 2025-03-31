@@ -85,10 +85,11 @@ int Fl_Dockable_Group_Driver::drag_box_out::handle(int event) {
 
 
 int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box, int event) {
-  static int fromx, fromy, winx, winy;
+  static int fromx, fromy, winx, winy, drag_count;
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)box->parent();
   if (event == FL_PUSH && (Fl::event_state() & FL_BUTTON1) &&
       (dock->state == Fl_Dockable_Group::UNDOCK || dock->state == Fl_Dockable_Group::DRAG)) {
+    if (dock->state == Fl_Dockable_Group::UNDOCK) drag_count = 0;
     Fl_Group *top = dock->parent();
     Fl_Window *top_win = top->top_window();
     fromx = Fl::event_x_root();
@@ -97,7 +98,10 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
     if (top->window()) top->window()->top_window_offset(offset_x, offset_y);
     winx = top_win->x_root() + offset_x + dock->x();
     winy = top_win->y_root() + offset_y + dock->y();
-    if (dock->state == Fl_Dockable_Group::UNDOCK) {
+    return 1;
+  } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && (Fl::event_state() & FL_BUTTON1)) {
+    if (++drag_count > 5) {
+      Fl_Group *top = dock->parent();
       // transform the dockable group into a draggable, borderless toplevel window
       store_docked_position(dock);
       top->remove(dock);
