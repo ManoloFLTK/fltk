@@ -41,8 +41,18 @@ Fl_Dockable_Group::~Fl_Dockable_Group() {
 }
 
 void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
-  Fl_Dockable_Group *w = (Fl_Dockable_Group*)win->child(0);
-  w->driver_->delete_win(w);
+  Fl_Dockable_Group *dock = (Fl_Dockable_Group*)win->child(0);
+  win->hide();
+  win->remove(dock);
+  Fl_Group *parent = dock->parent_when_docked_;
+  dock->position(dock->x_when_docked_, dock->y_when_docked_);
+  parent->add(dock);
+  dock->hide(); // to re-activate widgets in dock (e.g. make clocks tick again)
+  dock->show();
+  parent->redraw();
+  dock->state = (dock->target_count() > 0 ? Fl_Dockable_Group::UNDOCK : Fl_Dockable_Group::DOCKED);
+  dock->command_box()->label( (dock->target_count() > 0 ? "Undock" : "Docked") );
+  delete win;
 }
 
 
@@ -89,6 +99,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
     winy = top_win->y_root() + offset_y + dock->y();
     if (dock->state == Fl_Dockable_Group::UNDOCK) {
       // transform the dockable group into a draggable, borderless toplevel window
+      store_docked_position(dock);
       top->remove(dock);
       top->redraw();
       Fl_Window *win = new Fl_Window(winx, winy, dock->w(), dock->h(), "Drag");
@@ -169,5 +180,12 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
 void Fl_Dockable_Group::command_box(int x, int y, int w, int h, const char *t) {
   Fl_Dockable_Group_Driver::drag_box_out *drag = new Fl_Dockable_Group_Driver::drag_box_out(FL_DOWN_BOX, x,y,w,h, t);
   this->add(drag);
-  driver_->command_box(drag);
+  command_box_ = drag;
+}
+
+
+void Fl_Dockable_Group_Driver::store_docked_position(Fl_Dockable_Group *dock) {
+  dock->parent_when_docked_ = dock->parent();
+  dock->x_when_docked_ = dock->x();
+  dock->y_when_docked_ = dock->y();
 }

@@ -31,7 +31,6 @@ const char *Fl_Wayland_Dockable_Group_Driver::xdg_toplevel_drag_pseudo_mime = "x
 
 Fl_Wayland_Dockable_Group_Driver::Fl_Wayland_Dockable_Group_Driver() {
   drag_ = NULL;
-  command_box_ = NULL;
 }
 
 
@@ -51,14 +50,10 @@ Fl_Box *Fl_Wayland_Dockable_Group_Driver::new_target_box(Fl_Boxtype bt,
 }
 
 
-void Fl_Wayland_Dockable_Group_Driver::command_box(Fl_Box *b) {
-  command_box_ = b;
-}
-
-
 Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(Fl_Dockable_Group *from, drag_box_out *box, const char *t) {
   // transform the dockable group into a draggable, borderless toplevel window
   Fl_Group *top = from->parent();
+  driver(from)->store_docked_position(from);
   top->remove(from);
   top->redraw();
   Fl_Window *win = new Fl_Window(0, 0, from->w(), from->h(), t);
@@ -81,9 +76,9 @@ int Fl_Wayland_Dockable_Group_Driver::target_box_class::handle(int event) {
   if (event == FL_DND_ENTER) {
     //puts("FL_DND_ENTER");
     dock->state = Fl_Dockable_Group::DOCK;
-    dr->command_box_->label("Dock");
-    dr->command_box_->color(FL_RED);
-    dr->command_box_->redraw();
+    dock->command_box()->label("Dock");
+    dock->command_box()->color(FL_RED);
+    dock->command_box()->redraw();
     color(FL_RED); redraw();
     return 1;
   } else if (event == FL_DND_DRAG) {
@@ -92,9 +87,9 @@ int Fl_Wayland_Dockable_Group_Driver::target_box_class::handle(int event) {
   } else if (event == FL_DND_LEAVE) {
     //puts("FL_DND_LEAVE");
     dock->state = Fl_Dockable_Group::DRAG;
-    dr->command_box_->label("Drag");
-    dr->command_box_->color(FL_BACKGROUND_COLOR);
-    dr->command_box_->redraw();
+    dock->command_box()->label("Drag");
+    dock->command_box()->color(FL_BACKGROUND_COLOR);
+    dock->command_box()->redraw();
     color(FL_BACKGROUND_COLOR); redraw();
     return 1;
   } else if (event == FL_DND_RELEASE && dock->state == Fl_Dockable_Group::DOCK) {
@@ -116,8 +111,8 @@ int Fl_Wayland_Dockable_Group_Driver::target_box_class::handle(int event) {
     delete target;
     dock->clear_visible();
     dock->show();
-    dr->command_box_->label("Docked");
-    dr->command_box_->color(FL_BACKGROUND_COLOR);
+    dock->command_box()->label("Docked");
+    dock->command_box()->color(FL_BACKGROUND_COLOR);
     return 0; // not to generate FL_PASTE event
   }
   return Fl_Box::handle(event);
