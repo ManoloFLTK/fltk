@@ -57,7 +57,6 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(Fl_Dockable_Group *from, drag
   top->remove(from);
   top->redraw();
   Fl_Window *win = new Fl_Window(0, 0, from->w(), from->h(), t);
-  // TODO fix position of from's widgets
   from->position(0,0);
   win->add(from);
   win->end();
