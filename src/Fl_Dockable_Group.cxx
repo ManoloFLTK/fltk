@@ -19,6 +19,7 @@
 
 #include <FL/Fl_Dockable_Group.H>
 #include "Fl_Dockable_Group_Driver.H"
+#include <FL/Fl_Tabs.H>
 
 
 Fl_Dockable_Group *Fl_Dockable_Group::active_dockable = NULL;
@@ -46,6 +47,7 @@ Fl_Dockable_Group::~Fl_Dockable_Group() {
   }
 }
 
+
 void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)win->child(0);
   win->hide();
@@ -55,6 +57,8 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
   parent->add(dock);
   dock->hide(); // to re-activate widgets in dock (e.g. make clocks tick again)
   dock->show();
+  Fl_Tabs *tabs = dynamic_cast<Fl_Tabs*>(parent);
+  if (tabs) tabs->value(dock);
   parent->redraw();
   Fl_Dockable_Group_Driver::driver(dock)->state( (dock->target_count() > 0 ? Fl_Dockable_Group::UNDOCK : Fl_Dockable_Group::DOCKED) );
   Fl_Dockable_Group::active_dockable = NULL;
@@ -110,10 +114,12 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
       dock->position(0,0);
       win->add(dock);
       win->end();
+      dock->show(); // necessary for tabs
       win->callback((Fl_Callback0*)Fl_Dockable_Group_Driver::delete_win_cb);
       Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DRAG);
       win->border(0);
       win->show();
+      Fl::pushed(dock->command_box()); // necessary for tabs
     }
     return 1;
   } else if (event == FL_DRAG &&
@@ -157,7 +163,8 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
     Fl_Dockable_Group::active_dockable = NULL;
     target_box_class *target = (target_box_class*)dock->target_box(dock->target_index_);
     target->state(INACTIVE);
-    Fl_Window *parent = target->window();
+    Fl_Group *parent = target->parent();
+    parent->remove(target);
     target->hide();
     Fl_Window *top = dock->window();
     top->hide();
