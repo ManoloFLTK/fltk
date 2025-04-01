@@ -1368,6 +1368,7 @@ Fl_Wayland_Screen_Driver::Fl_Wayland_Screen_Driver() : Fl_Unix_Screen_Driver() {
   text_input_base = NULL;
   reset_cursor();
   wl_registry = NULL;
+  xdg_toplevel_drag = NULL;
 }
 
 

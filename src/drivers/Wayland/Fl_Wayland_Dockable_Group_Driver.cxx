@@ -63,7 +63,6 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(drag_box_out *box, const char
 int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
   Fl_Dockable_Group *dock = Fl_Dockable_Group::active_dockable;
   if (!dock) return 0;
-  Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
   if (event == FL_DND_ENTER) {
     //puts("FL_DND_ENTER");
     Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCK);
@@ -108,10 +107,14 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
 
 int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box, int event) {
   static int drag_count;
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+  Fl_Dockable_Group *dock = (Fl_Dockable_Group*)box->parent();
+  if (!scr_driver->xdg_toplevel_drag && dock->state != Fl_Dockable_Group::DOCKED) {
+    driver(dock)->state(Fl_Dockable_Group::DOCKED);
+    return 0;
+  }
   if ((event != FL_PUSH && event != FL_DRAG) || !(Fl::event_state() & FL_BUTTON1))
     return box->Fl_Box::handle(event);
-  Fl_Dockable_Group *dock = (Fl_Dockable_Group*)box->parent();
-  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   if (event == FL_PUSH && dock->state == Fl_Dockable_Group::UNDOCK) {
     drag_count = 0;
   } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && ++drag_count < 5) {
