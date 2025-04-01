@@ -25,6 +25,7 @@
 #  include "Fl_Wayland_Window_Driver.H"
 #  include "../Unix/Fl_Unix_System_Driver.H"
 #  include "Fl_Wayland_Graphics_Driver.H"
+#  include "../../Fl_Dockable_Group_Driver.H"
 #  include "../../flstring.h" // includes <string.h>
 
 #  include <errno.h>
@@ -310,6 +311,10 @@ static void data_offer_handle_offer(void *data, struct wl_data_offer *offer,
   } else if (strcmp(mime_type, "UTF8_STRING") == 0 && !fl_selection_type[1]) {
     fl_selection_type[1] = Fl::clipboard_plain_text;
     fl_selection_offer_type = "text/plain";
+  } else if (strcmp(mime_type, Fl_Wayland_Dockable_Group_Driver::xdg_toplevel_drag_pseudo_mime) == 0) {
+    fl_selection_type[1] = mime_type;
+    fl_selection_offer_type = mime_type;
+    //printf("set fl_selection_offer_type=%s\n",mime_type);
   }
 }
 
@@ -490,7 +495,8 @@ static void data_device_handle_motion(void *data, struct wl_data_device *data_de
     Fl::e_x_root = Fl::e_x + fl_dnd_target_window->x();
     Fl::e_y_root = Fl::e_y + fl_dnd_target_window->y();
     ret = Fl::handle(FL_DND_DRAG, fl_dnd_target_window);
-    if (Fl::belowmouse()) Fl::belowmouse()->take_focus();
+    if (Fl::belowmouse() && Fl::clipboard_contains(Fl::clipboard_plain_text))
+      Fl::belowmouse()->take_focus();
   }
   uint32_t supported_actions =  ret && (Fl::pushed() || !doing_dnd) ?
     WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY : WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
