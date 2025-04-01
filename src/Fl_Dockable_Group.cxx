@@ -134,14 +134,12 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
       if (can_dock != new_can_dock) {
         if (new_can_dock){
           Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCK);
-          box->redraw();
           dock->target_index_ = i;
           target_box_class *target = (target_box_class*)dock->target_box(i);
           target->state(DOCK_HERE);
           break;
         } else {
           Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DRAG);
-          box->redraw();
           dock->target_index_ = -1;
           target_box_class *target = (target_box_class*)dock->target_box(i);
           target->state(MAY_RECEIVE);
@@ -215,6 +213,7 @@ void Fl_Dockable_Group_Driver::state(enum Fl_Dockable_Group::states state) {
   dockable_->command_box()->color(c);
   dockable_->command_box()->labelcolor(fl_contrast(FL_FOREGROUND_COLOR, c));
   dockable_->command_box()->label(t);
+  dockable_->command_box()->redraw();
 }
 
 

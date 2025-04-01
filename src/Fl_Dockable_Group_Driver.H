@@ -15,6 +15,7 @@
 //
 
 #include <FL/platform.H>
+#include <FL/Fl_Dockable_Group.H>
 
 class Fl_Dockable_Group_Driver {
   friend class Fl_Dockable_Group;
@@ -59,7 +60,6 @@ class Fl_Wayland_Dockable_Group_Driver : public Fl_Dockable_Group_Driver {
 private:
   struct xdg_toplevel_drag_v1 *drag_;
   Fl_Window *copy_(drag_box_out *box, const char *t);
-  static const char *xdg_toplevel_drag_pseudo_mime;
 public:
   class wld_target_box_class : public target_box_class {
     public:
@@ -67,6 +67,7 @@ public:
       int handle(int event) FL_OVERRIDE;
   };
   Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_Group *from);
+  static const char *xdg_toplevel_drag_pseudo_mime;
   static Fl_Dockable_Group *active_dock;
   Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Dockable_Group*) FL_OVERRIDE;
   int handle(drag_box_out *, int event) FL_OVERRIDE;

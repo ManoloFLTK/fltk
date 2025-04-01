@@ -1,6 +1,7 @@
 #include <FL/Fl_Dockable_Group.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Round_Clock.H>
+#include <FL/Fl_Input.H>
 
 
 int main(int argc, char **argv) {
@@ -15,6 +16,7 @@ int main(int argc, char **argv) {
   dock->command_box(22, 42, 306, 20);
   
   Fl_Window *destination = new Fl_Window(source->x(), source->y() + source->h() + 50, 340, 180, "destination");
+  new Fl_Input(5,5,100,30, NULL);
   destination->end();
   dock->target_box(FL_DOWN_BOX, 20, 40, 80, 30, destination);
   
