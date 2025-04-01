@@ -19,6 +19,7 @@
 
 
 #include <FL/Fl_Dockable_Group.H>
+#include <FL/Fl_Tabs.H>
 #include "../../Fl_Dockable_Group_Driver.H"
 #include "Fl_Wayland_Screen_Driver.H"
 #include "Fl_Wayland_Window_Driver.H"
@@ -84,7 +85,8 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
     xdg_toplevel_drag_v1_destroy(dr->drag_);
     dr->drag_ = NULL;
     Fl_Dockable_Group::active_dockable = NULL;
-    Fl_Window *parent = window();
+    Fl_Group *parent = this->parent();
+    parent->remove(this);
     state(Fl_Dockable_Group_Driver::INACTIVE);
     Fl_Dockable_Group::active_dockable = NULL;
     Fl_Window *top = dock->window();
@@ -96,6 +98,8 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
     dock->clear_visible();
     Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCKED);
     dock->show();
+    Fl_Tabs *tabs = dynamic_cast<Fl_Tabs*>(parent);
+    if (tabs) tabs->value(dock);
     return 0; // not to generate FL_PASTE event
   }
   return Fl_Box::handle(event);
@@ -127,7 +131,9 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
                               xid->wl_surface, NULL, scr_driver->seat->serial);
     int dock_x = dock->x(), dock_y = dock->y();
     Fl_Window *new_win = copy_(box, "dragged");
+    box->parent()->show(); // necessary for tabs
     new_win->show();
+    Fl::pushed(dock->command_box()); // necessary for tabs
     xid = fl_wl_xid(new_win);
     xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
     xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x() - dock_x, Fl::event_y() - dock_y);
