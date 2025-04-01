@@ -68,7 +68,6 @@ public:
   };
   Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_Group *from);
   static const char *xdg_toplevel_drag_pseudo_mime;
-  static Fl_Dockable_Group *active_dock;
   Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Dockable_Group*) FL_OVERRIDE;
   int handle(drag_box_out *, int event) FL_OVERRIDE;
 };

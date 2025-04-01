@@ -49,6 +49,7 @@ public:
   void label_for_states(const char *undock = "Undock", const char *drag = "Drag",
                         const char *dock = "Dock", const char *docked = "Docked");
   enum states {UNDOCK, DRAG, DOCK, DOCKED} state;
+  static Fl_Dockable_Group *active_dockable;
 };
 
 #endif // Fl_Dockable_Group_H
