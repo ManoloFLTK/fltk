@@ -98,6 +98,7 @@ static Fl_Window *fl_dnd_target_window = 0;
 static wl_surface *fl_dnd_target_surface = 0;
 static bool doing_dnd = false; // true when DnD is in action
 static wl_surface *dnd_icon = NULL; // non null when DnD uses text as cursor
+wl_surface **Fl_Wayland_Screen_Driver::fl_dnd_icon = &dnd_icon;
 static wl_cursor* save_cursor = NULL; // non null when DnD uses "dnd-copy" cursor
 
 

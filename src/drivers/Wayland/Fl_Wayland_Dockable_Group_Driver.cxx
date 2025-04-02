@@ -65,25 +65,6 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(cmd_box_class *box, const cha
 }
 
 
-void Fl_Wayland_Dockable_Group_Driver::handle_dnd_release(
-                            Fl_Wayland_Dockable_Group_Driver::wld_target_box_class *box) {
-#ifdef HAVE_XDG_TOPLEVEL_DRAG
-  Fl_Dockable_Group *dock = this->dockable_;
-  xdg_toplevel_drag_v1_destroy(this->drag_);
-  this->drag_ = NULL;
-  Fl_Dockable_Group::active_dockable = NULL;
-  Fl_Group *parent = box->parent();
-  parent->remove(box);
-  box->state(Fl_Dockable_Group_Driver::INACTIVE);
-  Fl_Dockable_Group::active_dockable = NULL;
-  Fl_Window *top = dock->window();
-  top->hide();
-  top->remove(dock);
-  delete top;
-#endif
-}
-
-
 int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
   Fl_Dockable_Group *dock = Fl_Dockable_Group::active_dockable;
   if (!dock) return 0;
@@ -103,14 +84,28 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
     return 1;
   } else if (event == FL_DND_RELEASE) {
     //puts("FL_DND_RELEASE");
-    Fl_Group *parent = this->parent();
-    ((Fl_Wayland_Dockable_Group_Driver*)driver(dock))->handle_dnd_release(this);
-    parent->add(dock);
+    Fl_Dockable_Group::active_dockable = NULL;
+    Fl_Group *target_group = this->parent();
+    target_group->remove(this);
+    this->state(Fl_Dockable_Group_Driver::INACTIVE);
+    Fl_Dockable_Group::active_dockable = NULL;
+#ifdef HAVE_XDG_TOPLEVEL_DRAG
+    if (scr_driver->xdg_toplevel_drag) {
+      Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)driver(dock);
+      xdg_toplevel_drag_v1_destroy(dr->drag_);
+      dr->drag_ = NULL;
+      Fl_Window *top = dock->window();
+      top->hide();
+      top->remove(dock);
+      delete top;
+    }
+#endif
+    target_group->add(dock);
     dock->resize(x(), y(), w(), h());
     dock->clear_visible();
     Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCKED);
     dock->show();
-    Fl_Tabs *tabs = dynamic_cast<Fl_Tabs*>(parent);
+    Fl_Tabs *tabs = dynamic_cast<Fl_Tabs*>(target_group);
     if (tabs) tabs->value(dock);
     return 0; // not to generate FL_PASTE event
   }
@@ -219,31 +214,20 @@ int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_bo
     wl_data_source_offer(scr_driver->seat->data_source, xdg_toplevel_drag_pseudo_mime);
     wl_data_source_set_actions(scr_driver->seat->data_source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
     Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
-    struct wl_surface *dnd_icon = wl_compositor_create_surface(scr_driver->wl_compositor);
+    *Fl_Wayland_Screen_Driver::fl_dnd_icon = wl_compositor_create_surface(scr_driver->wl_compositor);
     //printf("start_drag surface=%p serial=%u\n",xid->wl_surface, scr_driver->seat->serial);
     wl_data_device_start_drag(scr_driver->seat->data_device, scr_driver->seat->data_source,
-                              xid->wl_surface, dnd_icon, scr_driver->seat->serial);
+                              xid->wl_surface, *Fl_Wayland_Screen_Driver::fl_dnd_icon, scr_driver->seat->serial);
     int s = Fl_Wayland_Window_Driver::driver(box->top_window())->wld_scale();
     struct Fl_Wayland_Graphics_Driver::wld_buffer *off = (struct Fl_Wayland_Graphics_Driver::wld_buffer *)offscreen_from_group(dock, s);
-    wl_surface_attach(dnd_icon, off->wl_buffer, 0, 0);
-    wl_surface_set_buffer_scale(dnd_icon, s);
-    wl_surface_damage(dnd_icon, 0, 0, 10000, 10000);
-    wl_surface_commit(dnd_icon);
-    wl_surface_set_user_data(dnd_icon, off);
+    wl_surface_attach(*Fl_Wayland_Screen_Driver::fl_dnd_icon, off->wl_buffer, 0, 0);
+    wl_surface_set_buffer_scale(*Fl_Wayland_Screen_Driver::fl_dnd_icon, s);
+    wl_surface_damage(*Fl_Wayland_Screen_Driver::fl_dnd_icon, 0, 0, 10000, 10000);
+    wl_surface_commit(*Fl_Wayland_Screen_Driver::fl_dnd_icon);
+    wl_surface_set_user_data(*Fl_Wayland_Screen_Driver::fl_dnd_icon, off);
     Fl_Dockable_Group::active_dockable = dock;
     state(Fl_Dockable_Group::UNDOCK);
     return 1;
   }
   return box->Fl_Box::handle(event);
-}
-
-
-void Fl_oldWayland_Dockable_Group_Driver::handle_dnd_release(
-                    Fl_Wayland_Dockable_Group_Driver::wld_target_box_class *box) {
-  Fl_Dockable_Group *dock = this->dockable_;
-  Fl_Dockable_Group::active_dockable = NULL;
-  Fl_Group *parent = box->parent();
-  parent->remove(box);
-  box->state(Fl_Dockable_Group_Driver::INACTIVE);
-  Fl_Dockable_Group::active_dockable = NULL;
 }

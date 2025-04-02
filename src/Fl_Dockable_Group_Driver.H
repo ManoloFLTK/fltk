@@ -73,7 +73,6 @@ public:
   static const char *xdg_toplevel_drag_pseudo_mime;
   Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Dockable_Group*) FL_OVERRIDE;
   int handle(cmd_box_class *, int event) FL_OVERRIDE;
-  virtual void handle_dnd_release(Fl_Wayland_Dockable_Group_Driver::wld_target_box_class *);
 };
 
 
@@ -81,6 +80,5 @@ class Fl_oldWayland_Dockable_Group_Driver : public Fl_Wayland_Dockable_Group_Dri
 public:
   Fl_oldWayland_Dockable_Group_Driver(Fl_Dockable_Group *from) : Fl_Wayland_Dockable_Group_Driver(from) {}
   int handle(cmd_box_class *, int event) FL_OVERRIDE;
-  void handle_dnd_release(Fl_Wayland_Dockable_Group_Driver::wld_target_box_class *) FL_OVERRIDE;
 };
 #endif // FLTK_USE_WAYLAND
