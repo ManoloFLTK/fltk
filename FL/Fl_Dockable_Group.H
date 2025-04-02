@@ -34,6 +34,7 @@ private:
   std::vector<Fl_Box *>target_; // vector of target boxes
   int target_index_; // index in vector to target where docking will occur
   Fl_Group *parent_when_docked_;
+  Fl_Widget *next_in_group_when_docked_;
   int x_when_docked_, y_when_docked_;
 public:
   Fl_Dockable_Group(int x, int y, int w, int h, const char *t=0);
