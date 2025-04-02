@@ -45,7 +45,7 @@ Fl_Box *Fl_Wayland_Dockable_Group_Driver::new_target_box(Fl_Boxtype bt,
 }
 
 
-Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(drag_box_out *box, const char *t) {
+Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(cmd_box_class *box, const char *t) {
   // transform the dockable group into a draggable, borderless toplevel window
   Fl_Group *top = dockable_->parent();
   store_docked_position(dockable_);
@@ -109,7 +109,7 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
 }
 
 
-int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box, int event) {
+int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *box, int event) {
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
   static int drag_count;
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
@@ -168,7 +168,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
 }
 
 
-int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box, int event) {
+int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *box, int event) {
   static int drag_count;
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)box->parent();
@@ -178,8 +178,6 @@ int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_b
     drag_count = 0;
   } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && ++drag_count < 5) {
     Fl_Window *top = dock->top_window();
-    // It seems that while MUTTER accepts to apply the xdg_toplevel_drag protocol
-    // to a subwindow, KWIN doesn't accept it and works OK only when dragging inside a toplevel.
     struct wld_window *xid = fl_wl_xid(dock->window());
     scr_driver->seat->data_source = wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
     wl_data_source_add_listener(scr_driver->seat->data_source, Fl_Wayland_Screen_Driver::p_data_source_listener, (void*)0);
