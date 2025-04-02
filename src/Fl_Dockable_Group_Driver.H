@@ -26,9 +26,9 @@ protected:
   static void delete_win_cb(Fl_Window *);
   Fl_Dockable_Group *dockable_;
 public:
-  class drag_box_out : public Fl_Box {
+  class cmd_box_class : public Fl_Box {
   public:
-    drag_box_out(Fl_Boxtype b, int x, int y, int w, int h, const char *l) : Fl_Box(b, x, y, w, h, l) {
+    cmd_box_class(Fl_Boxtype b, int x, int y, int w, int h, const char *l) : Fl_Box(b, x, y, w, h, l) {
       labelsize(12);
     }
     int handle(int event) FL_OVERRIDE;
@@ -48,7 +48,7 @@ public:
   virtual Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Dockable_Group*) {
     return new target_box_class(bt, x, y, w, h);
   }
-  virtual int handle(drag_box_out *, int event);
+  virtual int handle(cmd_box_class *, int event);
   static Fl_Dockable_Group_Driver *driver(Fl_Dockable_Group *dock) { return dock->driver_; }
   void state(enum Fl_Dockable_Group::states);
 };
@@ -59,7 +59,7 @@ public:
 class Fl_Wayland_Dockable_Group_Driver : public Fl_Dockable_Group_Driver {
 private:
   struct xdg_toplevel_drag_v1 *drag_;
-  Fl_Window *copy_(drag_box_out *box, const char *t);
+  Fl_Window *copy_(cmd_box_class *box, const char *t);
 public:
   class wld_target_box_class : public target_box_class {
     public:
@@ -69,13 +69,13 @@ public:
   Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_Group *from);
   static const char *xdg_toplevel_drag_pseudo_mime;
   Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Dockable_Group*) FL_OVERRIDE;
-  int handle(drag_box_out *, int event) FL_OVERRIDE;
+  int handle(cmd_box_class *, int event) FL_OVERRIDE;
 };
 
 
 class Fl_oldWayland_Dockable_Group_Driver : public Fl_Wayland_Dockable_Group_Driver {
 public:
   Fl_oldWayland_Dockable_Group_Driver(Fl_Dockable_Group *from) : Fl_Wayland_Dockable_Group_Driver(from) {}
-  int handle(drag_box_out *, int event) FL_OVERRIDE;
+  int handle(cmd_box_class *, int event) FL_OVERRIDE;
 };
 #endif // FLTK_USE_WAYLAND

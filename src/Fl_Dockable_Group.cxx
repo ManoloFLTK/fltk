@@ -87,13 +87,13 @@ Fl_Box *Fl_Dockable_Group::target_box(Fl_Boxtype bt, int x, int y, int w, int h,
 }
 
 
-int Fl_Dockable_Group_Driver::drag_box_out::handle(int event) {
+int Fl_Dockable_Group_Driver::cmd_box_class::handle(int event) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)parent();
   return Fl_Dockable_Group_Driver::driver(dock)->handle(this, event);
 }
 
 
-int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box, int event) {
+int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *box, int event) {
   static int fromx, fromy, winx, winy, drag_count;
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)box->parent();
   if (event == FL_PUSH && (Fl::event_state() & FL_BUTTON1) &&
@@ -189,7 +189,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box
 
 
 void Fl_Dockable_Group::command_box(int x, int y, int w, int h) {
-  Fl_Dockable_Group_Driver::drag_box_out *drag = new Fl_Dockable_Group_Driver::drag_box_out(FL_DOWN_BOX, x,y,w,h, NULL);
+  Fl_Dockable_Group_Driver::cmd_box_class *drag = new Fl_Dockable_Group_Driver::cmd_box_class(FL_DOWN_BOX, x,y,w,h, NULL);
   this->add(drag);
   command_box_ = drag;
   driver_->state(UNDOCK);
