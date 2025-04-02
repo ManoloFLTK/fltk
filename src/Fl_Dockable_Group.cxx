@@ -19,7 +19,6 @@
 
 #include <FL/Fl_Dockable_Group.H>
 #include "Fl_Dockable_Group_Driver.H"
-#include <FL/Fl_Tabs.H>
 #ifdef FLTK_USE_WAYLAND
 #  include "drivers/Wayland/Fl_Wayland_Screen_Driver.H"
 #endif
@@ -61,11 +60,10 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
   win->remove(dock);
   Fl_Group *parent = dock->parent_when_docked_;
   dock->position(dock->x_when_docked_, dock->y_when_docked_);
-  parent->add(dock);
+  if (dock->next_in_group_when_docked_) parent->insert(*dock, dock->next_in_group_when_docked_);
+  else parent->add(dock);
   dock->hide(); // to re-activate widgets in dock (e.g. make clocks tick again)
   dock->show();
-  Fl_Tabs *tabs = dynamic_cast<Fl_Tabs*>(parent);
-  if (tabs) tabs->value(dock);
   parent->redraw();
   Fl_Dockable_Group_Driver::driver(dock)->state( (dock->target_count() > 0 ? Fl_Dockable_Group::UNDOCK : Fl_Dockable_Group::DOCKED) );
   Fl_Dockable_Group::active_dockable = NULL;
@@ -199,9 +197,12 @@ void Fl_Dockable_Group::command_box(int x, int y, int w, int h) {
 
 
 void Fl_Dockable_Group_Driver::store_docked_position(Fl_Dockable_Group *dock) {
-  dock->parent_when_docked_ = dock->parent();
+  Fl_Group *gr = dock->parent();
+  dock->parent_when_docked_ = gr;
   dock->x_when_docked_ = dock->x();
   dock->y_when_docked_ = dock->y();
+  const int i = gr->find(dock);
+  dock->next_in_group_when_docked_ = (i < gr->children() - 1 ? gr->child(i + 1) : NULL);
 }
 
 
