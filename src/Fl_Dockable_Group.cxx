@@ -36,6 +36,8 @@ Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) 
     Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
     driver_ = ( scr_driver->xdg_toplevel_drag ? new Fl_Wayland_Dockable_Group_Driver(this) :
                 new Fl_oldWayland_Dockable_Group_Driver(this) );
+printf("Using %s\n",( scr_driver->xdg_toplevel_drag ?  "Fl_Wayland_Dockable_Group_Driver" :
+                         "Fl_oldWayland_Dockable_Group_Driver" ));
   } else
 #endif
   {

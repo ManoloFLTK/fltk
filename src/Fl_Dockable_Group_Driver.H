@@ -15,6 +15,7 @@
 //
 
 #include <FL/platform.H>
+#include <config.h>
 #include <FL/Fl_Dockable_Group.H>
 
 class Fl_Dockable_Group_Driver {
@@ -58,7 +59,9 @@ public:
 
 class Fl_Wayland_Dockable_Group_Driver : public Fl_Dockable_Group_Driver {
 private:
+#ifdef HAVE_XDG_TOPLEVEL_DRAG
   struct xdg_toplevel_drag_v1 *drag_;
+#endif
   Fl_Window *copy_(cmd_box_class *box, const char *t);
 public:
   class wld_target_box_class : public target_box_class {
@@ -70,6 +73,7 @@ public:
   static const char *xdg_toplevel_drag_pseudo_mime;
   Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Dockable_Group*) FL_OVERRIDE;
   int handle(cmd_box_class *, int event) FL_OVERRIDE;
+  virtual void handle_dnd_release(Fl_Wayland_Dockable_Group_Driver::wld_target_box_class *);
 };
 
 
@@ -77,5 +81,6 @@ class Fl_oldWayland_Dockable_Group_Driver : public Fl_Wayland_Dockable_Group_Dri
 public:
   Fl_oldWayland_Dockable_Group_Driver(Fl_Dockable_Group *from) : Fl_Wayland_Dockable_Group_Driver(from) {}
   int handle(cmd_box_class *, int event) FL_OVERRIDE;
+  void handle_dnd_release(Fl_Wayland_Dockable_Group_Driver::wld_target_box_class *) FL_OVERRIDE;
 };
 #endif // FLTK_USE_WAYLAND
