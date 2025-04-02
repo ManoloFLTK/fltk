@@ -19,7 +19,6 @@
 
 
 #include <FL/Fl_Dockable_Group.H>
-#include <FL/Fl_Tabs.H>
 #include <FL/Fl_Image_Surface.H>
 #include "../../Fl_Dockable_Group_Driver.H"
 #include "Fl_Wayland_Screen_Driver.H"
@@ -86,9 +85,7 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
     //puts("FL_DND_RELEASE");
     Fl_Dockable_Group::active_dockable = NULL;
     Fl_Group *target_group = this->parent();
-    target_group->remove(this);
     this->state(Fl_Dockable_Group_Driver::INACTIVE);
-    Fl_Dockable_Group::active_dockable = NULL;
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
     if (scr_driver->xdg_toplevel_drag) {
       Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)driver(dock);
@@ -100,13 +97,14 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
       delete top;
     }
 #endif
-    target_group->add(dock);
+    // Replace 'this' by 'dock' in target_group keeping its position in the child array.
+    // This is advantageous if target_group is an Fl_Tab by keeping the current active tab.
+    target_group->insert(*dock, this);
+    target_group->remove(this);
     dock->resize(x(), y(), w(), h());
     dock->clear_visible();
     Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCKED);
     dock->show();
-    Fl_Tabs *tabs = dynamic_cast<Fl_Tabs*>(target_group);
-    if (tabs) tabs->value(dock);
     return 0; // not to generate FL_PASTE event
   }
   return Fl_Box::handle(event);
