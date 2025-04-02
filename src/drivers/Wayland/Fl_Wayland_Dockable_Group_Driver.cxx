@@ -24,7 +24,9 @@
 #include "Fl_Wayland_Screen_Driver.H"
 #include "Fl_Wayland_Window_Driver.H"
 #include "xdg-shell-client-protocol.h"
-#include "xdg-toplevel-drag-client-protocol.h"
+#ifdef HAVE_XDG_TOPLEVEL_DRAG
+#  include "xdg-toplevel-drag-client-protocol.h"
+#endif
 
 
 const char *Fl_Wayland_Dockable_Group_Driver::xdg_toplevel_drag_pseudo_mime = "xdg_toplevel_drag_manager";
@@ -80,6 +82,7 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
     return 1;
   } else if (event == FL_DND_RELEASE && dock->state == Fl_Dockable_Group::DOCK) {
     //puts("FL_DND_RELEASE");
+#ifdef HAVE_XDG_TOPLEVEL_DRAG
     Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
     xdg_toplevel_drag_v1_destroy(dr->drag_);
     dr->drag_ = NULL;
@@ -99,6 +102,7 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
     dock->show();
     Fl_Tabs *tabs = dynamic_cast<Fl_Tabs*>(parent);
     if (tabs) tabs->value(dock);
+#endif
     return 0; // not to generate FL_PASTE event
   }
   return Fl_Box::handle(event);
@@ -106,13 +110,10 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
 
 
 int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box, int event) {
+#ifdef HAVE_XDG_TOPLEVEL_DRAG
   static int drag_count;
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)box->parent();
-  if (!scr_driver->xdg_toplevel_drag && dock->state != Fl_Dockable_Group::DOCKED) {
-    driver(dock)->state(Fl_Dockable_Group::DOCKED);
-    return 0;
-  }
   if ((event != FL_PUSH && event != FL_DRAG) || !(Fl::event_state() & FL_BUTTON1))
     return box->Fl_Box::handle(event);
   if (event == FL_PUSH && dock->state == Fl_Dockable_Group::UNDOCK) {
@@ -162,4 +163,34 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
     Fl_Dockable_Group::active_dockable = dock;
   }
   return 1;
+#endif // HAVE_XDG_TOPLEVEL_DRAG
+  return box->Fl_Box::handle(event);
+}
+
+
+int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_out *box, int event) {
+  static int drag_count;
+  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+  Fl_Dockable_Group *dock = (Fl_Dockable_Group*)box->parent();
+  if ((event != FL_PUSH && event != FL_DRAG) || !(Fl::event_state() & FL_BUTTON1))
+    return box->Fl_Box::handle(event);
+  if (event == FL_PUSH && dock->state == Fl_Dockable_Group::UNDOCK) {
+    drag_count = 0;
+  } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && ++drag_count < 5) {
+    Fl_Window *top = dock->top_window();
+    // It seems that while MUTTER accepts to apply the xdg_toplevel_drag protocol
+    // to a subwindow, KWIN doesn't accept it and works OK only when dragging inside a toplevel.
+    struct wld_window *xid = fl_wl_xid(dock->window());
+    scr_driver->seat->data_source = wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
+    wl_data_source_add_listener(scr_driver->seat->data_source, Fl_Wayland_Screen_Driver::p_data_source_listener, (void*)0);
+    wl_data_source_offer(scr_driver->seat->data_source, xdg_toplevel_drag_pseudo_mime);
+    wl_data_source_set_actions(scr_driver->seat->data_source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
+    Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
+    printf("start_drag surface=%p serial=%u\n",xid->wl_surface, scr_driver->seat->serial);
+    wl_data_device_start_drag(scr_driver->seat->data_device, scr_driver->seat->data_source,
+                              xid->wl_surface, NULL, scr_driver->seat->serial);
+    
+    return 1;
+  }
+  return box->Fl_Box::handle(event);
 }

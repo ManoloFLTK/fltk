@@ -72,4 +72,10 @@ public:
   int handle(drag_box_out *, int event) FL_OVERRIDE;
 };
 
+
+class Fl_oldWayland_Dockable_Group_Driver : public Fl_Wayland_Dockable_Group_Driver {
+public:
+  Fl_oldWayland_Dockable_Group_Driver(Fl_Dockable_Group *from) : Fl_Wayland_Dockable_Group_Driver(from) {}
+  int handle(drag_box_out *, int event) FL_OVERRIDE;
+};
 #endif // FLTK_USE_WAYLAND
