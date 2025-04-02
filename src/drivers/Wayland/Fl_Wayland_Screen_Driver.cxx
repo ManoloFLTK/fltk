@@ -35,7 +35,9 @@
 #include <xkbcommon/xkbcommon-compose.h>
 #include "text-input-client-protocol.h"
 #include "gtk-shell-client-protocol.h"
-#include "xdg-toplevel-drag-client-protocol.h"
+#ifdef HAVE_XDG_TOPLEVEL_DRAG
+#  include "xdg-toplevel-drag-client-protocol.h"
+#endif
 #include <assert.h>
 #include <sys/mman.h>
 #include <poll.h>
@@ -1304,10 +1306,12 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
     scr_driver->text_input_base = (struct zwp_text_input_manager_v3 *)
       wl_registry_bind(wl_registry, id, &zwp_text_input_manager_v3_interface, 1);
 //printf("scr_driver->text_input_base=%p version=%d\n",scr_driver->text_input_base,version);
+#ifdef HAVE_XDG_TOPLEVEL_DRAG
   } else if (strcmp(interface, xdg_toplevel_drag_manager_v1_interface.name) == 0) {
     scr_driver->xdg_toplevel_drag = (struct xdg_toplevel_drag_manager_v1 *)
       wl_registry_bind(wl_registry, id, &xdg_toplevel_drag_manager_v1_interface, 1);
 //printf("scr_driver->xdg_toplevel_drag=%p version=%d\n",scr_driver->xdg_toplevel_drag,version);
+#endif // HAVE_XDG_TOPLEVEL_DRAG
   }
 }
 
