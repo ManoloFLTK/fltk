@@ -208,6 +208,25 @@ static struct Fl_Wayland_Graphics_Driver::wld_buffer *offscreen_from_group(Fl_Do
 }
 
 
+static void xdg_toplevel_drag_data_source_handle_cancelled(void *data, struct wl_data_source *source) {
+  Fl_Dockable_Group *dock = (Fl_Dockable_Group*)data;
+  Fl_Dockable_Group_Driver::driver(dock)->state( (Fl_Dockable_Group::active_dockable ? Fl_Dockable_Group::UNDOCK : Fl_Dockable_Group::DOCKED) );
+  Fl_Dockable_Group::active_dockable = NULL;
+  Fl_Wayland_Screen_Driver::p_data_source_listener->cancelled(NULL, source);
+}
+
+static struct wl_data_source_listener *xdg_toplevel_drag_listener = NULL;
+
+static const struct wl_data_source_listener *xdg_toplevel_drag_data_source_listener() {
+  if (!xdg_toplevel_drag_listener) {
+    xdg_toplevel_drag_listener = new struct wl_data_source_listener;
+    memcpy(xdg_toplevel_drag_listener, Fl_Wayland_Screen_Driver::p_data_source_listener, sizeof(struct wl_data_source_listener));
+    xdg_toplevel_drag_listener->cancelled = xdg_toplevel_drag_data_source_handle_cancelled;
+  }
+  return (const struct wl_data_source_listener *)xdg_toplevel_drag_listener;
+}
+
+
 int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *box, int event) {
   static int drag_count;
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
@@ -224,7 +243,7 @@ int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_bo
     struct wld_window *xid = fl_wl_xid(dock->window());
     state(Fl_Dockable_Group::DRAG);
     scr_driver->seat->data_source = wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
-    wl_data_source_add_listener(scr_driver->seat->data_source, Fl_Wayland_Screen_Driver::p_data_source_listener, (void*)0);
+    wl_data_source_add_listener(scr_driver->seat->data_source, xdg_toplevel_drag_data_source_listener(), dock);
     wl_data_source_offer(scr_driver->seat->data_source, xdg_toplevel_drag_pseudo_mime);
     wl_data_source_set_actions(scr_driver->seat->data_source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
     Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
@@ -240,7 +259,7 @@ int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_bo
     wl_surface_commit(*Fl_Wayland_Screen_Driver::fl_dnd_icon);
     wl_surface_set_user_data(*Fl_Wayland_Screen_Driver::fl_dnd_icon, off);
     Fl_Dockable_Group::active_dockable = dock;
-    state(Fl_Dockable_Group::UNDOCK);
+    state(Fl_Dockable_Group::DRAGGED);
     return 1;
   }
   return box->Fl_Box::handle(event);

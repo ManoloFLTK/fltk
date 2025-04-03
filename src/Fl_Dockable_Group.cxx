@@ -207,20 +207,22 @@ void Fl_Dockable_Group_Driver::store_docked_position(Fl_Dockable_Group *dock) {
 
 
 void Fl_Dockable_Group::color_for_states(Fl_Color undock, Fl_Color drag,
-                                         Fl_Color dock, Fl_Color docked) {
+                                         Fl_Color dock, Fl_Color docked, Fl_Color dragged) {
   driver_->undock_color_ = undock;
   driver_->drag_color_ = drag;
   driver_->dock_color_ = dock;
   driver_->docked_color_ = docked;
+  driver_->dragged_color_ = dragged;
 }
 
 
 void Fl_Dockable_Group::label_for_states(const char *undock, const char * drag,
-                                         const char * dock, const char * docked) {
+                                         const char * dock, const char * docked, const char *dragged) {
   driver_->undock_label_ = undock;
   driver_->drag_label_ = drag;
   driver_->dock_label_ = dock;
   driver_->docked_label_ = docked;
+  driver_->dragged_label_ = dragged;
 }
 
 
@@ -231,6 +233,7 @@ void Fl_Dockable_Group_Driver::state(enum Fl_Dockable_Group::states state) {
   if (state == Fl_Dockable_Group::UNDOCK) { c = undock_color_; t = undock_label_; }
   else if (state == Fl_Dockable_Group::DRAG) { c = drag_color_; t = drag_label_; }
   else if (state == Fl_Dockable_Group::DOCK) { c = dock_color_; t = dock_label_; }
+  else if (state == Fl_Dockable_Group::DRAGGED) { c = dragged_color_; t = dragged_label_; }
   else { c = docked_color_; t = docked_label_; }
   dockable_->command_box()->color(c);
   dockable_->command_box()->labelcolor(fl_contrast(FL_FOREGROUND_COLOR, c));
@@ -241,7 +244,7 @@ void Fl_Dockable_Group_Driver::state(enum Fl_Dockable_Group::states state) {
 
 void Fl_Dockable_Group_Driver::target_box_class::state(enum Fl_Dockable_Group_Driver::target_states s) {
   state_ = s;
-  Fl_Color c;
+  Fl_Color c = 0;
   const char *t = NULL;
   if (s == Fl_Dockable_Group_Driver::MAY_RECEIVE)  {
     c = (Fl_Dockable_Group::active_dockable ?

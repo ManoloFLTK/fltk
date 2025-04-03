@@ -46,10 +46,12 @@ public:
   int target_count() { return (int)target_.size(); }
   int target_index() { return target_index_; }
   void color_for_states(Fl_Color undock = FL_BACKGROUND_COLOR, Fl_Color drag = FL_BACKGROUND2_COLOR,
-                        Fl_Color dock = FL_SELECTION_COLOR, Fl_Color docked = FL_INACTIVE_COLOR);
+                        Fl_Color dock = FL_SELECTION_COLOR, Fl_Color docked = FL_INACTIVE_COLOR,
+                        Fl_Color dragged = FL_SELECTION_COLOR);
   void label_for_states(const char *undock = "Undock", const char *drag = "Drag",
-                        const char *dock = "Dock", const char *docked = "Docked");
-  enum states {UNDOCK, DRAG, DOCK, DOCKED} state;
+                        const char *dock = "Dock", const char *docked = "Docked",
+                        const char *dragged = "Dragged");
+  enum states {UNDOCK, DRAG, DOCK, DOCKED, DRAGGED} state;
   static Fl_Dockable_Group *active_dockable;
 };
 
