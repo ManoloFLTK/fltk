@@ -154,7 +154,6 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *bo
           dock->target_index_ = i;
           target_box_class *target = (target_box_class*)dock->target_box(i);
           target->state(DOCK_HERE);
-          break;
         } else {
           Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DRAG);
           dock->target_index_ = -1;
@@ -162,6 +161,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *bo
           target->state(MAY_RECEIVE);
         }
       }
+      if (new_can_dock) break;
     }
     return 1;
   } else if (event == FL_RELEASE && dock->state == Fl_Dockable_Group::DOCK) { // Dock dockable in place
