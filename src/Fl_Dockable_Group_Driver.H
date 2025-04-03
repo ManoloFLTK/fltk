@@ -61,8 +61,10 @@ class Fl_Wayland_Dockable_Group_Driver : public Fl_Dockable_Group_Driver {
 private:
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
   struct xdg_toplevel_drag_v1 *drag_;
-#endif
+  int old_keyboard_screen_scaling_;
+  static void delete_win_cb(Fl_Window *);
   Fl_Window *copy_(cmd_box_class *box, const char *t);
+#endif
 public:
   class wld_target_box_class : public target_box_class {
     public:
