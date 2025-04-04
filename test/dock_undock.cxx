@@ -32,14 +32,14 @@ int main(int argc, char **argv) {
   dock2 = dock;
   dock->color(FL_GREEN);
   dock->box(FL_THIN_UP_BOX);
-  new Fl_Clock(160, 90, 60, 60);
-  new Fl_Round_Clock(245, 90, 60, 60);
-  r = new Fl_Box(FL_NO_BOX, 0, 151, 155, 10, NULL);
+  new Fl_Clock(160, 65, 60, 60);
+  new Fl_Round_Clock(245, 65, 60, 60);
+  r = new Fl_Box(FL_NO_BOX, 0, 126, 155, 10, NULL);
   dock->end();
   dock->resizable(r);
   source->end();
   source->resizable(dock);
-  dock->command_box(27, 67, 300, 13);
+  dock->command_box(27, 140, 60, 13);
   dock->command_box()->labelsize(10);
   
   Fl_Window *destination = new Fl_Window(150, source->y() + source->h() + 50,
@@ -50,6 +50,7 @@ int main(int argc, char **argv) {
   Fl_Box *b = dock1->target_box(FL_DOWN_BOX, 10, 60, 300, 120, tabs);
   dock2->target_box_add(b);
   tabs->end();
+  tabs->value(dock2);
   destination->end();
   destination->show(argc, argv);
 
