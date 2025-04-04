@@ -66,7 +66,6 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
   dock->show();
   parent->redraw();
   Fl_Dockable_Group_Driver::driver(dock)->state( (dock->target_count() > 0 ? Fl_Dockable_Group::UNDOCK : Fl_Dockable_Group::DOCKED) );
-  Fl_Dockable_Group::active_dockable = NULL;
   delete win;
 }
 
@@ -147,16 +146,17 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *bo
                            dock_y + dock->h() >= target_y &&
                            dock_y < target_y + target->h());
       bool can_dock = (dock->state == Fl_Dockable_Group::DOCK);
-      Fl_Dockable_Group::active_dockable = dock;
       if (can_dock != new_can_dock) {
         if (new_can_dock){
           Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCK);
           dock->target_index_ = i;
+          Fl_Dockable_Group::active_dockable = dock;
           target_box_class *target = (target_box_class*)dock->target_box(i);
           target->state(DOCK_HERE);
         } else {
           Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DRAG);
           dock->target_index_ = -1;
+          Fl_Dockable_Group::active_dockable = NULL;
           target_box_class *target = (target_box_class*)dock->target_box(i);
           target->state(MAY_RECEIVE);
         }

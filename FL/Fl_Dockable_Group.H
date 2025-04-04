@@ -52,6 +52,11 @@ public:
                         const char *dock = "Dock", const char *docked = "Docked",
                         const char *dragged = "Dragged");
   enum states {UNDOCK, DRAG, DOCK, DOCKED, DRAGGED} state;
+  /** Non-NULL when an Fl_Dockable_Group is currently active.
+   Under Wayland, this means a Drag-and-Drop of a window (or an icon copy of a window) is active.
+   Under other platforms, this means an Fl_Dockable_Group is currently above a target box
+   and can be docked there.
+   */
   static Fl_Dockable_Group *active_dockable;
 };
 
