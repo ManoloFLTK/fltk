@@ -36,6 +36,7 @@ private:
   Fl_Group *parent_when_docked_;
   Fl_Widget *next_in_group_when_docked_;
   int x_when_docked_, y_when_docked_;
+  void color_targets_following_dock_();
 public:
   Fl_Dockable_Group(int x, int y, int w, int h, const char *t=0);
   virtual ~Fl_Dockable_Group();
