@@ -44,6 +44,7 @@ public:
   Fl_Box *command_box() { return command_box_; }
   Fl_Box *target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Group *g);
   Fl_Box *target_box(int n) { return target_[n]; }
+  void target_box_add(Fl_Box *);
   int target_count() { return (int)target_.size(); }
   int target_index() { return target_index_; }
   void color_for_states(Fl_Color undock = FL_BACKGROUND_COLOR, Fl_Color drag = FL_BACKGROUND2_COLOR,
