@@ -90,6 +90,11 @@ Fl_Box *Fl_Dockable_Group::target_box(Fl_Boxtype bt, int x, int y, int w, int h,
 }
 
 
+void Fl_Dockable_Group::target_box_add(Fl_Box *target_box) {
+  target_.insert(target_.begin(), target_box);
+}
+
+
 int Fl_Dockable_Group_Driver::cmd_box_class::handle(int event) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)parent();
   return Fl_Dockable_Group_Driver::driver(dock)->handle(this, event);
