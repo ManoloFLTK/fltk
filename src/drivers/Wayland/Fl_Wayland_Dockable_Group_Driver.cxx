@@ -252,7 +252,9 @@ int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_bo
                               xid->wl_surface, *Fl_Wayland_Screen_Driver::fl_dnd_icon, scr_driver->seat->serial);
     int s = Fl_Wayland_Window_Driver::driver(box->top_window())->wld_scale();
     struct Fl_Wayland_Graphics_Driver::wld_buffer *off = (struct Fl_Wayland_Graphics_Driver::wld_buffer *)offscreen_from_group(dock, s);
-    wl_surface_attach(*Fl_Wayland_Screen_Driver::fl_dnd_icon, off->wl_buffer, 0, 0);
+    double r = double(off->draw_buffer.width) / (dock->w() * s);
+    wl_surface_attach(*Fl_Wayland_Screen_Driver::fl_dnd_icon, off->wl_buffer,
+                      (dock->x() - Fl::event_x()) * r, (dock->y() - Fl::event_y()) * r );
     wl_surface_set_buffer_scale(*Fl_Wayland_Screen_Driver::fl_dnd_icon, s);
     wl_surface_damage(*Fl_Wayland_Screen_Driver::fl_dnd_icon, 0, 0, 10000, 10000);
     wl_surface_commit(*Fl_Wayland_Screen_Driver::fl_dnd_icon);
