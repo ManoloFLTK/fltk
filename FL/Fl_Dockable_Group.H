@@ -31,22 +31,23 @@ class Fl_Dockable_Group : public Fl_Group {
 private:
   Fl_Dockable_Group_Driver *driver_;
   Fl_Box *command_box_;
-  std::vector<Fl_Box *>target_; // vector of target boxes
-  int target_index_; // index in vector to target where docking will occur
+  static std::vector<Fl_Box *>target_; // vector of target boxes
+  static int target_index_; // index in vector to target where docking will occur
+public:
   Fl_Group *parent_when_docked_;
-  Fl_Widget *next_in_group_when_docked_;
   int x_when_docked_, y_when_docked_;
+private:
+  Fl_Widget *next_in_group_when_docked_;
   void color_targets_following_dock_();
 public:
   Fl_Dockable_Group(int x, int y, int w, int h, const char *t=0);
   virtual ~Fl_Dockable_Group();
   void command_box(int x, int y, int w, int h);
   Fl_Box *command_box() { return command_box_; }
-  Fl_Box *target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Group *g);
-  Fl_Box *target_box(int n) { return target_[n]; }
-  void target_box_add(Fl_Box *);
-  int target_count() { return (int)target_.size(); }
-  int target_index() { return target_index_; }
+  static Fl_Box *target_box(int x, int y, int w, int h, Fl_Group *g);
+  static Fl_Box *target_box(int n) { return target_[n]; }
+  static int target_count() { return (int)target_.size(); }
+  static int target_index() { return target_index_; }
   void color_for_states(Fl_Color undock = FL_BACKGROUND_COLOR, Fl_Color drag = FL_BACKGROUND2_COLOR,
                         Fl_Color dock = FL_SELECTION_COLOR, Fl_Color docked = FL_INACTIVE_COLOR,
                         Fl_Color dragged = FL_SELECTION_COLOR);

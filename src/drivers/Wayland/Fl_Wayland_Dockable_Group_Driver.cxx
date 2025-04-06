@@ -41,13 +41,6 @@ Fl_Wayland_Dockable_Group_Driver::Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_G
 }
 
 
-Fl_Box *Fl_Wayland_Dockable_Group_Driver::new_target_box(Fl_Boxtype bt,
-                                                          int x, int y, int w, int h,
-                                                          Fl_Dockable_Group *dock) {
-  return new wld_target_box_class(bt, x, y, w, h);
-}
-
-
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
 
 Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(cmd_box_class *box, const char *t) {
@@ -98,7 +91,6 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
     //puts("FL_DND_RELEASE");
     Fl_Dockable_Group::active_dockable = NULL;
     Fl_Group *target_group = this->parent();
-    this->state(Fl_Dockable_Group_Driver::INACTIVE);
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
     if (scr_driver->xdg_toplevel_drag) {
       Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)driver(dock);
@@ -109,15 +101,38 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
       top->remove(dock);
       delete top;
       if (dr->old_keyboard_screen_scaling_) Fl::keyboard_screen_scaling(1);
-    }
+    } else
 #endif
+    {
+      dock->parent()->redraw();
+    }
+    Fl_Group *new_target_box_place;
+    int x_when_docked, y_when_docked;
+#ifdef HAVE_XDG_TOPLEVEL_DRAG
+    if (scr_driver->xdg_toplevel_drag) {
+      new_target_box_place = dock->parent_when_docked_;
+      x_when_docked = dock->x_when_docked_;
+      y_when_docked = dock->y_when_docked_;
+    } else
+#endif
+    {
+      new_target_box_place = dock->parent();
+      x_when_docked = dock->x();
+      y_when_docked = dock->y();
+    }
     // Replace 'this' by 'dock' in target_group keeping its position in the child array.
     // This is advantageous if target_group is an Fl_Tab by keeping the current active tab.
     target_group->insert(*dock, this);
-    target_group->remove(this);
+    // move target-box this from its parent to dock's original parent
+    new_target_box_place->add(this);
+    this->set_visible();
+    this->state(MAY_RECEIVE);
+    target_group->redraw();
+    int dock_w = dock->w(), dock_h = dock->h();
     dock->resize(x(), y(), w(), h());
+    this->resize(x_when_docked, y_when_docked, dock_w, dock_h);
     dock->clear_visible();
-    Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCKED);
+    Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::UNDOCK/*DOCKED*/);
     wl_data_source_set_user_data(scr_driver->seat->data_source, NULL);
     dock->show();
     return 0; // not to generate FL_PASTE event
@@ -128,7 +143,7 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
 
 static void xdg_toplevel_drag_data_source_handle_cancelled(void *data, struct wl_data_source *source) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)data;
-  if (dock) Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::UNDOCK);
+  if (dock) Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::UNDOCK/*DOCKED*/);
   Fl_Dockable_Group::active_dockable = NULL;
   Fl_Wayland_Screen_Driver::p_data_source_listener->cancelled(NULL, source);
 }

@@ -38,7 +38,7 @@ public:
   class target_box_class : public Fl_Box {
     public:
       enum target_states state_;
-      target_box_class(Fl_Boxtype bt, int x, int y, int w, int h) : Fl_Box(bt,x,y,w,h,NULL) {
+      target_box_class(int x, int y, int w, int h) : Fl_Box(FL_DOWN_BOX, x,y,w,h,NULL) {
         labelfont(FL_ITALIC);
         state(MAY_RECEIVE);
       }
@@ -46,9 +46,7 @@ public:
   };
   Fl_Dockable_Group_Driver(Fl_Dockable_Group *from) { dockable_ = from; }
   void store_docked_position(Fl_Dockable_Group *dock);
-  virtual Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Dockable_Group*) {
-    return new target_box_class(bt, x, y, w, h);
-  }
+  static Fl_Box *new_target_box(int x, int y, int w, int h);
   virtual int handle(cmd_box_class *, int event);
   static Fl_Dockable_Group_Driver *driver(Fl_Dockable_Group *dock) { return dock->driver_; }
   void state(enum Fl_Dockable_Group::states);
@@ -68,12 +66,11 @@ private:
 public:
   class wld_target_box_class : public target_box_class {
     public:
-      wld_target_box_class(Fl_Boxtype bt, int x, int y, int w, int h) : target_box_class(bt,x,y,w,h) {}
+      wld_target_box_class(int x, int y, int w, int h) : target_box_class(x,y,w,h) {}
       int handle(int event) FL_OVERRIDE;
   };
   Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_Group *from);
   static const char *xdg_toplevel_drag_pseudo_mime;
-  Fl_Box *new_target_box(Fl_Boxtype bt, int x, int y, int w, int h, Fl_Dockable_Group*) FL_OVERRIDE;
   int handle(cmd_box_class *, int event) FL_OVERRIDE;
 };
 

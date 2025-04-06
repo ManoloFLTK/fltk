@@ -47,8 +47,7 @@ int main(int argc, char **argv) {
   new Fl_Input(5,5,100,30, NULL);
   tabs = new Fl_Tabs(5, 40, 310, 140);
   new Fl_Box(FL_FLAT_BOX, 10, 60, 300, 120, "Tab 1");
-  Fl_Box *b = dock1->target_box(FL_DOWN_BOX, 10, 60, 300, 120, tabs);
-  dock2->target_box_add(b);
+  Fl_Dockable_Group::target_box(10, 60, 300, 120, tabs);
   tabs->end();
   tabs->value(dock2);
   destination->end();
@@ -57,8 +56,7 @@ int main(int argc, char **argv) {
   destination = new Fl_Window(destination->x() + destination->w() + 50, source->y() + source->h() + 50,
                               340, 190, "destination (group)");
   destination->end();
-  b = dock2->target_box(FL_DOWN_BOX, 10, 30, 320, 150, destination);
-  dock1->target_box_add(b);
+  Fl_Dockable_Group::target_box(10, 30, 320, 150, destination);
   destination->show();
   
   source->show();
