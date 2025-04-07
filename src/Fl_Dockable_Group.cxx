@@ -17,7 +17,9 @@
  Fl_Dockable_Group implementation.
  */
 
+#include <FL/platform.H> // for FLTK_USE_WAYLAND
 #include <FL/Fl_Dockable_Group.H>
+#include <FL/Fl_Window.H>
 #include "Fl_Dockable_Group_Driver.H"
 
 Fl_Dockable_Group *Fl_Dockable_Group::active_dockable = NULL;

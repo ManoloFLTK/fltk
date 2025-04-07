@@ -18,6 +18,8 @@
  */
 
 
+#include <config.h>
+#include <FL/platform.H>
 #include <FL/Fl_Dockable_Group.H>
 #include <FL/Fl_Image_Surface.H>
 #include "../../Fl_Dockable_Group_Driver.H"

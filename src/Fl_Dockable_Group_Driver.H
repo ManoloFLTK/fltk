@@ -14,8 +14,6 @@
 //     https://www.fltk.org/bugs.php
 //
 
-#include <FL/platform.H>
-#include <config.h>
 #include <FL/Fl_Dockable_Group.H>
 
 class Fl_Dockable_Group_Driver {
