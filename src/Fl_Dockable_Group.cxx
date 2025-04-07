@@ -59,9 +59,14 @@ Fl_Box *Fl_Dockable_Group_Driver::new_target_box(int x, int y, int w, int h) {
 }
 
 
-Fl_Dockable_Group::~Fl_Dockable_Group() {
-  while (target_.size()) {
-    target_.erase(target_.begin());
+Fl_Dockable_Group_Driver::target_box_class::~target_box_class() {
+  for (int i = 0; i < Fl_Dockable_Group::target_.size(); i++) {
+    if (Fl_Dockable_Group::target_[i] == this) {
+      Fl_Dockable_Group::target_.erase(Fl_Dockable_Group::target_.begin()+i);
+      if (Fl_Dockable_Group::target_index_ == i)
+        Fl_Dockable_Group::target_index_ = -1;
+      break;
+    }
   }
 }
 

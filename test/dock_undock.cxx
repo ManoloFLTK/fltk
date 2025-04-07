@@ -5,13 +5,16 @@
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Tabs.H>
 
-Fl_Dockable_Group *dock1, *dock2;
+void delete_win(Fl_Window *win) {
+  delete win;
+}
+
 
 int main(int argc, char **argv) {
   Fl_Window *source = new Fl_Window(150, 150, 340, 180, "source (tab)");
+  source->callback((Fl_Callback0*)delete_win);
   Fl_Tabs *tabs = new Fl_Tabs(20, 40, 310, 115);
   Fl_Dockable_Group *dock = new Fl_Dockable_Group(25, 60, 305, 95, "Fl_Dockable_Group-1");
-  dock1 = dock;
   dock->color(FL_YELLOW);
   dock->box(FL_THIN_UP_BOX);
   new Fl_Round_Clock(160, 90, 60, 60);
@@ -28,8 +31,8 @@ int main(int argc, char **argv) {
   source->show();
   
   source = new Fl_Window(source->x() + source->w() + 50, source->y(), 340, 180, "source (group)");
+  source->callback((Fl_Callback0*)delete_win);
   dock = new Fl_Dockable_Group(25, 60, 305, 95, "Fl_Dockable_Group-2");
-  dock2 = dock;
   dock->color(FL_GREEN);
   dock->box(FL_THIN_UP_BOX);
   new Fl_Clock(160, 65, 60, 60);
@@ -44,17 +47,19 @@ int main(int argc, char **argv) {
   
   Fl_Window *destination = new Fl_Window(150, source->y() + source->h() + 50,
                                          340, 190, "destination (tab)");
+  destination->callback((Fl_Callback0*)delete_win);
   new Fl_Input(5,5,100,30, NULL);
   tabs = new Fl_Tabs(5, 40, 310, 140);
   new Fl_Box(FL_FLAT_BOX, 10, 60, 300, 120, "Tab 1");
   Fl_Dockable_Group::target_box(10, 60, 300, 120, tabs);
   tabs->end();
-  tabs->value(dock2);
+  tabs->value(dock);
   destination->end();
   destination->show(argc, argv);
 
   destination = new Fl_Window(destination->x() + destination->w() + 50, source->y() + source->h() + 50,
                               340, 190, "destination (group)");
+  destination->callback((Fl_Callback0*)delete_win);
   destination->end();
   Fl_Dockable_Group::target_box(10, 30, 320, 150, destination);
   destination->show();

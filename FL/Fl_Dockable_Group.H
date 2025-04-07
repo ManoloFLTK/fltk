@@ -40,7 +40,6 @@ private:
   void color_targets_following_dock_();
 public:
   Fl_Dockable_Group(int x, int y, int w, int h, const char *t=0);
-  virtual ~Fl_Dockable_Group();
   void command_box(int x, int y, int w, int h);
   Fl_Box *command_box() { return command_box_; }
   static Fl_Box *target_box(int x, int y, int w, int h, Fl_Group *g);

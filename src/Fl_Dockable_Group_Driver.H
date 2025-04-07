@@ -34,12 +34,13 @@ public:
   };
   enum target_states {INACTIVE, MAY_RECEIVE, DOCK_HERE};
   class target_box_class : public Fl_Box {
-    public:
-      enum target_states state_;
-      target_box_class(int x, int y, int w, int h) : Fl_Box(FL_DOWN_BOX, x,y,w,h,NULL) {
-        labelfont(FL_ITALIC);
-        state(MAY_RECEIVE);
-      }
+  public:
+    enum target_states state_;
+    target_box_class(int x, int y, int w, int h) : Fl_Box(FL_DOWN_BOX, x,y,w,h,NULL) {
+      labelfont(FL_ITALIC);
+      state(MAY_RECEIVE);
+    }
+    virtual ~target_box_class();
     void state(enum target_states);
   };
   static Fl_Dockable_Group_Driver *newDockableGroupDriver(Fl_Dockable_Group*);
