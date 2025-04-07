@@ -94,6 +94,7 @@ static struct wl_surface *gtk_shell_surface = NULL;
 Fl_Wayland_Screen_Driver::compositor_name Fl_Wayland_Screen_Driver::compositor =
   Fl_Wayland_Screen_Driver::unspecified;
 
+const char *Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime = "xdg_toplevel_drag_manager";
 
 extern "C" {
   bool fl_libdecor_using_weston(void) {

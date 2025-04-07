@@ -29,7 +29,30 @@
 #endif
 
 
-const char *Fl_Wayland_Dockable_Group_Driver::xdg_toplevel_drag_pseudo_mime = "xdg_toplevel_drag_manager";
+class Fl_Wayland_Dockable_Group_Driver : public Fl_Dockable_Group_Driver {
+private:
+#ifdef HAVE_XDG_TOPLEVEL_DRAG
+  struct xdg_toplevel_drag_v1 *drag_;
+  int old_keyboard_screen_scaling_;
+  static void delete_win_cb(Fl_Window *);
+  Fl_Window *copy_(cmd_box_class *box, const char *t);
+#endif
+public:
+  class wld_target_box_class : public target_box_class {
+    public:
+      wld_target_box_class(int x, int y, int w, int h) : target_box_class(x,y,w,h) {}
+      int handle(int event) FL_OVERRIDE;
+  };
+  Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_Group *from);
+  int handle(cmd_box_class *, int event) FL_OVERRIDE;
+};
+
+
+class Fl_oldWayland_Dockable_Group_Driver : public Fl_Wayland_Dockable_Group_Driver {
+public:
+  Fl_oldWayland_Dockable_Group_Driver(Fl_Dockable_Group *from) : Fl_Wayland_Dockable_Group_Driver(from) {}
+  int handle(cmd_box_class *, int event) FL_OVERRIDE;
+};
 
 
 Fl_Wayland_Dockable_Group_Driver::Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_Group *from) :
@@ -38,6 +61,24 @@ Fl_Wayland_Dockable_Group_Driver::Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_G
   drag_ = NULL;
   old_keyboard_screen_scaling_ = 0;
 #endif
+}
+
+
+Fl_Dockable_Group_Driver *Fl_Dockable_Group_Driver::newDockableGroupDriver(Fl_Dockable_Group *dock) {
+  fl_open_display();
+  if (fl_wl_display()) {
+    Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
+    return ( scr_driver->xdg_toplevel_drag ? new Fl_Wayland_Dockable_Group_Driver(dock) :
+               new Fl_oldWayland_Dockable_Group_Driver(dock) );
+  } else return new Fl_Dockable_Group_Driver(dock);
+}
+
+
+Fl_Box *Fl_Dockable_Group_Driver::newTargetBoxClass(int x, int y, int w, int h) {
+  fl_open_display();
+  if (fl_wl_display()) {
+    return new Fl_Wayland_Dockable_Group_Driver::wld_target_box_class(x, y, w, h);
+  } else return new target_box_class(x, y, w, h);
 }
 
 
@@ -171,7 +212,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_c
     struct wld_window *xid = fl_wl_xid(dock->window());
     scr_driver->seat->data_source = wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
     wl_data_source_add_listener(scr_driver->seat->data_source, xdg_toplevel_drag_data_source_listener(), (void*)0);
-    wl_data_source_offer(scr_driver->seat->data_source, xdg_toplevel_drag_pseudo_mime);
+    wl_data_source_offer(scr_driver->seat->data_source, Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime);
     wl_data_source_set_actions(scr_driver->seat->data_source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
     Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
     dr->drag_ =
@@ -198,7 +239,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_c
     if (dr->drag_) xdg_toplevel_drag_v1_destroy(dr->drag_);
     scr_driver->seat->data_source = wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
     wl_data_source_add_listener(scr_driver->seat->data_source, xdg_toplevel_drag_data_source_listener(), (void*)0);
-    wl_data_source_offer(scr_driver->seat->data_source, xdg_toplevel_drag_pseudo_mime);
+    wl_data_source_offer(scr_driver->seat->data_source, Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime);
     wl_data_source_set_actions(scr_driver->seat->data_source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
     dr->drag_ = xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag(scr_driver->xdg_toplevel_drag, scr_driver->seat->data_source);
     struct wld_window *xid = fl_wl_xid(dock->window());
@@ -255,7 +296,7 @@ int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_bo
     state(Fl_Dockable_Group::DRAG);
     scr_driver->seat->data_source = wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
     wl_data_source_add_listener(scr_driver->seat->data_source, xdg_toplevel_drag_data_source_listener(), dock);
-    wl_data_source_offer(scr_driver->seat->data_source, xdg_toplevel_drag_pseudo_mime);
+    wl_data_source_offer(scr_driver->seat->data_source, Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime);
     wl_data_source_set_actions(scr_driver->seat->data_source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
     *Fl_Wayland_Screen_Driver::fl_dnd_icon = wl_compositor_create_surface(scr_driver->wl_compositor);
     //printf("start_drag surface=%p serial=%u\n",xid->wl_surface, scr_driver->seat->serial);

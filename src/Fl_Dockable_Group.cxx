@@ -19,9 +19,6 @@
 
 #include <FL/Fl_Dockable_Group.H>
 #include "Fl_Dockable_Group_Driver.H"
-#ifdef FLTK_USE_WAYLAND
-#  include "drivers/Wayland/Fl_Wayland_Screen_Driver.H"
-#endif
 
 Fl_Dockable_Group *Fl_Dockable_Group::active_dockable = NULL;
 
@@ -30,38 +27,31 @@ int Fl_Dockable_Group::target_index_ = -1;
 std::vector<Fl_Box *>Fl_Dockable_Group::target_; // empty vector of target boxes
 
 
+#ifndef FLTK_USE_WAYLAND
+
+Fl_Dockable_Group_Driver *Fl_Dockable_Group_Driver::newDockableGroupDriver(Fl_Dockable_Group *dock) {
+  return new Fl_Dockable_Group_Driver(dock);
+}
+
+
+Fl_Box *Fl_Dockable_Group_Driver::newTargetBoxClass(int x, int y, int w, int h) {
+  return new target_box_class(x, y, w, h);
+}
+
+#endif
+
+
 Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) : Fl_Group(x,y,w,h,t) {
   state = UNDOCK;
   target_index_ = -1;
-#ifdef FLTK_USE_WAYLAND
-  fl_open_display();
-  if (fl_wl_display()) {
-    Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-    driver_ = ( scr_driver->xdg_toplevel_drag ? new Fl_Wayland_Dockable_Group_Driver(this) :
-                new Fl_oldWayland_Dockable_Group_Driver(this) );
-printf("Using %s\n",( scr_driver->xdg_toplevel_drag ?  "Fl_Wayland_Dockable_Group_Driver" :
-                         "Fl_oldWayland_Dockable_Group_Driver" ));
-  } else
-#endif
-  {
-    driver_ = new Fl_Dockable_Group_Driver(this);
-  }
+  driver_ = Fl_Dockable_Group_Driver::newDockableGroupDriver(this);
   color_for_states();
   label_for_states();
 }
 
 
 Fl_Box *Fl_Dockable_Group_Driver::new_target_box(int x, int y, int w, int h) {
-  Fl_Box *box;
-#ifdef FLTK_USE_WAYLAND
-  fl_open_display();
-  if (fl_wl_display()) {
-    box = new Fl_Wayland_Dockable_Group_Driver::wld_target_box_class(x, y, w, h);
-  } else
-#endif
-  {
-    box = new target_box_class(x, y, w, h);
-  }
+  Fl_Box *box = newTargetBoxClass(x, y, w, h);
   Fl_Dockable_Group::target_.insert(Fl_Dockable_Group::target_.begin(), box);
   return box;
 }

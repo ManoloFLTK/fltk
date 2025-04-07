@@ -44,6 +44,8 @@ public:
       }
     void state(enum target_states);
   };
+  static Fl_Dockable_Group_Driver *newDockableGroupDriver(Fl_Dockable_Group*);
+  static Fl_Box *newTargetBoxClass(int x, int y, int w, int h);
   Fl_Dockable_Group_Driver(Fl_Dockable_Group *from) { dockable_ = from; }
   void store_docked_position(Fl_Dockable_Group *dock);
   static Fl_Box *new_target_box(int x, int y, int w, int h);
@@ -54,33 +56,3 @@ public:
   int x_when_docked() { return dockable_->x_when_docked_; }
   int y_when_docked() { return dockable_->y_when_docked_; }
 };
-
-
-#ifdef FLTK_USE_WAYLAND
-
-class Fl_Wayland_Dockable_Group_Driver : public Fl_Dockable_Group_Driver {
-private:
-#ifdef HAVE_XDG_TOPLEVEL_DRAG
-  struct xdg_toplevel_drag_v1 *drag_;
-  int old_keyboard_screen_scaling_;
-  static void delete_win_cb(Fl_Window *);
-  Fl_Window *copy_(cmd_box_class *box, const char *t);
-#endif
-public:
-  class wld_target_box_class : public target_box_class {
-    public:
-      wld_target_box_class(int x, int y, int w, int h) : target_box_class(x,y,w,h) {}
-      int handle(int event) FL_OVERRIDE;
-  };
-  Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_Group *from);
-  static const char *xdg_toplevel_drag_pseudo_mime;
-  int handle(cmd_box_class *, int event) FL_OVERRIDE;
-};
-
-
-class Fl_oldWayland_Dockable_Group_Driver : public Fl_Wayland_Dockable_Group_Driver {
-public:
-  Fl_oldWayland_Dockable_Group_Driver(Fl_Dockable_Group *from) : Fl_Wayland_Dockable_Group_Driver(from) {}
-  int handle(cmd_box_class *, int event) FL_OVERRIDE;
-};
-#endif // FLTK_USE_WAYLAND
