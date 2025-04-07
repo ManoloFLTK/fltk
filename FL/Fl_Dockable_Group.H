@@ -32,11 +32,9 @@ private:
   Fl_Dockable_Group_Driver *driver_;
   Fl_Box *command_box_;
   static std::vector<Fl_Box *>target_; // vector of target boxes
-  static int target_index_; // index in vector to target where docking will occur
-public:
+  static int target_index_; // index in vector to target where docking will occur:
   Fl_Group *parent_when_docked_;
   int x_when_docked_, y_when_docked_;
-private:
   Fl_Widget *next_in_group_when_docked_;
   void color_targets_following_dock_();
 public:
@@ -49,12 +47,10 @@ public:
   static int target_count() { return (int)target_.size(); }
   static int target_index() { return target_index_; }
   void color_for_states(Fl_Color undock = FL_BACKGROUND_COLOR, Fl_Color drag = FL_BACKGROUND2_COLOR,
-                        Fl_Color dock = FL_SELECTION_COLOR, Fl_Color docked = FL_INACTIVE_COLOR,
-                        Fl_Color dragged = FL_SELECTION_COLOR);
+                        Fl_Color dock = FL_SELECTION_COLOR, Fl_Color dragged = FL_SELECTION_COLOR);
   void label_for_states(const char *undock = "Undock", const char *drag = "Drag",
-                        const char *dock = "Dock", const char *docked = "Docked",
-                        const char *dragged = "Dragged");
-  enum states {UNDOCK, DRAG, DOCK, DOCKED, DRAGGED} state;
+                        const char *dock = "Dock", const char *dragged = "Dragged");
+  enum states {UNDOCK, DRAG, DOCK, DRAGGED} state;
   /** Non-NULL when an Fl_Dockable_Group is currently active.
    Under Wayland, this means a Drag-and-Drop of a window (or an icon copy of a window) is active.
    Under other platforms, this means an Fl_Dockable_Group is currently above a target box

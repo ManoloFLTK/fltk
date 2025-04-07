@@ -50,6 +50,9 @@ public:
   virtual int handle(cmd_box_class *, int event);
   static Fl_Dockable_Group_Driver *driver(Fl_Dockable_Group *dock) { return dock->driver_; }
   void state(enum Fl_Dockable_Group::states);
+  Fl_Group *parent_when_docked() { return dockable_->parent_when_docked_; }
+  int x_when_docked() { return dockable_->x_when_docked_; }
+  int y_when_docked() { return dockable_->y_when_docked_; }
 };
 
 
