@@ -250,6 +250,7 @@ int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_bo
   } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && ++drag_count < 5) {
     return 1;
   } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && drag_count >= 5) {
+    drag_count = 0;
     struct wld_window *xid = fl_wl_xid(dock->window());
     state(Fl_Dockable_Group::DRAG);
     scr_driver->seat->data_source = wl_data_device_manager_create_data_source(scr_driver->seat->data_device_manager);
