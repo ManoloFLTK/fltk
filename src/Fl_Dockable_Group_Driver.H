@@ -14,6 +14,8 @@
 //     https://www.fltk.org/bugs.php
 //
 
+#ifndef FL_DOXYGEN
+
 #include <FL/Fl_Dockable_Group.H>
 #include <vector>
 
@@ -58,3 +60,5 @@ public:
   int x_when_docked() { return dockable_->x_when_docked_; }
   int y_when_docked() { return dockable_->y_when_docked_; }
 };
+
+#endif // ! FL_DOXYGEN

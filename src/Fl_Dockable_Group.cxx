@@ -24,12 +24,8 @@
 
 Fl_Dockable_Group *Fl_Dockable_Group::active_dockable = NULL;
 
-int Fl_Dockable_Group_Driver::target_index_ = -1;
 
-std::vector<Fl_Box *>Fl_Dockable_Group_Driver::target_; // empty vector of target boxes
-
-
-#ifndef FLTK_USE_WAYLAND
+#if !defined(FLTK_USE_WAYLAND) && !defined(FL_DOXYGEN)
 
 Fl_Dockable_Group_Driver *Fl_Dockable_Group_Driver::newDockableGroupDriver(Fl_Dockable_Group *dock) {
   return new Fl_Dockable_Group_Driver(dock);
@@ -43,12 +39,139 @@ Fl_Box *Fl_Dockable_Group_Driver::newTargetBoxClass(int x, int y, int w, int h) 
 #endif
 
 
+/**
+ Constructor.
+ \param x,y,w,h,t used as with Fl_Group
+ */
 Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) : Fl_Group(x,y,w,h,t) {
   state = UNDOCK;
   driver_ = Fl_Dockable_Group_Driver::newDockableGroupDriver(this);
   color_for_states();
   label_for_states();
 }
+
+
+/**
+ Creates a 'target box' above which any Fl_Dockable_Group may be dragged and docked releasing the mouse.
+ \param x,y,w,h Position and size of the 'target box'.
+ \param g Group (or derived object, e.g., Fl_Double_Window, Fl_Tabs) to which the 'target box' to be created will be added.
+ */
+Fl_Box *Fl_Dockable_Group::target_box(int x, int y, int w, int h, Fl_Group *g) {
+  Fl_Group *save = Fl_Group::current();
+  Fl_Group::current(NULL);
+  Fl_Box *target_box = Fl_Dockable_Group_Driver::new_target_box(x, y, w, h);
+  if (g) g->add(target_box);
+  Fl_Group::current(save);
+  return target_box;
+}
+
+
+/** Returns the \p n 'th 'target box' present in the GUI */
+Fl_Box *Fl_Dockable_Group::target_box(int n) { return Fl_Dockable_Group_Driver::target_[n]; }
+
+/** Returns the number of 'target boxes' present in the GUI */
+int Fl_Dockable_Group::target_count() { return (int)Fl_Dockable_Group_Driver::target_.size(); }
+
+/** Index of 'target box' where docking will occur if mouse is released.
+ Value -1 is returned when mouse releasing would not dock the current Fl_Dockable_Group to a new GUI location. */
+int Fl_Dockable_Group::target_index() { return Fl_Dockable_Group_Driver::target_index_; }
+
+
+/** Creates the Fl_Dockable_Group's 'command box'.
+ The 'command box' allows to drag away an Fl_Dockable_Group by clicking that box
+ and dragging the object. The location and size of the 'command box' inside the Fl_Dockable_Group
+ can be freely set by the caller. Its changing colors and labels are best set via member functions color_for_states()
+ and label_for_states(). Its boxtype is FL_DOWN_BOX by default but can be be freely changed.
+ */
+void Fl_Dockable_Group::command_box(int x, int y, int w, int h) {
+  Fl_Dockable_Group_Driver::cmd_box_class *drag =
+    new Fl_Dockable_Group_Driver::cmd_box_class(FL_DOWN_BOX, x, y, w, h, NULL);
+  this->add(drag);
+  command_box_ = drag;
+  driver_->state(UNDOCK);
+}
+
+
+/**
+ Sets the colors of the object's 'command box' according to its current state.
+ \param undock, drag, dock, dragged Color used for states Fl_Dockable_Group::UNDOCK, Fl_Dockable_Group::DRAG,
+ Fl_Dockable_Group::DOCK, Fl_Dockable_Group::DRAGGED, respectively.
+ */
+void Fl_Dockable_Group::color_for_states(Fl_Color undock, Fl_Color drag,
+                                         Fl_Color dock, Fl_Color dragged) {
+  driver_->undock_color_ = undock;
+  driver_->drag_color_ = drag;
+  driver_->dock_color_ = dock;
+  driver_->dragged_color_ = dragged;
+}
+
+
+/**
+ Sets the text labels of the object's 'command box' according to its current state.
+ \param undock, drag, dock, dragged Text labels used for states Fl_Dockable_Group::UNDOCK, Fl_Dockable_Group::DRAG,
+ Fl_Dockable_Group::DOCK, Fl_Dockable_Group::DRAGGED, respectively.
+ */
+void Fl_Dockable_Group::label_for_states(const char *undock, const char * drag,
+                                         const char * dock, const char *dragged) {
+  driver_->undock_label_ = undock;
+  driver_->drag_label_ = drag;
+  driver_->dock_label_ = dock;
+  driver_->dragged_label_ = dragged;
+}
+
+
+void Fl_Dockable_Group::color_targets_following_dock_() {
+  bool new_can_dock = false;
+  int found = -1;
+  for (int i = 0; i < this->target_count(); i++) {
+    Fl_Box *target = Fl_Dockable_Group_Driver::target_[i];
+    if (!target->visible_r()) continue;
+    int target_x, target_y;
+    Fl_Window *top = target->top_window_offset(target_x, target_y);
+    target_x += top->x();
+    target_y += top->y();
+    int dock_x = this->window()->x() + this->x();
+    int dock_y = this->window()->y() + this->y();
+    // does dockable partially cover target ?
+    new_can_dock = (dock_x + this->w() >= target_x &&
+                         dock_x < target_x + target->w() &&
+                         dock_y + this->h() >= target_y &&
+                         dock_y < target_y + target->h());
+    if (new_can_dock) {
+      found = i;
+      break;
+    }
+  }
+  bool can_dock = (this->state == Fl_Dockable_Group::DOCK);
+  if (found >= 0 && can_dock && found != Fl_Dockable_Group_Driver::target_index_) { // dock crosses several target boxes
+    found = -1;
+    can_dock = false;
+  }
+  if (can_dock != new_can_dock) {
+    if (found >= 0) {
+      Fl_Dockable_Group_Driver::driver(this)->state(Fl_Dockable_Group::DOCK);
+      Fl_Dockable_Group_Driver::target_index_ = found;
+      Fl_Dockable_Group::active_dockable = this;
+      Fl_Dockable_Group_Driver::target_box_class *target = (Fl_Dockable_Group_Driver::target_box_class*)Fl_Dockable_Group::target_box(found);
+      target->state(Fl_Dockable_Group_Driver::DOCK_HERE);
+    } else {
+      Fl_Dockable_Group_Driver::driver(this)->state(Fl_Dockable_Group::DRAG);
+      if (Fl_Dockable_Group_Driver::target_index_ >= 0) {
+        Fl_Dockable_Group_Driver::target_box_class *target = (Fl_Dockable_Group_Driver::target_box_class*)Fl_Dockable_Group::target_box(Fl_Dockable_Group_Driver::target_index_);
+        target->state(Fl_Dockable_Group_Driver::MAY_RECEIVE);
+      }
+      Fl_Dockable_Group_Driver::target_index_ = -1;
+      Fl_Dockable_Group::active_dockable = NULL;
+    }
+  }
+}
+
+
+#ifndef FL_DOXYGEN
+
+int Fl_Dockable_Group_Driver::target_index_ = -1;
+
+std::vector<Fl_Box *>Fl_Dockable_Group_Driver::target_; // empty vector of target boxes
 
 
 Fl_Box *Fl_Dockable_Group_Driver::new_target_box(int x, int y, int w, int h) {
@@ -88,24 +211,6 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
   Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::UNDOCK);
   delete win;
 }
-
-
-Fl_Box *Fl_Dockable_Group::target_box(int x, int y, int w, int h, Fl_Group *g) {
-  Fl_Group *save = Fl_Group::current();
-  Fl_Group::current(NULL);
-  Fl_Box *target_box = Fl_Dockable_Group_Driver::new_target_box(x, y, w, h);
-  if (g) g->add(target_box);
-  Fl_Group::current(save);
-  return target_box;
-}
-
-
-Fl_Box *Fl_Dockable_Group::target_box(int n) { return Fl_Dockable_Group_Driver::target_[n]; }
-
-int Fl_Dockable_Group::target_count() { return (int)Fl_Dockable_Group_Driver::target_.size(); }
-
-int Fl_Dockable_Group::target_index() { return Fl_Dockable_Group_Driver::target_index_; }
-
 
 
 int Fl_Dockable_Group_Driver::cmd_box_class::handle(int event) {
@@ -181,61 +286,6 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *bo
 }
 
 
-void Fl_Dockable_Group::color_targets_following_dock_() {
-  bool new_can_dock = false;
-  int found = -1;
-  for (int i = 0; i < this->target_count(); i++) {
-    Fl_Box *target = Fl_Dockable_Group_Driver::target_[i];
-    if (!target->visible_r()) continue;
-    int target_x, target_y;
-    Fl_Window *top = target->top_window_offset(target_x, target_y);
-    target_x += top->x();
-    target_y += top->y();
-    int dock_x = this->window()->x() + this->x();
-    int dock_y = this->window()->y() + this->y();
-    // does dockable partially cover target ?
-    new_can_dock = (dock_x + this->w() >= target_x &&
-                         dock_x < target_x + target->w() &&
-                         dock_y + this->h() >= target_y &&
-                         dock_y < target_y + target->h());
-    if (new_can_dock) {
-      found = i;
-      break;
-    }
-  }
-  bool can_dock = (this->state == Fl_Dockable_Group::DOCK);
-  if (found >= 0 && can_dock && found != Fl_Dockable_Group_Driver::target_index_) { // dock crosses several target boxes
-    found = -1;
-    can_dock = false;
-  }
-  if (can_dock != new_can_dock) {
-    if (found >= 0) {
-      Fl_Dockable_Group_Driver::driver(this)->state(Fl_Dockable_Group::DOCK);
-      Fl_Dockable_Group_Driver::target_index_ = found;
-      Fl_Dockable_Group::active_dockable = this;
-      Fl_Dockable_Group_Driver::target_box_class *target = (Fl_Dockable_Group_Driver::target_box_class*)Fl_Dockable_Group::target_box(found);
-      target->state(Fl_Dockable_Group_Driver::DOCK_HERE);
-    } else {
-      Fl_Dockable_Group_Driver::driver(this)->state(Fl_Dockable_Group::DRAG);
-      if (Fl_Dockable_Group_Driver::target_index_ >= 0) {
-        Fl_Dockable_Group_Driver::target_box_class *target = (Fl_Dockable_Group_Driver::target_box_class*)Fl_Dockable_Group::target_box(Fl_Dockable_Group_Driver::target_index_);
-        target->state(Fl_Dockable_Group_Driver::MAY_RECEIVE);
-      }
-      Fl_Dockable_Group_Driver::target_index_ = -1;
-      Fl_Dockable_Group::active_dockable = NULL;
-    }
-  }
-}
-
-
-void Fl_Dockable_Group::command_box(int x, int y, int w, int h) {
-  Fl_Dockable_Group_Driver::cmd_box_class *drag = new Fl_Dockable_Group_Driver::cmd_box_class(FL_DOWN_BOX, x,y,w,h, NULL);
-  this->add(drag);
-  command_box_ = drag;
-  driver_->state(UNDOCK);
-}
-
-
 void Fl_Dockable_Group_Driver::store_docked_position(Fl_Dockable_Group *dock) {
   Fl_Group *gr = dock->parent();
   dock->parent_when_docked_ = gr;
@@ -246,24 +296,6 @@ void Fl_Dockable_Group_Driver::store_docked_position(Fl_Dockable_Group *dock) {
   if (i < count) {
     dock->next_in_group_when_docked_ = (i < count - 1 ? gr->child(i + 1) : gr->child(count - 2));
   }
-}
-
-
-void Fl_Dockable_Group::color_for_states(Fl_Color undock, Fl_Color drag,
-                                         Fl_Color dock, Fl_Color dragged) {
-  driver_->undock_color_ = undock;
-  driver_->drag_color_ = drag;
-  driver_->dock_color_ = dock;
-  driver_->dragged_color_ = dragged;
-}
-
-
-void Fl_Dockable_Group::label_for_states(const char *undock, const char * drag,
-                                         const char * dock, const char *dragged) {
-  driver_->undock_label_ = undock;
-  driver_->drag_label_ = drag;
-  driver_->dock_label_ = dock;
-  driver_->dragged_label_ = dragged;
 }
 
 
@@ -300,3 +332,5 @@ void Fl_Dockable_Group_Driver::target_box_class::state(enum Fl_Dockable_Group_Dr
   label(t);
   redraw();
 }
+
+#endif // FL_DOXYGEN
