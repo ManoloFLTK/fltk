@@ -15,12 +15,15 @@
 //
 
 #include <FL/Fl_Dockable_Group.H>
+#include <vector>
 
 class Fl_Dockable_Group_Driver {
   friend class Fl_Dockable_Group;
 private:
   Fl_Color undock_color_, drag_color_, dock_color_, docked_color_, dragged_color_;
   const char *undock_label_, *drag_label_, *dock_label_, *docked_label_, *dragged_label_;
+  static std::vector<Fl_Box *>target_; // vector of target boxes
+  static int target_index_; // index in vector to target where docking will occur:
 protected:
   static void delete_win_cb(Fl_Window *);
   Fl_Dockable_Group *dockable_;

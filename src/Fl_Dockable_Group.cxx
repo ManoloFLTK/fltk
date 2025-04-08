@@ -24,9 +24,9 @@
 
 Fl_Dockable_Group *Fl_Dockable_Group::active_dockable = NULL;
 
-int Fl_Dockable_Group::target_index_ = -1;
+int Fl_Dockable_Group_Driver::target_index_ = -1;
 
-std::vector<Fl_Box *>Fl_Dockable_Group::target_; // empty vector of target boxes
+std::vector<Fl_Box *>Fl_Dockable_Group_Driver::target_; // empty vector of target boxes
 
 
 #ifndef FLTK_USE_WAYLAND
@@ -45,7 +45,6 @@ Fl_Box *Fl_Dockable_Group_Driver::newTargetBoxClass(int x, int y, int w, int h) 
 
 Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) : Fl_Group(x,y,w,h,t) {
   state = UNDOCK;
-  target_index_ = -1;
   driver_ = Fl_Dockable_Group_Driver::newDockableGroupDriver(this);
   color_for_states();
   label_for_states();
@@ -54,17 +53,17 @@ Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) 
 
 Fl_Box *Fl_Dockable_Group_Driver::new_target_box(int x, int y, int w, int h) {
   Fl_Box *box = newTargetBoxClass(x, y, w, h);
-  Fl_Dockable_Group::target_.insert(Fl_Dockable_Group::target_.begin(), box);
+  target_.insert(target_.begin(), box);
   return box;
 }
 
 
 Fl_Dockable_Group_Driver::target_box_class::~target_box_class() {
-  for (int i = 0; i < Fl_Dockable_Group::target_.size(); i++) {
-    if (Fl_Dockable_Group::target_[i] == this) {
-      Fl_Dockable_Group::target_.erase(Fl_Dockable_Group::target_.begin()+i);
-      if (Fl_Dockable_Group::target_index_ == i)
-        Fl_Dockable_Group::target_index_ = -1;
+  for (int i = 0; i < target_.size(); i++) {
+    if (target_[i] == this) {
+      target_.erase(target_.begin()+i);
+      if (target_index_ == i)
+        target_index_ = -1;
       break;
     }
   }
@@ -73,8 +72,8 @@ Fl_Dockable_Group_Driver::target_box_class::~target_box_class() {
 
 void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)win->child(0);
-  if (dock->target_index_ >= 0) {
-    target_box_class *target = (target_box_class*)Fl_Dockable_Group::target_box(Fl_Dockable_Group::target_index_);
+  if (Fl_Dockable_Group_Driver::target_index_ >= 0) {
+    target_box_class *target = (target_box_class*)Fl_Dockable_Group::target_box(target_index_);
     target->state(MAY_RECEIVE);
   }
   win->hide();
@@ -99,6 +98,14 @@ Fl_Box *Fl_Dockable_Group::target_box(int x, int y, int w, int h, Fl_Group *g) {
   Fl_Group::current(save);
   return target_box;
 }
+
+
+Fl_Box *Fl_Dockable_Group::target_box(int n) { return Fl_Dockable_Group_Driver::target_[n]; }
+
+int Fl_Dockable_Group::target_count() { return (int)Fl_Dockable_Group_Driver::target_.size(); }
+
+int Fl_Dockable_Group::target_index() { return Fl_Dockable_Group_Driver::target_index_; }
+
 
 
 int Fl_Dockable_Group_Driver::cmd_box_class::handle(int event) {
@@ -150,7 +157,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *bo
     return 1;
   } else if (event == FL_RELEASE && dock->state == Fl_Dockable_Group::DOCK) { // Dock dockable in place
     Fl_Dockable_Group::active_dockable = NULL;
-    target_box_class *target = (target_box_class*)Fl_Dockable_Group::target_box(Fl_Dockable_Group::target_index_);
+    target_box_class *target = (target_box_class*)Fl_Dockable_Group::target_box(target_index_);
     // move target-box target from its parent to dock's original parent = parent_when_docked_
     Fl_Group *parent = target->parent(); // can be an Fl_Tabs
     Fl_Window *top = dock->window(); // extract dock from its window and delete the containing window
@@ -178,7 +185,7 @@ void Fl_Dockable_Group::color_targets_following_dock_() {
   bool new_can_dock = false;
   int found = -1;
   for (int i = 0; i < this->target_count(); i++) {
-    Fl_Box *target = this->target_[i];
+    Fl_Box *target = Fl_Dockable_Group_Driver::target_[i];
     if (!target->visible_r()) continue;
     int target_x, target_y;
     Fl_Window *top = target->top_window_offset(target_x, target_y);
@@ -197,24 +204,24 @@ void Fl_Dockable_Group::color_targets_following_dock_() {
     }
   }
   bool can_dock = (this->state == Fl_Dockable_Group::DOCK);
-  if (found >= 0 && can_dock && found != this->target_index_) { // dock crosses several target boxes
+  if (found >= 0 && can_dock && found != Fl_Dockable_Group_Driver::target_index_) { // dock crosses several target boxes
     found = -1;
     can_dock = false;
   }
   if (can_dock != new_can_dock) {
     if (found >= 0) {
       Fl_Dockable_Group_Driver::driver(this)->state(Fl_Dockable_Group::DOCK);
-      this->target_index_ = found;
+      Fl_Dockable_Group_Driver::target_index_ = found;
       Fl_Dockable_Group::active_dockable = this;
       Fl_Dockable_Group_Driver::target_box_class *target = (Fl_Dockable_Group_Driver::target_box_class*)Fl_Dockable_Group::target_box(found);
       target->state(Fl_Dockable_Group_Driver::DOCK_HERE);
     } else {
       Fl_Dockable_Group_Driver::driver(this)->state(Fl_Dockable_Group::DRAG);
-      if (this->target_index_ >= 0) {
-        Fl_Dockable_Group_Driver::target_box_class *target = (Fl_Dockable_Group_Driver::target_box_class*)Fl_Dockable_Group::target_box(this->target_index_);
+      if (Fl_Dockable_Group_Driver::target_index_ >= 0) {
+        Fl_Dockable_Group_Driver::target_box_class *target = (Fl_Dockable_Group_Driver::target_box_class*)Fl_Dockable_Group::target_box(Fl_Dockable_Group_Driver::target_index_);
         target->state(Fl_Dockable_Group_Driver::MAY_RECEIVE);
       }
-      this->target_index_ = -1;
+      Fl_Dockable_Group_Driver::target_index_ = -1;
       Fl_Dockable_Group::active_dockable = NULL;
     }
   }

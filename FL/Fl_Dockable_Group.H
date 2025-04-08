@@ -22,7 +22,6 @@
 
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Box.H>
-#include <vector>
 
 class Fl_Dockable_Group_Driver;
 
@@ -32,8 +31,6 @@ class Fl_Dockable_Group : public Fl_Group {
 private:
   Fl_Dockable_Group_Driver *driver_;
   Fl_Box *command_box_;
-  static std::vector<Fl_Box *>target_; // vector of target boxes
-  static int target_index_; // index in vector to target where docking will occur:
   Fl_Group *parent_when_docked_;
   int x_when_docked_, y_when_docked_;
   Fl_Widget *next_in_group_when_docked_;
@@ -43,9 +40,9 @@ public:
   void command_box(int x, int y, int w, int h);
   Fl_Box *command_box() { return command_box_; }
   static Fl_Box *target_box(int x, int y, int w, int h, Fl_Group *g);
-  static Fl_Box *target_box(int n) { return target_[n]; }
-  static int target_count() { return (int)target_.size(); }
-  static int target_index() { return target_index_; }
+  static Fl_Box *target_box(int n);
+  static int target_count();
+  static int target_index();
   void color_for_states(Fl_Color undock = FL_BACKGROUND_COLOR, Fl_Color drag = FL_BACKGROUND2_COLOR,
                         Fl_Color dock = FL_SELECTION_COLOR, Fl_Color dragged = FL_SELECTION_COLOR);
   void label_for_states(const char *undock = "Undock", const char *drag = "Drag",
