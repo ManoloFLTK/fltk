@@ -120,7 +120,7 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
   if (event == FL_DND_ENTER) {
     //puts("FL_DND_ENTER");
     if (scr_driver->xdg_toplevel_drag) Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DOCK);
-    state(DOCK_HERE);
+    state(Fl_Dockable_Group::DOCK_HERE);
     return 1;
   } else if (event == FL_DND_DRAG) {
     //puts("FL_DND_DRAG");
@@ -128,7 +128,7 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
   } else if (event == FL_DND_LEAVE) {
     //puts("FL_DND_LEAVE");
     if (scr_driver->xdg_toplevel_drag) Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DRAG);
-    state(MAY_RECEIVE);
+    state(Fl_Dockable_Group::MAY_RECEIVE);
     return 1;
   } else if (event == FL_DND_RELEASE) {
     //puts("FL_DND_RELEASE");
@@ -163,7 +163,7 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
     // move target-box this from its parent to dock's original parent
     new_target_box_place->add(this);
     this->set_visible();
-    this->state(MAY_RECEIVE);
+    this->state(Fl_Dockable_Group::MAY_RECEIVE);
     new_target_box_place->redraw();
     target_group->redraw();
     int dock_w = dock->w(), dock_h = dock->h();

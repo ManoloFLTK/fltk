@@ -120,6 +120,17 @@ void Fl_Dockable_Group::label_for_states(const char *undock, const char * drag,
 }
 
 
+/**
+ Sets the text labels used by 'target boxes' in their 2 states.
+ \param receive The text label when a 'target box' is in the Fl_Dockable_Group::MAY_RECEIVE state.
+ \param dock The text label when a 'target box' is in the Fl_Dockable_Group::DOCK_HERE state.
+ */
+void Fl_Dockable_Group::label_for_target_states(const char *receive, const char *dock) {
+  Fl_Dockable_Group_Driver::target_receive_label_ = receive;
+  Fl_Dockable_Group_Driver::target_dock_label_ = dock;
+}
+
+
 void Fl_Dockable_Group::color_targets_following_dock_() {
   bool new_can_dock = false;
   int found = -1;
@@ -153,12 +164,12 @@ void Fl_Dockable_Group::color_targets_following_dock_() {
       Fl_Dockable_Group_Driver::target_index_ = found;
       Fl_Dockable_Group::active_dockable = this;
       Fl_Dockable_Group_Driver::target_box_class *target = (Fl_Dockable_Group_Driver::target_box_class*)Fl_Dockable_Group::target_box(found);
-      target->state(Fl_Dockable_Group_Driver::DOCK_HERE);
+      target->state(DOCK_HERE);
     } else {
       Fl_Dockable_Group_Driver::driver(this)->state(Fl_Dockable_Group::DRAG);
       if (Fl_Dockable_Group_Driver::target_index_ >= 0) {
         Fl_Dockable_Group_Driver::target_box_class *target = (Fl_Dockable_Group_Driver::target_box_class*)Fl_Dockable_Group::target_box(Fl_Dockable_Group_Driver::target_index_);
-        target->state(Fl_Dockable_Group_Driver::MAY_RECEIVE);
+        target->state(MAY_RECEIVE);
       }
       Fl_Dockable_Group_Driver::target_index_ = -1;
       Fl_Dockable_Group::active_dockable = NULL;
@@ -172,6 +183,10 @@ void Fl_Dockable_Group::color_targets_following_dock_() {
 int Fl_Dockable_Group_Driver::target_index_ = -1;
 
 std::vector<Fl_Box *>Fl_Dockable_Group_Driver::target_; // empty vector of target boxes
+
+const char *Fl_Dockable_Group_Driver::target_receive_label_ = "Dock target";
+
+const char *Fl_Dockable_Group_Driver::target_dock_label_ = "Accept";
 
 
 Fl_Box *Fl_Dockable_Group_Driver::new_target_box(int x, int y, int w, int h) {
@@ -197,7 +212,7 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)win->child(0);
   if (Fl_Dockable_Group_Driver::target_index_ >= 0) {
     target_box_class *target = (target_box_class*)Fl_Dockable_Group::target_box(target_index_);
-    target->state(MAY_RECEIVE);
+    target->state(Fl_Dockable_Group::MAY_RECEIVE);
   }
   win->hide();
   win->remove(dock);
@@ -272,7 +287,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *bo
     parent->add(dock);
     dock->parent_when_docked_->add(target);
     target->set_visible(); // useful if target is an Fl_Tabs child
-    target->state(MAY_RECEIVE);
+    target->state(Fl_Dockable_Group::MAY_RECEIVE);
     int dock_w = dock->w(), dock_h = dock->h();
     dock->resize(target->x(), target->y(), target->w(), target->h());
     target->resize(dock->x_when_docked_, dock->y_when_docked_, dock_w, dock_h);
@@ -315,17 +330,17 @@ void Fl_Dockable_Group_Driver::state(enum Fl_Dockable_Group::states state) {
 }
 
 
-void Fl_Dockable_Group_Driver::target_box_class::state(enum Fl_Dockable_Group_Driver::target_states s) {
+void Fl_Dockable_Group_Driver::target_box_class::state(enum Fl_Dockable_Group::target_states s) {
   state_ = s;
   Fl_Color c = 0;
   const char *t = NULL;
-  if (s == Fl_Dockable_Group_Driver::MAY_RECEIVE)  {
+  if (s == Fl_Dockable_Group::MAY_RECEIVE)  {
     c = (Fl_Dockable_Group::active_dockable ?
          driver(Fl_Dockable_Group::active_dockable)->drag_color_ : FL_BACKGROUND2_COLOR);
-    t = "Dock target";
-  } else if (s == Fl_Dockable_Group_Driver::DOCK_HERE) {
+    t = target_receive_label_;
+  } else if (s == Fl_Dockable_Group::DOCK_HERE) {
     c = driver(Fl_Dockable_Group::active_dockable)->dock_color_;
-    t = "Accept";
+    t = target_dock_label_;
   }
   color(c);
   labelcolor(fl_contrast(FL_FOREGROUND_COLOR, c));
