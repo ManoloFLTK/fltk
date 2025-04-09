@@ -759,8 +759,8 @@ if(UNIX AND FLTK_BACKEND_WAYLAND)
   list(APPEND STATIC_FILES "xdg-shell-protocol.c")
   list(APPEND SHARED_FILES "xdg-shell-protocol.c")
 
-  if(EXISTS ${PROTOCOLS}/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1.xml)
-    set(INFILE ${PROTOCOLS}/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1.xml)
+  set(INFILE ${PROTOCOLS}/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1.xml)
+  if(EXISTS ${INFILE})
     add_custom_command(
       OUTPUT xdg-toplevel-drag-protocol.c xdg-toplevel-drag-client-protocol.h
       COMMAND wayland-scanner private-code  ${INFILE} xdg-toplevel-drag-protocol.c
