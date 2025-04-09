@@ -207,7 +207,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_c
     return box->Fl_Box::handle(event);
   if (event == FL_PUSH && dock->state == Fl_Dockable_Group::UNDOCK) {
     drag_count = 0;
-  } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && ++drag_count >= 5) {
+  } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && ++drag_count >= 3) {
     Fl_Window *top = dock->top_window();
     // It seems that while MUTTER accepts to apply the xdg_toplevel_drag protocol
     // to a subwindow, KWIN doesn't accept it and works OK only when dragging inside a toplevel.
@@ -229,7 +229,9 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_c
     Fl::pushed(dock->command_box()); // necessary for tabs
     xid = fl_wl_xid(new_win);
     xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
-    xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x() - dock_x, Fl::event_y() - dock_y);
+    int s = Fl_Wayland_Window_Driver::driver(top)->wld_scale();
+    xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel,
+                                (Fl::event_x() - dock_x) * s, (Fl::event_y() - dock_y) * s);
     //printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
     Fl_Dockable_Group::active_dockable = dock;
     old_keyboard_screen_scaling_ = Fl_Screen_Driver::keyboard_screen_scaling;
@@ -290,9 +292,9 @@ int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_bo
   if (event == FL_PUSH && dock->state == Fl_Dockable_Group::UNDOCK) {
     drag_count = 0;
     return 1;
-  } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && ++drag_count < 5) {
+  } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && ++drag_count < 3) {
     return 1;
-  } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && drag_count >= 5) {
+  } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && drag_count >= 3) {
     drag_count = 0;
     struct wld_window *xid = fl_wl_xid(dock->window());
     state(Fl_Dockable_Group::DRAG);

@@ -244,7 +244,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *bo
     winy = top_win->y_root() + offset_y + dock->y();
     return 1;
   } else if (event == FL_DRAG && dock->state == Fl_Dockable_Group::UNDOCK && (Fl::event_state() & FL_BUTTON1)) {
-    if (++drag_count > 5) {
+    if (++drag_count >= 3) {
       Fl_Group *top = dock->parent();
       // transform the dockable group into a draggable, borderless toplevel window
       store_docked_position(dock);
