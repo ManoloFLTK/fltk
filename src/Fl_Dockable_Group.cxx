@@ -137,13 +137,11 @@ void Fl_Dockable_Group::color_targets_following_dock_() {
     Fl_Window *top = target->top_window_offset(target_x, target_y);
     target_x += top->x();
     target_y += top->y();
-    int dock_x = this->window()->x() + this->x();
-    int dock_y = this->window()->y() + this->y();
-    // does dockable partially cover target ?
-    new_can_dock = (dock_x + this->w() >= target_x &&
-                         dock_x < target_x + target->w() &&
-                         dock_y + this->h() >= target_y &&
-                         dock_y < target_y + target->h());
+    int dock_x = this->window()->x() + this->x() + Fl::event_x();
+    int dock_y = this->window()->y() + this->y() + Fl::event_y();
+    // Is dragging cursor inside target ?
+    new_can_dock = dock_x >= target_x && dock_x < target_x + target->w() &&
+                   dock_y >= target_y && dock_y < target_y + target->h();
     if (new_can_dock) {
       found = i;
       break;
