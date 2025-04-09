@@ -38,7 +38,7 @@ class Fl_Dockable_Group_Driver;
  it gets resized to the location and size of its receiving 'target box'. Another effect of this move operation is that
  the 'target box' moves from the Fl_Dockable_Group's destination location to its location of origin.
  Therefore, an Fl_Dockable_Group can be dragged from its new location back to where it was before
- in the GUI. While an Fl_Dockable_Group is being dragged away, hitting Escape moves it back to its
+ in the GUI. While an Fl_Dockable_Group is being dragged away, hitting Escape sends it back to its
  starting location.
  
  An Fl_Dockable_Group can be made the child of an Fl_Tabs object. This results in a tab that can be detached
@@ -62,8 +62,8 @@ class Fl_Dockable_Group_Driver;
  When the active Wayland compositor doesn't support that protocol, FLTK computes a small image of the Fl_Dockable_Group and
  uses it as the cursor image of a DnD operation that ends being dropped to a 'target box' or being cancelled.
  The KWin compositor's support of <tt>XDG toplevel drag</tt> forbids an Fl_Dockable_Group to be part of a subwindow.
- - Under other platforms, Fl_Dockable_Group dragging begins by transforming the group into an Fl_Window which is
- dragged around with the mouse and can be docked to any 'target box' or cancelled with Escape.
+ - Under other platforms, Fl_Dockable_Group dragging and docking begins by transforming the group into an Fl_Window which is
+ dragged around with the mouse and can be docked to any 'target box', or sent back to its initial location with Escape.
 */
 class Fl_Dockable_Group : public Fl_Group {
 #ifndef FL_DOXYGEN
@@ -98,14 +98,7 @@ public:
     DOCK, ///< The Fl_Dockable_Group is above a target box where it will dock if the mouse is released.
     DRAGGED ///<  Used only when the Fl_Dockable_Group is represented by an icon and is being dragged.
   } state; ///< The current state of the Fl_Dockable_Group.
-  /**
-   The 2 states a 'target group' can adopt during its lifetime.
-   */
-  enum target_states {
-    MAY_RECEIVE, ///< Indicates the 'target box' is a potential location where an Fl_Dockable_Group could be dragged.
-    DOCK_HERE ///< Indicates an Fl_Dockable_Group is being dragged above the 'target box' ; releasing the mouse would dock the group.
-  };
-  static void label_for_target_states(const char *receive = "Dock target", const char *dock = "Accept");
+  static void label_for_target_boxes(const char *l);
   /** Non-NULL when an Fl_Dockable_Group is currently active.
    Under Wayland, this means a Drag-and-Drop of a window (or an icon copy of a window) is active.
    Under other platforms, this means an Fl_Dockable_Group is currently above a target box

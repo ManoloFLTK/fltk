@@ -24,7 +24,7 @@ class Fl_Dockable_Group_Driver {
 private:
   Fl_Color undock_color_, drag_color_, dock_color_, docked_color_, dragged_color_;
   const char *undock_label_, *drag_label_, *dock_label_, *docked_label_, *dragged_label_;
-  static const char *target_receive_label_, *target_dock_label_;
+  static const char *target_box_label_;
   static std::vector<Fl_Box *>target_; // vector of target boxes
   static int target_index_; // index in vector to target where docking will occur:
 protected:
@@ -38,15 +38,19 @@ public:
     }
     int handle(int event) FL_OVERRIDE;
   };
+  enum target_states {
+    MAY_RECEIVE,
+    DOCK_HERE
+  };
   class target_box_class : public Fl_Box {
   public:
-    enum Fl_Dockable_Group::target_states state_;
+    enum target_states state_;
     target_box_class(int x, int y, int w, int h) : Fl_Box(FL_DOWN_BOX, x,y,w,h,NULL) {
       labelfont(FL_ITALIC);
-      state(Fl_Dockable_Group::MAY_RECEIVE);
+      state(MAY_RECEIVE);
     }
     virtual ~target_box_class();
-    void state(enum Fl_Dockable_Group::target_states);
+    void state(enum target_states);
   };
   static Fl_Dockable_Group_Driver *newDockableGroupDriver(Fl_Dockable_Group*);
   static Fl_Box *newTargetBoxClass(int x, int y, int w, int h);
