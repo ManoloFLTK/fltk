@@ -18,7 +18,7 @@
  */
 
 
-#include <config.h>
+#include <config.h> // for HAVE_XDG_TOPLEVEL_DRAG
 #include <FL/platform.H>
 #include <FL/Fl_Dockable_Group.H>
 #include <FL/Fl_Image_Surface.H>
@@ -36,7 +36,7 @@ private:
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
   struct xdg_toplevel_drag_v1 *drag_;
   int old_keyboard_screen_scaling_;
-  static void delete_win_cb(Fl_Window *);
+  static void delete_win_cb_(Fl_Window *);
   Fl_Window *copy_(cmd_box_class *box, const char *t);
 #endif
 public:
@@ -50,7 +50,11 @@ public:
 };
 
 
+// This class is used when the compositor doesn't support protocol 'XDG toplevel drag'.
+// An image of the Fl_Dockable_Group object is used as the DnD cursor icon.
 class Fl_oldWayland_Dockable_Group_Driver : public Fl_Wayland_Dockable_Group_Driver {
+private:
+  struct Fl_Wayland_Graphics_Driver::wld_buffer *offscreen_from_group_(int scale);
 public:
   Fl_oldWayland_Dockable_Group_Driver(Fl_Dockable_Group *from) : Fl_Wayland_Dockable_Group_Driver(from) {}
   int handle(cmd_box_class *, int event) FL_OVERRIDE;
@@ -96,14 +100,14 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(cmd_box_class *box, const cha
   dockable_->position(0,0);
   win->add(dockable_);
   win->end();
-  win->callback((Fl_Callback0*)Fl_Wayland_Dockable_Group_Driver::delete_win_cb);
+  win->callback((Fl_Callback0*)Fl_Wayland_Dockable_Group_Driver::delete_win_cb_);
   state(Fl_Dockable_Group::DRAG);
   win->border(0);
   return win;
 }
 
 
-void Fl_Wayland_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
+void Fl_Wayland_Dockable_Group_Driver::delete_win_cb_(Fl_Window *win) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)win->child(0);
   Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
   if (dr->old_keyboard_screen_scaling_) Fl::keyboard_screen_scaling(1);
@@ -261,20 +265,20 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_c
 }
 
 
-static struct Fl_Wayland_Graphics_Driver::wld_buffer *offscreen_from_group(Fl_Dockable_Group *dock,
-                                                                           int scale) {
+struct Fl_Wayland_Graphics_Driver::wld_buffer *
+      Fl_oldWayland_Dockable_Group_Driver::offscreen_from_group_(int scale) {
   int icon_size = 200; // max width or height of image for cursor in FLTK units
   struct Fl_Wayland_Graphics_Driver::wld_buffer *off;
-  double r1 = double(icon_size) / dock->w();
-  double r2 = double(icon_size) / dock->h();
+  double r1 = double(icon_size) / dockable_->w();
+  double r2 = double(icon_size) / dockable_->h();
   double r = (r1 < r2 ? r1 : r2);
   r = (r < 1 ? r : 1);
-  int width = dock->w() * r;
-  int height = dock->h() * r;
+  int width = dockable_->w() * r;
+  int height = dockable_->h() * r;
   Fl_Image_Surface *surf = Fl_Wayland_Graphics_Driver::custom_offscreen(width * scale, height * scale, &off);
   Fl_Surface_Device::push_current(surf);
   cairo_scale(off->draw_buffer.cairo_, r * scale, r * scale);
-  surf->draw(dock);
+  surf->draw(dockable_);
   Fl_Surface_Device::pop_current();
   delete surf;
   cairo_surface_flush( cairo_get_target(off->draw_buffer.cairo_) );
@@ -307,7 +311,7 @@ int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_bo
     wl_data_device_start_drag(scr_driver->seat->data_device, scr_driver->seat->data_source,
                               xid->wl_surface, *Fl_Wayland_Screen_Driver::fl_dnd_icon, scr_driver->seat->serial);
     int s = Fl_Wayland_Window_Driver::driver(box->top_window())->wld_scale();
-    struct Fl_Wayland_Graphics_Driver::wld_buffer *off = (struct Fl_Wayland_Graphics_Driver::wld_buffer *)offscreen_from_group(dock, s);
+    struct Fl_Wayland_Graphics_Driver::wld_buffer *off = offscreen_from_group_(s);
     double r = double(off->draw_buffer.width) / (dock->w() * s);
     wl_surface_attach(*Fl_Wayland_Screen_Driver::fl_dnd_icon, off->wl_buffer,
                       (dock->x() - Fl::event_x()) * r, (dock->y() - Fl::event_y()) * r );

@@ -100,7 +100,7 @@ public:
   } state; ///< The current state of the Fl_Dockable_Group.
   static void label_for_target_boxes(const char *l);
   /** Non-NULL when an Fl_Dockable_Group is currently active.
-   Under Wayland, this means a Drag-and-Drop of a window (or an icon copy of a window) is active.
+   Under Wayland, this means a Drag-and-Drop of a window (or an image of a window) is active.
    Under other platforms, this means an Fl_Dockable_Group is currently above a target box
    and can be docked there.
    */
