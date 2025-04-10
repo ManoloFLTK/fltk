@@ -56,7 +56,7 @@ class Fl_Dockable_Group_Driver;
  
  \note Platform details:
  - Under Wayland, Fl_Dockable_Group dragging and docking is performed via a Drag-and-Drop mechanism which itself
- can be implemented in 2 ways. Recent versions of the Mutter (Gnome ≥ 48) and KWin (Qt ≥ 6.6) compositors support a Wayland
+ can be implemented in 2 ways. Recent versions of the Mutter (Gnome ≥ 48) and KWin (Qt ≥ 6.3) compositors support a Wayland
  protocol called <tt>XDG toplevel drag</tt> that allows to detach the Fl_Dockable_Group, transform it into a
  draggable window, and drop it to a 'target box' back into the form of an Fl_Dockable_Group.
  When the active Wayland compositor doesn't support that protocol, FLTK computes a small image of the Fl_Dockable_Group and

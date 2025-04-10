@@ -109,11 +109,7 @@ public:
   struct libdecor *libdecor_context;
   struct xdg_wm_base *xdg_wm_base;
   struct zwp_text_input_manager_v3 *text_input_base;
-#ifdef HAVE_XDG_TOPLEVEL_DRAG
   struct xdg_toplevel_drag_manager_v1 *xdg_toplevel_drag;
-#else
-  void *xdg_toplevel_drag;
-#endif
 // constructor
   Fl_Wayland_Screen_Driver();
 
