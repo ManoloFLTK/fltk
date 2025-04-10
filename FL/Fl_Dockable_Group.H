@@ -37,8 +37,10 @@ class Fl_Dockable_Group_Driver;
  to be docked. When an Fl_Dockable_Group is dragged away from one location and docked at a new location,
  it gets resized to the location and size of its receiving 'target box'. Another effect of this move operation is that
  the 'target box' moves from the Fl_Dockable_Group's destination location to its location of origin.
- Therefore, an Fl_Dockable_Group can be dragged from its new location back to where it was before
- in the GUI. While an Fl_Dockable_Group is being dragged away, hitting Escape sends it back to its
+ Therefore, after an Fl_Dockable_Group gets dragged from location A to location B in the GUI, that group
+ can be dragged from B back to A because the 'target box'  that was initially at B has been moved to A.
+ 
+ While an Fl_Dockable_Group is being dragged away, hitting Escape before it's docked somewhere sends it back to its
  starting location.
  
  An Fl_Dockable_Group can be made the child of an Fl_Tabs object. This results in a tab that can be detached
@@ -55,15 +57,18 @@ class Fl_Dockable_Group_Driver;
  A usage example is found at \p test/dock_undock.cxx.
  
  \note Platform details:
- - Under Wayland, Fl_Dockable_Group dragging and docking is performed via a Drag-and-Drop mechanism which itself
- can be implemented in 2 ways. Recent versions of the Mutter (Gnome ≥ 48) and KWin (Qt ≥ 6.3) compositors support a Wayland
+ <ul><li>Under Wayland, Fl_Dockable_Group dragging and docking is performed via a Drag-and-Drop operation which itself
+ can be implemented in 2 ways.
+ <ul><li>Recent versions of the Mutter (Gnome ≥ 48) and KWin (Qt ≥ 6.3) compositors support a Wayland
  protocol called <tt>XDG toplevel drag</tt> that allows to detach the Fl_Dockable_Group, transform it into a
  draggable window, and drop it to a 'target box' back into the form of an Fl_Dockable_Group.
- When the active Wayland compositor doesn't support that protocol, FLTK computes a small image of the Fl_Dockable_Group and
- uses it as the cursor image of a DnD operation that ends being dropped to a 'target box' or being cancelled.
  The KWin compositor's support of <tt>XDG toplevel drag</tt> forbids an Fl_Dockable_Group to be part of a subwindow.
- - Under other platforms, Fl_Dockable_Group dragging and docking begins by transforming the group into an Fl_Window which is
+ <li>When the active Wayland compositor doesn't support that protocol, FLTK computes a small image of the Fl_Dockable_Group and
+ uses it as the cursor image of a DnD operation that ends being dropped to a 'target box' or being cancelled.
+ </ul>
+ <li>Under other platforms, Fl_Dockable_Group dragging and docking begins by transforming the group into an Fl_Window which is
  dragged around with the mouse and can be docked to any 'target box', or sent back to its initial location with Escape.
+ </ul>
 */
 class Fl_Dockable_Group : public Fl_Group {
 #ifndef FL_DOXYGEN

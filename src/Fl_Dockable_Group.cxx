@@ -81,9 +81,10 @@ int Fl_Dockable_Group::target_index() { return Fl_Dockable_Group_Driver::target_
 
 /** Creates the Fl_Dockable_Group's 'command box'.
  The 'command box' allows to drag away an Fl_Dockable_Group by clicking that box
- and dragging the object. The location and size of the 'command box' inside the Fl_Dockable_Group
+ and dragging the mouse. The position and size of the 'command box' inside the Fl_Dockable_Group
  can be freely set by the caller. Its changing colors and labels are best set via member functions color_for_states()
  and label_for_states(). Its boxtype is FL_DOWN_BOX by default but can be be freely changed.
+ \param x,y,w,h Position and size of the 'command box'.
  \return The created 'command box'.
  */
 Fl_Box *Fl_Dockable_Group::command_box(int x, int y, int w, int h) {
@@ -97,7 +98,7 @@ Fl_Box *Fl_Dockable_Group::command_box(int x, int y, int w, int h) {
 
 
 /**
- Sets the colors of the object's 'command box' according to its current state.
+ Sets the colors the object's 'command box' takes in each of its possible states.
  \param undock, drag, dock, dragged Color used for states Fl_Dockable_Group::UNDOCK, Fl_Dockable_Group::DRAG,
  Fl_Dockable_Group::DOCK, Fl_Dockable_Group::DRAGGED, respectively.
  */
@@ -111,7 +112,7 @@ void Fl_Dockable_Group::color_for_states(Fl_Color undock, Fl_Color drag,
 
 
 /**
- Sets the text labels of the object's 'command box' according to its current state.
+ Sets the text labels the object's 'command box' uses in each of its possible states.
  \param undock, drag, dock, dragged Text labels used for states Fl_Dockable_Group::UNDOCK, Fl_Dockable_Group::DRAG,
  Fl_Dockable_Group::DOCK, Fl_Dockable_Group::DRAGGED, respectively.
  */
