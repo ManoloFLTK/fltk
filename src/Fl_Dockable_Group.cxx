@@ -56,6 +56,7 @@ Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) 
  Its boxtype is FL_DOWN_BOX by default.
  \param x,y,w,h Position and size of the 'target box'.
  \param g Group (or derived object, e.g., Fl_Double_Window, Fl_Tabs) to which the 'target box' to be created will be added.
+ \return The created 'target box'.
  */
 Fl_Box *Fl_Dockable_Group::target_box(int x, int y, int w, int h, Fl_Group *g) {
   Fl_Group *save = Fl_Group::current();
@@ -123,7 +124,8 @@ void Fl_Dockable_Group::label_for_states(const char *undock, const char * drag,
 }
 
 
-/** Sets the label of 'target boxes' */
+/** Sets the label of 'target boxes'.
+ The default label is <tt>"Dock here"</tt>. */
 void Fl_Dockable_Group::label_for_target_boxes(const char *l) {
   Fl_Dockable_Group_Driver::target_box_label_ = l;
 }
