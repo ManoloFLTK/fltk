@@ -190,6 +190,12 @@ static void xdg_toplevel_drag_data_source_handle_cancelled(void *data, struct wl
   Fl_Wayland_Screen_Driver::p_data_source_listener->cancelled(NULL, source);
 }
 
+
+static void xdg_toplevel_drag_data_source_handle_dnd_finished(void *data, struct wl_data_source *source) {
+  xdg_toplevel_drag_data_source_handle_cancelled(data, source);
+}
+
+
 static struct wl_data_source_listener *xdg_toplevel_drag_listener = NULL;
 
 static const struct wl_data_source_listener *xdg_toplevel_drag_data_source_listener() {
@@ -197,6 +203,7 @@ static const struct wl_data_source_listener *xdg_toplevel_drag_data_source_liste
     xdg_toplevel_drag_listener = new struct wl_data_source_listener;
     memcpy(xdg_toplevel_drag_listener, Fl_Wayland_Screen_Driver::p_data_source_listener, sizeof(struct wl_data_source_listener));
     xdg_toplevel_drag_listener->cancelled = xdg_toplevel_drag_data_source_handle_cancelled;
+    xdg_toplevel_drag_listener->dnd_finished = xdg_toplevel_drag_data_source_handle_dnd_finished;
   }
   return (const struct wl_data_source_listener *)xdg_toplevel_drag_listener;
 }
