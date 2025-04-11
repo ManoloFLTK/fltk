@@ -233,7 +233,9 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_c
     Fl::pushed(dock->command_box()); // necessary for tabs
     xid = fl_wl_xid(new_win);
     xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
-    int s = Fl_Wayland_Window_Driver::driver(top)->wld_scale();
+    float s = Fl::screen_scale(top->screen_num());
+    if (Fl_Wayland_Screen_Driver::compositor == Fl_Wayland_Screen_Driver::MUTTER)
+               s *= Fl_Wayland_Window_Driver::driver(top)->wld_scale();
     xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel,
                                 (Fl::event_x() - dock_x) * s, (Fl::event_y() - dock_y) * s);
     //printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
@@ -256,7 +258,8 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_c
                               scr_driver->seat->pointer_focus, NULL, scr_driver->seat->serial);
     //printf("xdg_toplevel_drag_v1_attach to toplevel=%p\n",xid->xdg_toplevel);
     // need to attach AFTER start_drag even though xdg_toplevel_drag protocol doc says opposite!
-    xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x(), Fl::event_y());
+    float s = Fl::screen_scale(dock->window()->screen_num());
+    xdg_toplevel_drag_v1_attach(dr->drag_, xid->xdg_toplevel, Fl::event_x() * s, Fl::event_y() * s);
     Fl_Dockable_Group::active_dockable = dock;
   }
   return 1;
