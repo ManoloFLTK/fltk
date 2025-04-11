@@ -294,7 +294,7 @@ int Fl_oldWayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_bo
   static int drag_count;
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)box->parent();
-  if ((event != FL_PUSH && event != FL_DRAG) || !(Fl::event_state() & FL_BUTTON1))
+  if ((event != FL_PUSH && event != FL_DRAG) || !(Fl::event_state() & FL_BUTTON1) || Fl::belowmouse() != box)
     return box->Fl_Box::handle(event);
   if (event == FL_PUSH && dock->state == Fl_Dockable_Group::UNDOCK) {
     drag_count = 0;
