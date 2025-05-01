@@ -139,36 +139,7 @@ function(fl_create_example NAME SOURCES LIBRARIES)
       set_target_properties(${TARGET_NAME} PROPERTIES RESOURCE ${ICON_PATH})
     endif()
 
-    if (${TARGET_NAME} MATCHES -shared)
-      #set FLTK_USED_LIBS to list of necessary FLTK frameworks
-      get_property(FLTK_TARGETS TARGET ${TARGET_NAME} PROPERTY LINK_LIBRARIES)
-      set(FLTK_USED_LIBS fltk)
-      if (FLTK_TARGETS MATCHES fltk::images-shared)
-        list(PREPEND FLTK_USED_LIBS fltk_images fltk_png fltk_jpeg fltk_z)
-      endif()
-      if (FLTK_TARGETS MATCHES fltk::gl-shared)
-        list(PREPEND FLTK_USED_LIBS fltk_gl)
-      endif()
-
-      if(CMAKE_GENERATOR STREQUAL Xcode)
-        set(PROJECT_PREFIX $<CONFIG>/)
-      else()
-        set(PROJECT_PREFIX )
-      endif(CMAKE_GENERATOR STREQUAL Xcode)
-      set(BUNDLE_FRAMEWORK_PATH
-          ${EXECUTABLE_OUTPUT_PATH}/${PROJECT_PREFIX}${TARGET_NAME}.app/Contents/Frameworks)
-      #create the Frameworks directory inside bundle
-      add_custom_command(TARGET ${TARGET_NAME} PRE_LINK
-        COMMAND mkdir ARGS -p ${BUNDLE_FRAMEWORK_PATH})
-      #copy needed frameworks to bundle from FLTK build dir
-      foreach(ELT ${FLTK_USED_LIBS})
-        add_custom_command(TARGET ${TARGET_NAME} PRE_LINK
-          COMMAND cp ARGS -R ${CMAKE_BINARY_DIR}/lib/${PROJECT_PREFIX}${ELT}.framework ${BUNDLE_FRAMEWORK_PATH})
-      endforeach()
-      set_target_properties(${TARGET_NAME} PROPERTIES INSTALL_RPATH @loader_path/../Frameworks
-        BUILD_WITH_INSTALL_RPATH TRUE)
-    endif (${TARGET_NAME} MATCHES -shared)
-
+    fltk_cp_frameworks_to_bundle(${TARGET_NAME} ${CMAKE_CURRENT_BINARY_DIR}/.. ${EXECUTABLE_OUTPUT_PATH})
   endif()
 
   ##############################################################################
