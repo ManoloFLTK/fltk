@@ -87,12 +87,12 @@ endfunction(fltk_set_bundle_icon TARGET ICON_PATH)
 
 function(fltk_cp_frameworks_to_bundle NAME FLTK_BUILD_DIR BINARY_DIR)
   get_property(FLTK_TARGETS TARGET ${NAME} PROPERTY LINK_LIBRARIES)
-  if(APPLE AND FLTK_TARGETS MATCHES "fltk::[a-z]*-shared")
+  if(APPLE AND (FLTK_TARGETS MATCHES "fltk::[a-z]*-shared" OR FLTK_TARGETS MATCHES "fluid-lib-shared"))
     set_target_properties(${NAME} PROPERTIES INSTALL_RPATH @loader_path/../Frameworks
         BUILD_WITH_INSTALL_RPATH TRUE)
     #set FLTK_USED_LIBS to list of necessary FLTK frameworks
     set(FLTK_USED_LIBS fltk)
-    if (FLTK_TARGETS MATCHES fltk::images-shared)
+    if (FLTK_TARGETS MATCHES fltk::images-shared OR FLTK_TARGETS MATCHES fluid-lib-shared)
       list(PREPEND FLTK_USED_LIBS fltk_images fltk_png fltk_jpeg fltk_z)
     endif()
     if (FLTK_TARGETS MATCHES fltk::gl-shared)

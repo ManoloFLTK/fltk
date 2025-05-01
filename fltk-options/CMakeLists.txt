@@ -104,6 +104,10 @@ if(FLTK_BUILD_SHARED_LIBS)
     set(libs fltk::fltk-shared)
   endif()
   make_target(fltk-options-shared TRUE "${SOURCES}" "${libs}" options-shared)
+  if(APPLE)
+    include(../CMake/FLTK-Functions.cmake)
+    fltk_cp_frameworks_to_bundle(fltk-options-shared ${CMAKE_CURRENT_BINARY_DIR}/.. ${EXECUTABLE_OUTPUT_PATH})
+  endif(APPLE)
 endif()
 
 # Create aliases for all executables,

@@ -252,6 +252,10 @@ if(FLTK_BUILD_SHARED_LIBS)
     make_target(fluid-shared TRUE "${MAIN_FILES}" "fluid-lib-shared;call_main" fluid-shared)
   else()
     make_target(fluid-shared TRUE "${MAIN_FILES}" fluid-lib-shared fluid-shared)
+    if(BACKEND_APPLE)
+      include(../CMake/FLTK-Functions.cmake)
+      fltk_cp_frameworks_to_bundle(fluid-shared ${CMAKE_CURRENT_BINARY_DIR}/.. ${EXECUTABLE_OUTPUT_PATH})
+    endif(BACKEND_APPLE)
   endif()
 
   # experimental
