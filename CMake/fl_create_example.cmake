@@ -139,7 +139,7 @@ function(fl_create_example NAME SOURCES LIBRARIES)
       set_target_properties(${TARGET_NAME} PROPERTIES RESOURCE ${ICON_PATH})
     endif()
 
-    fltk_cp_frameworks_to_bundle(${TARGET_NAME} ${CMAKE_CURRENT_BINARY_DIR}/.. ${EXECUTABLE_OUTPUT_PATH})
+    fltk_cp_frameworks_to_bundle(${TARGET_NAME} ${CMAKE_CURRENT_BINARY_DIR}/.. ${EXECUTABLE_OUTPUT_PATH} ${LIBRARIES})
   endif()
 
   ##############################################################################
