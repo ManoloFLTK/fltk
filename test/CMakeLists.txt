@@ -307,8 +307,23 @@ if(FLTK_BUILD_SHARED_LIBS)
 
     # Games
     fl_create_example(blocks-shared "blocks.cxx;blocks.plist;blocks.icns" "fltk::fltk-shared;${AUDIOLIBS}")
+    if(APPLE AND NOT FLTK_BACKEND_X11)
+      if(CMAKE_GENERATOR STREQUAL Xcode)
+        set(PROJECT_PREFIX $<CONFIG>/)
+      else()
+        set(PROJECT_PREFIX )
+      endif(CMAKE_GENERATOR STREQUAL Xcode)
+      set(EXEPATH ${CMAKE_CURRENT_BINARY_DIR}/../bin/test/${PROJECT_PREFIX}blocks-shared.app/Contents/MacOS)
+      add_custom_command(TARGET blocks-shared POST_BUILD
+        COMMAND mv ARGS ${EXEPATH}/blocks-shared ${EXEPATH}/blocks )
+    endif()
     fl_create_example(checkers-shared "checkers.cxx;checkers_pieces.fl;checkers.icns" fltk::images-shared)
     fl_create_example(sudoku-shared "sudoku.cxx;sudoku.plist;sudoku.icns;sudoku.rc" "fltk::images-shared;${AUDIOLIBS}")
+    if(APPLE AND NOT FLTK_BACKEND_X11)
+      set(EXEPATH ${CMAKE_CURRENT_BINARY_DIR}/../bin/test/${PROJECT_PREFIX}sudoku-shared.app/Contents/MacOS)
+      add_custom_command(TARGET sudoku-shared POST_BUILD
+        COMMAND mv ARGS ${EXEPATH}/sudoku-shared ${EXEPATH}/sudoku )
+    endif()
 
     if(OPENGL_FOUND)
       fl_create_example(glpuzzle-shared glpuzzle.cxx "${GLDEMO_SHARED}")
