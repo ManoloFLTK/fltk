@@ -104,13 +104,16 @@ function(fltk_cp_frameworks_to_bundle TARGET FLTK_BUILD_DIR BINARY_DIR FLTK_SHAR
       set(PROJECT_PREFIX )
     endif(CMAKE_GENERATOR STREQUAL Xcode)
     set(BUNDLE_FRAMEWORK_PATH ${BINARY_DIR}/${PROJECT_PREFIX}${TARGET}.app/Contents/Frameworks)
-    #create the Frameworks directory inside bundle
-    add_custom_command(TARGET ${TARGET} PRE_LINK
-      COMMAND mkdir ARGS -p ${BUNDLE_FRAMEWORK_PATH})
-    #copy needed frameworks to bundle from FLTK build dir
+    #create Frameworks directory in bundle and copy needed frameworks to bundle from FLTK build dir
+    #tested OK with CMake 3.15 on macOS
+    set(INFILES)
     foreach(ELT ${FLTK_USED_LIBS})
-      add_custom_command(TARGET ${TARGET} PRE_LINK
-        COMMAND cp ARGS -R ${FLTK_BUILD_DIR}/lib/${PROJECT_PREFIX}/${ELT}.framework ${BUNDLE_FRAMEWORK_PATH})
+      list(APPEND INFILES ${FLTK_BUILD_DIR}/lib/${PROJECT_PREFIX}${ELT}.framework)
     endforeach()
+    add_custom_command(TARGET ${TARGET} PRE_LINK
+      COMMAND mkdir -p ${BUNDLE_FRAMEWORK_PATH}
+      COMMAND cp -R ${INFILES} ${BUNDLE_FRAMEWORK_PATH}
+      COMMAND_EXPAND_LISTS
+    )
   endif()
 endfunction(fltk_cp_frameworks_to_bundle TARGET FLTK_BUILD_DIR BINARY_DIR FLTK_SHARED)
