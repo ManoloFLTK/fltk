@@ -85,7 +85,8 @@ function(fltk_set_bundle_icon TARGET ICON_PATH)
 endfunction(fltk_set_bundle_icon TARGET ICON_PATH)
 
 
-function(fltk_cp_frameworks_to_bundle TARGET FLTK_BUILD_DIR BINARY_DIR FLTK_SHARED)
+function(fltk_cp_frameworks_to_bundle TARGET FLTK_BUILD_DIR BINARY_DIR)
+  get_target_property(FLTK_SHARED ${TARGET} LINK_LIBRARIES)
   if(APPLE AND (FLTK_SHARED MATCHES "fltk::[a-z]*-shared"))
     set_target_properties(${TARGET} PROPERTIES INSTALL_RPATH @loader_path/../Frameworks
         BUILD_WITH_INSTALL_RPATH TRUE)
@@ -97,7 +98,10 @@ function(fltk_cp_frameworks_to_bundle TARGET FLTK_BUILD_DIR BINARY_DIR FLTK_SHAR
     if (FLTK_SHARED MATCHES fltk::gl-shared)
       list(PREPEND FLTK_USED_LIBS fltk_gl)
     endif()
- 
+    if (FLTK_SHARED MATCHES fltk::forms-shared)
+      list(PREPEND FLTK_USED_LIBS fltk_forms)
+    endif()
+
     if(CMAKE_GENERATOR STREQUAL Xcode)
       set(PROJECT_PREFIX $<CONFIG>/)
     else()
@@ -116,4 +120,4 @@ function(fltk_cp_frameworks_to_bundle TARGET FLTK_BUILD_DIR BINARY_DIR FLTK_SHAR
       COMMAND_EXPAND_LISTS
     )
   endif()
-endfunction(fltk_cp_frameworks_to_bundle TARGET FLTK_BUILD_DIR BINARY_DIR FLTK_SHARED)
+endfunction(fltk_cp_frameworks_to_bundle TARGET FLTK_BUILD_DIR BINARY_DIR)

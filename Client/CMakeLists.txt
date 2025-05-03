@@ -17,5 +17,5 @@ target_link_libraries(fltk_client PRIVATE fltk::images-shared)
 
 if(APPLE)
   include(${FLTK_DIR}/FLTK-Functions.cmake)
-  fltk_cp_frameworks_to_bundle(${PROJECT_NAME} ${FLTK_DIR} ${PROJECT_BINARY_DIR} fltk::images-shared)
+  fltk_cp_frameworks_to_bundle(${PROJECT_NAME} ${FLTK_DIR} ${PROJECT_BINARY_DIR})
 endif(APPLE)

@@ -308,6 +308,7 @@ if(FLTK_BUILD_SHARED_LIBS)
     # Games
     fl_create_example(blocks-shared "blocks.cxx;blocks.plist;blocks.icns" "fltk::fltk-shared;${AUDIOLIBS}")
     if(APPLE AND NOT FLTK_BACKEND_X11)
+      #app bundle's Info.plist has CFBundleExecutable="blocks", so we need to rename executable
       if(CMAKE_GENERATOR STREQUAL Xcode)
         set(PROJECT_PREFIX $<CONFIG>/)
       else()
@@ -320,6 +321,7 @@ if(FLTK_BUILD_SHARED_LIBS)
     fl_create_example(checkers-shared "checkers.cxx;checkers_pieces.fl;checkers.icns" fltk::images-shared)
     fl_create_example(sudoku-shared "sudoku.cxx;sudoku.plist;sudoku.icns;sudoku.rc" "fltk::images-shared;${AUDIOLIBS}")
     if(APPLE AND NOT FLTK_BACKEND_X11)
+      #app bundle's Info.plist has CFBundleExecutable="sudoku", so we need to rename executable
       set(EXEPATH ${CMAKE_CURRENT_BINARY_DIR}/../bin/test/${PROJECT_PREFIX}sudoku-shared.app/Contents/MacOS)
       add_custom_command(TARGET sudoku-shared POST_BUILD
         COMMAND mv ARGS ${EXEPATH}/sudoku-shared ${EXEPATH}/sudoku )
