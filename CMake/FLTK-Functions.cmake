@@ -87,7 +87,8 @@ endfunction(fltk_set_bundle_icon TARGET ICON_PATH)
 
 function(fltk_cp_frameworks_to_bundle TARGET FLTK_BUILD_DIR BINARY_DIR)
   get_target_property(FLTK_SHARED ${TARGET} LINK_LIBRARIES)
-  if(APPLE AND (FLTK_SHARED MATCHES "fltk::[a-z]*-shared"))
+  get_target_property(CREATE_BUNDLE ${TARGET} MACOSX_BUNDLE)
+  if(APPLE AND CREATE_BUNDLE AND (FLTK_SHARED MATCHES "fltk::[a-z]*-shared"))
     set_target_properties(${TARGET} PROPERTIES INSTALL_RPATH @loader_path/../Frameworks
         BUILD_WITH_INSTALL_RPATH TRUE)
     #set FLTK_USED_LIBS to list of necessary FLTK frameworks
