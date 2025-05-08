@@ -1,11 +1,23 @@
 //
-//  Fl_Native_Input.H
+// Classes Fl_Native_Input and Fl_Native_Multiline_Input for the Fast Light Tool Kit (FLTK).
+//
+// Copyright 2025 by Bill Spitzak and others.
+//
+// This library is free software. Distribution and use rights are outlined in
+// the file "COPYING" which should have been included with this file.  If this
+// file is missing or damaged, see the license at:
+//
+//     https://www.fltk.org/COPYING.php
+//
+// Please see the following page on how to report bugs and issues:
+//
+//     https://www.fltk.org/bugs.php
 //
 
 #ifndef FL_NATIVE_INPUT_H
 #define FL_NATIVE_INPUT_H
 
-#include <FL/Fl_Group.H>
+#include <FL/Fl_Input.H>
 
 
 class Fl_Native_Input_Driver;
@@ -20,39 +32,37 @@ class Fl_Native_Input_Driver;
  Characters can be input using the keyboard
  or a text input method. Character composition is done using dead keys and/or a compose key as defined by the operating system.
  Text selection, copy/paste to/from the clipboard, undo, redo, and text drag-and-drop are supported.
- Class Fl_Native_Input API is the same as that of class Fl_Input_.
  By default, it is drawn with an inset box and a white background.
  */
-class FL_EXPORT Fl_Native_Input : public Fl_Group {
+class FL_EXPORT Fl_Native_Input : public Fl_Input {
 private:
-  Fl_Color cursor_color_;
-  Fl_Font font_;
-  Fl_Fontsize font_size_;
-  Fl_Color text_color_;
   bool is_readonly_;
   bool is_selectable_;
   bool rtl_;
-  bool wrap_;
-  int shortcut_;
 protected:
   Fl_Native_Input_Driver *driver;
 public:
   Fl_Native_Input(int x, int y, int w, int h, const char *l = 0);
   virtual ~Fl_Native_Input();
-  void append(const char *t, int length = 0, char keep_selection = 0);
   void right_to_left(bool rtl);
   bool right_to_left();
   int handle(int event) FL_OVERRIDE;
   void draw() FL_OVERRIDE;
   void resize(int x, int y, int w, int h) FL_OVERRIDE;
+  void paste();
+  void select_all();
+  int input_type() const;
+  void input_type(int t);
+  void selectable(bool on_off);
+  bool selectable();
+#ifndef FL_DOXYGEN // don't repeat docu of inherited members of Fl_Input_
+  void append(const char *t, int length = 0, char keep_selection = 0);
   void textfont(Fl_Font);
   void textsize(Fl_Fontsize);
   void textcolor(Fl_Color);
   Fl_Font textfont();
   Fl_Fontsize textsize();
   Fl_Color textcolor();
-  Fl_Color cursor_color() const;
-  void cursor_color(Fl_Color c);
   const char *value();
   int value(const char *);
   int value(const char *, int len);
@@ -62,37 +72,24 @@ public:
   void insert_position(int pos, int m);
   void readonly(bool on_off);
   bool readonly();
-  void selectable(bool on_off);
-  bool selectable();
   int replace(int from, int to, const char *text, int len = 0);
-  void select_all();
   int copy(int clipboard);
   int copy_cuts();
-  void paste();
   int cut(int a, int b);
   int cut();
   int cut(int n);
   int mark() const;
   void mark(int n);
   unsigned index(int i) const;
-  int input_type() const;
-  void input_type(int t);
-  int maximum_size() const;
-  void maximum_size(int m);
-  int shortcut() const;
-  void shortcut(int s);
   int size() const;
   void size(int W, int H);
   int static_value(const char *str, int len);
   int static_value(const char *str);
-  int tab_nav();
-  void tab_nav(int val);
   int undo();
   int redo();
   bool can_undo() const;
   bool can_redo() const;
-  bool wrap();
-  void wrap(bool value);
+#endif // !FL_DOXYGEN
 };
 
 

@@ -1,5 +1,17 @@
 //
-//  Fl_Cocoa_Native_Input_Driver.mm
+// Fl_Cocoa_Native_Input_Driver for the Fast Light Tool Kit (FLTK).
+//
+// Copyright 2025 by Bill Spitzak and others.
+//
+// This library is free software. Distribution and use rights are outlined in
+// the file "COPYING" which should have been included with this file.  If this
+// file is missing or damaged, see the license at:
+//
+//     https://www.fltk.org/COPYING.php
+//
+// Please see the following page on how to report bugs and issues:
+//
+//     https://www.fltk.org/bugs.php
 //
 
 #include <FL/platform.H> // for fl_mac_xid
@@ -121,7 +133,7 @@ public:
     return;
   }
   else if (aSelector == @selector(insertTab:)) { // tab
-    if (driver->kind == Fl_Native_Input_Driver::SINGLE_LINE || driver->tab_nav()) {
+    if (driver->kind == Fl_Native_Input_Driver::SINGLE_LINE || driver->widget->tab_nav()) {
       Fl::e_keysym = FL_Tab;
       Fl::handle(FL_KEYBOARD, driver->widget->window());
       return;
@@ -222,6 +234,7 @@ Fl_Native_Input_Driver *Fl_Native_Input_Driver::newNativeInputDriver(Fl_Native_I
 #endif
   if (!retval) retval = new Fl_Backup_Native_Input_Driver();
   retval->widget = n;
+  retval->widget->maximum_size(INT_MAX);
   return retval;
 }
 
@@ -230,7 +243,6 @@ Fl_Cocoa_Native_Input_Driver::Fl_Cocoa_Native_Input_Driver() : Fl_Native_Input_D
   scroll_view = nil;
   text_view = nil;
   text_before_show = nil;
-  maximum_size_ = INT_MAX;
   initial_fill = false;
 }
 

@@ -1,6 +1,17 @@
 //
-//  Fl_Native_Input_Driver.H
+// Fl_Native_Input_Driver and Fl_Backup_Native_Input_Driver for the Fast Light Tool Kit (FLTK).
 //
+// Copyright 2025 by Bill Spitzak and others.
+//
+// This library is free software. Distribution and use rights are outlined in
+// the file "COPYING" which should have been included with this file.  If this
+// file is missing or damaged, see the license at:
+//
+//     https://www.fltk.org/COPYING.php
+//
+// Please see the following page on how to report bugs and issues:
+//
+//     https://www.fltk.org/bugs.php
 //
 
 #ifndef FL_NATIVE_INPUT_DRIVER_H
@@ -13,15 +24,11 @@
 #include <FL/Fl_Export.H>
 
 class Fl_Native_Input_Driver {
-private:
-  int tab_nav_;
-protected:
-  int maximum_size_;
 public:
   enum kind_enum {SINGLE_LINE, MULTIPLE_LINES} kind;
   static Fl_Native_Input_Driver *newNativeInputDriver(Fl_Native_Input*);
   Fl_Native_Input *widget;
-  Fl_Native_Input_Driver() : tab_nav_(1), maximum_size_(32767) {}
+  Fl_Native_Input_Driver() {}
   virtual ~Fl_Native_Input_Driver() {}
   virtual void show_widget() {}
   virtual void hide_widget() {}
@@ -55,14 +62,12 @@ public:
   virtual int handle_paste() { return 0; }
   virtual int handle_dnd(int event) { return 0; }
   virtual void right_to_left() {}
-  virtual int maximum_size() const { return maximum_size_; };
-  virtual void maximum_size(int m) {}
   virtual int size() { return (int)strlen(value()); }
-  virtual void tab_nav(int val) { tab_nav_ = val; }
-  int tab_nav() { return tab_nav_; }
   virtual int copy_cuts() { return 0; }
   virtual void deactivate();
   virtual void activate();
+  virtual void set_kind(kind_enum k) { this->kind = k; };
+  virtual bool is_backup_driver() { return false; }
   void maybe_do_callback(Fl_Callback_Reason reason);
   int byte_pos_to_char_pos(int pos);
 };
@@ -70,15 +75,12 @@ public:
 
 // Class Fl_Backup_Native_Input_Driver gives a default implementation of
 // Fl_Native_Input_Driver for platforms that don't provide a platform-native text widget.
-// In this implementation, Fl_Native_Input is an Fl_Group
-// containing an Fl_Input or Fl_Multiline_Input, and focus is managed normally by FLTK.
 class Fl_Backup_Native_Input_Driver : public Fl_Native_Input_Driver {
-private:
-  class Fl_Input *input_;
 public:
   Fl_Backup_Native_Input_Driver();
   ~Fl_Backup_Native_Input_Driver();
   void show_widget() FL_OVERRIDE;
+  void hide_widget() FL_OVERRIDE;
   void value(const char *t, int len) FL_OVERRIDE;
   const char *value() FL_OVERRIDE;
   unsigned index(int i) const FL_OVERRIDE;
@@ -87,8 +89,11 @@ public:
   int insert_position() FL_OVERRIDE;
   void insert_position(int pos, int mark) FL_OVERRIDE;
   int mark() FL_OVERRIDE;
+  int handle_keyboard() FL_OVERRIDE;
+  int handle_mouse(int event) FL_OVERRIDE;
   int handle_focus(int event) FL_OVERRIDE;
   int handle_dnd(int event) FL_OVERRIDE;
+  int handle_paste() FL_OVERRIDE;
   void select_all() FL_OVERRIDE;
   void paste() FL_OVERRIDE;
   int copy() FL_OVERRIDE;
@@ -99,8 +104,9 @@ public:
   void textcolor() FL_OVERRIDE;
   void textfontandsize() FL_OVERRIDE;
   int size() FL_OVERRIDE;
-  void tab_nav(int val) FL_OVERRIDE;
   int copy_cuts() FL_OVERRIDE;
+  void set_kind(kind_enum) FL_OVERRIDE;
+  bool is_backup_driver() FL_OVERRIDE { return true; }
 };
 
 

@@ -1,5 +1,17 @@
 //
-//  Fl_WinAPI_Native_Input_Driver.cxx
+// Fl_WinAPI_Native_Input_Driver for the Fast Light Tool Kit (FLTK).
+//
+// Copyright 2025 by Bill Spitzak and others.
+//
+// This library is free software. Distribution and use rights are outlined in
+// the file "COPYING" which should have been included with this file.  If this
+// file is missing or damaged, see the license at:
+//
+//     https://www.fltk.org/COPYING.php
+//
+// Please see the following page on how to report bugs and issues:
+//
+//     https://www.fltk.org/bugs.php
 //
 
 #include "../../Fl_Native_Input_Driver.H"
@@ -60,6 +72,7 @@ public:
 Fl_Native_Input_Driver *Fl_Native_Input_Driver::newNativeInputDriver(Fl_Native_Input *n) {
   Fl_Native_Input_Driver *retval = (Fl_Native_Input_Driver*)new Fl_WinAPI_Native_Input_Driver();
   retval->widget = n;
+  retval->widget->maximum_size(INT_MAX);
   return retval;
 }
 
@@ -72,7 +85,6 @@ Fl_WinAPI_Native_Input_Driver::Fl_WinAPI_Native_Input_Driver() : Fl_Native_Input
   text_before_show_ = NULL;
   edit_win = NULL;
   brush = NULL;
-  maximum_size_ = INT_MAX;
 }
 
 
@@ -149,7 +161,7 @@ static LRESULT CALLBACK fltk_edit_wnd_proc(HWND hWnd, UINT uMsg, WPARAM wParam, 
   Fl_WinAPI_Native_Input_Driver *dr =
     (Fl_WinAPI_Native_Input_Driver*)GetWindowLongPtrW(hWnd, GWLP_USERDATA);
   if (uMsg == WM_KEYDOWN) {
-    if ((wParam == VK_TAB && (dr->kind == Fl_Native_Input_Driver::SINGLE_LINE || dr->tab_nav())) || wParam == VK_ESCAPE) { // handle Tab or Esc keystrokes by FLTK
+    if ((wParam == VK_TAB && (dr->kind == Fl_Native_Input_Driver::SINGLE_LINE || dr->widget->tab_nav())) || wParam == VK_ESCAPE) { // handle Tab or Esc keystrokes by FLTK
       use_edit_proc = false;
     } else if (wParam == VK_RETURN && dr->kind == Fl_Native_Input_Driver::SINGLE_LINE) {
       if (dr->widget->when() & FL_WHEN_ENTER_KEY) {
