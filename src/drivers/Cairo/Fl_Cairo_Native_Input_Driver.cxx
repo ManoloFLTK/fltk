@@ -1,10 +1,23 @@
 //
-//  Fl_Cairo_Native_Input_Driver.cxx
+// Fl_Cairo_Native_Input_Driver for the Fast Light Tool Kit (FLTK).
+//
+// Copyright 2025 by Bill Spitzak and others.
+//
+// This library is free software. Distribution and use rights are outlined in
+// the file "COPYING" which should have been included with this file.  If this
+// file is missing or damaged, see the license at:
+//
+//     https://www.fltk.org/COPYING.php
+//
+// Please see the following page on how to report bugs and issues:
+//
+//     https://www.fltk.org/bugs.php
 //
 
 #include "../../Fl_Native_Input_Driver.H"
 #include <FL/Fl_Image_Surface.H>
 #include <FL/Fl_Scrollbar.H>
+#include <FL/fl_callback_macros.H>
 #include "../Cairo/Fl_Cairo_Graphics_Driver.H"
 #include <FL/fl_ask.H>          // fl_beep()
 #include "../../Fl_Screen_Driver.H"
@@ -38,6 +51,8 @@ private:
   static void textbuffer_changed_(GtkTextBuffer *buffer_, Fl_Cairo_Native_Input_Driver*);
   static void adjustment_changed_(GtkAdjustment *adj, Fl_Cairo_Native_Input_Driver*);
   static void adjustment_value_changed_(GtkAdjustment *adj, Fl_Cairo_Native_Input_Driver*);
+  static void draw_child(Fl_Widget& widget);
+  static void update_child(Fl_Widget& widget);
   void text_view_scroll_mark_onscreen_(bool relative_to_mark = false);
   void text_view_scroll_mark_h_(GtkTextIter *before);
   void scan_all_paragraphs_();
@@ -127,6 +142,7 @@ static int calc_char_length(const char *text, int len) {
 Fl_Native_Input_Driver *Fl_Native_Input_Driver::newNativeInputDriver(Fl_Native_Input *native) {
   Fl_Native_Input_Driver *retval = (Fl_Native_Input_Driver*)new Fl_Cairo_Native_Input_Driver();
   retval->widget = native;
+  retval->widget->maximum_size(INT32_MAX);
   return retval;
 }
 
@@ -146,7 +162,6 @@ Fl_Cairo_Native_Input_Driver::Fl_Cairo_Native_Input_Driver() : Fl_Native_Input_D
   lineheight_ = 0;
   upper_ = 0;
   insert_offset_ = -1; // means undefined
-  maximum_size_ = INT32_MAX;
 }
 
 Fl_Cairo_Native_Input_Driver::~Fl_Cairo_Native_Input_Driver() {
@@ -154,6 +169,8 @@ Fl_Cairo_Native_Input_Driver::~Fl_Cairo_Native_Input_Driver() {
   if (text_view_) {
     gtk_widget_destroy(window_);
   }
+  if (v_fl_scrollbar_) delete v_fl_scrollbar_;
+  if (h_fl_slider_) delete h_fl_slider_;
 }
 
 
@@ -191,11 +208,11 @@ void Fl_Cairo_Native_Input_Driver::adjustment_value_changed_(GtkAdjustment *adj,
 }
 
 
-static void scroll_cb(Fl_Slider *sb, GtkAdjustment *adjust) {
+static void scroll_cb(Fl_Slider *sb, GtkAdjustment *adjust, Fl_Native_Input *native) {
   int v = sb->value();
   gtk_adjustment_set_value(adjust, v);
-  Fl::focus(sb->parent());
-  sb->parent()->redraw();
+  Fl::focus(native);
+  native->redraw();
 }
 
 
@@ -271,7 +288,7 @@ void Fl_Cairo_Native_Input_Driver::show_widget()  {
   if (widget->window()->shown() && !text_view_) {
     window_ = gtk_offscreen_window_new();
     Fl_Group *g = Fl_Group::current();
-    Fl_Group::current(widget);
+    Fl_Group::current(NULL);
     if (kind == Fl_Native_Input_Driver::MULTIPLE_LINES) {
       v_fl_scrollbar_ = new Fl_Scrollbar(0, 0, 1, 1, NULL);
     }
@@ -282,13 +299,13 @@ void Fl_Cairo_Native_Input_Driver::show_widget()  {
     Fl_Group::current(g);
     if (v_fl_scrollbar_) {
       v_adjust_ = gtk_adjustment_new(0, 0, 10, 1, 1, 5); // temp values
-      v_fl_scrollbar_->callback((Fl_Callback*)scroll_cb, v_adjust_);
+      FL_FUNCTION_CALLBACK_3(v_fl_scrollbar_, scroll_cb, Fl_Slider*, v_fl_scrollbar_, GtkAdjustment*, v_adjust_, Fl_Native_Input*, widget);
       g_signal_connect(v_adjust_, "changed", G_CALLBACK(adjustment_changed_), this);
       g_signal_connect(v_adjust_, "value-changed", G_CALLBACK(adjustment_value_changed_), this);
     }
     if (h_fl_slider_) {
       h_adjust_ = gtk_adjustment_new(0, 0, 10, 1, 1, 5);
-      h_fl_slider_->callback((Fl_Callback*)scroll_cb, h_adjust_);
+      FL_FUNCTION_CALLBACK_3(h_fl_slider_, scroll_cb, Fl_Slider*, h_fl_slider_, GtkAdjustment*, h_adjust_, Fl_Native_Input*, widget);
       g_signal_connect(h_adjust_, "changed", G_CALLBACK(adjustment_changed_), this);
       g_signal_connect(h_adjust_, "value-changed", G_CALLBACK(adjustment_value_changed_), this);
     }
@@ -329,6 +346,9 @@ void Fl_Cairo_Native_Input_Driver::show_widget()  {
     }
     lineheight_ = widget->textsize() * 1.2;
     resize();
+  } else {
+    widget->set_visible();
+    widget->parent()->redraw();
   }
   if (kind == Fl_Native_Input_Driver::SINGLE_LINE && h_fl_slider_) h_fl_slider_->hide();
 }
@@ -346,13 +366,11 @@ void Fl_Cairo_Native_Input_Driver::resize()  {
                              (widget->right_to_left() ? 0 : allocation_.width),
                              widget->y() + Fl::box_dy(widget->box()),
                               slider_thickness_, allocation_.height);
-      v_fl_scrollbar_->parent()->init_sizes();
     }
     if (h_fl_slider_)  {
       h_fl_slider_->resize(widget->x() + Fl::box_dx(widget->box()) + (widget->right_to_left() ? slider_thickness_ : 0),
                              widget->y() + Fl::box_dy(widget->box()) + allocation_.height,
                              allocation_.width, slider_thickness_);
-      h_fl_slider_->parent()->init_sizes();
     }
   }
 }
@@ -416,6 +434,32 @@ void Fl_Cairo_Native_Input_Driver::draw()  {
               (widget->y() + Fl::box_dy(widget->box()))
               );
     delete rgb;
+  }
+  // draw the scrollbars
+  if (widget->damage() & ~FL_DAMAGE_CHILD) { // redraw the entire thing:
+    if (v_fl_scrollbar_) draw_child(*v_fl_scrollbar_);
+    if (h_fl_slider_) draw_child(*h_fl_slider_);
+  } else {      // only redraw the children that need it:
+    if (v_fl_scrollbar_) update_child(*v_fl_scrollbar_);
+    if (h_fl_slider_) update_child(*h_fl_slider_);
+  }
+}
+
+
+void Fl_Cairo_Native_Input_Driver::draw_child(Fl_Widget& widget) {
+  if (widget.visible() && fl_not_clipped(widget.x(), widget.y(), widget.w(), widget.h())) {
+    widget.clear_damage(FL_DAMAGE_ALL);
+    widget.draw();
+    widget.clear_damage();
+  }
+}
+
+
+void Fl_Cairo_Native_Input_Driver::update_child(Fl_Widget& widget) {
+  if (widget.damage() && widget.visible() &&
+      fl_not_clipped(widget.x(), widget.y(), widget.w(), widget.h())) {
+    widget.draw();
+    widget.clear_damage();
   }
 }
 
@@ -871,15 +915,24 @@ void Fl_Cairo_Native_Input_Driver::text_view_scroll_mark_h_(GtkTextIter *before)
 static GtkTextIter dnd_iter_position, dnd_iter_mark, newpos;
 static Fl_Widget *dnd_save_focus = NULL;
 static int drag_start = -1;
+static Fl_Slider *click_in_scroller = NULL; // non-NULL means the FL_PUSH was done inside a slider
 
 int Fl_Cairo_Native_Input_Driver::handle_mouse(int event) {
   if (v_fl_scrollbar_ && Fl::event_inside(v_fl_scrollbar_)) {
-    if (event == FL_PUSH) Fl::pushed(v_fl_scrollbar_);
-    return v_fl_scrollbar_->handle(event);
+    int r = v_fl_scrollbar_->handle(event);
+    if (event == FL_PUSH) {
+      Fl::pushed(v_fl_scrollbar_);
+      click_in_scroller = v_fl_scrollbar_;
+      return r;
+    }
   }
   if (h_fl_slider_ && Fl::event_inside(h_fl_slider_)) {
-    if (event == FL_PUSH) Fl::pushed(h_fl_slider_);
-    return h_fl_slider_->handle(event);
+    int r = h_fl_slider_->handle(event);
+    if (event == FL_PUSH) {
+      Fl::pushed(h_fl_slider_);
+      click_in_scroller = h_fl_slider_;
+      return r;
+    }
   }
   double dv = (v_adjust_ ? gtk_adjustment_get_value(v_adjust_) : 0);
   double dh = (h_adjust_ ? gtk_adjustment_get_value(h_adjust_) : 0);
@@ -940,7 +993,11 @@ int Fl_Cairo_Native_Input_Driver::handle_mouse(int event) {
     }
     widget->redraw();
     return 1;
-  } else if(event == FL_DRAG && widget->selectable()) {
+  } else if (event == FL_DRAG) {
+    if (click_in_scroller && (Fl::event_state() & FL_BUTTON1)) {
+      return click_in_scroller->handle(event);
+    }
+    if (!widget->selectable()) return 0;
     if (drag_start >= 0) {
       if (Fl::event_is_click()) return 1; // debounce the mouse
       // save the position because sometimes we don't get DND_ENTER:
@@ -959,11 +1016,12 @@ int Fl_Cairo_Native_Input_Driver::handle_mouse(int event) {
       Fl::event_x() - (widget->x() + Fl::box_dx(widget->box()) + v_scroll_w) + dh,
       Fl::event_y() - (widget->y() + Fl::box_dy(widget->box())) + dv);
     gtk_text_buffer_get_iter_at_mark(buffer_, &insert, gtk_text_buffer_get_insert(buffer_));
-    gtk_text_buffer_select_range(buffer_, &insert, &where);
+    if (!click_in_scroller) gtk_text_buffer_select_range(buffer_, &insert, &where);
     widget->redraw();
     return 1;
     
   } else if(event == FL_RELEASE) {
+    click_in_scroller = NULL;
     if (Fl::event_is_click() && drag_start >= 0) {
       // user clicked in the field and wants to reset the cursor position...
       GtkTextIter current;
@@ -1362,6 +1420,8 @@ void Fl_Cairo_Native_Input_Driver::right_to_left() {
 void Fl_Cairo_Native_Input_Driver::hide_widget() {
   if (!widget->readonly() && (widget->when() & FL_WHEN_RELEASE))
     maybe_do_callback(FL_REASON_LOST_FOCUS);
+  widget->clear_visible();
+  widget->parent()->redraw();
 }
 
 
