@@ -215,6 +215,7 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
   }
   win->hide();
   win->remove(dock);
+  dock->hide();
   Fl_Group *parent = dock->parent_when_docked_;
   if(dock->place_holder_while_dragged_) {
     dock->resize(dock->place_holder_while_dragged_->x(), dock->place_holder_while_dragged_->y(),
@@ -224,7 +225,6 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
     delete dock->place_holder_while_dragged_;
     dock->place_holder_while_dragged_ = NULL;
   }
-  dock->hide(); // to re-activate widgets in dock (e.g. make clocks tick again)
   dock->show();
   parent->redraw();
   Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::UNDOCK);
@@ -235,6 +235,18 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
 int Fl_Dockable_Group_Driver::cmd_box_class::handle(int event) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)parent();
   return Fl_Dockable_Group_Driver::driver(dock)->handle(this, event);
+}
+
+
+ void Fl_Dockable_Group_Driver::recursively_hide_subwindows(Fl_Group *g) {
+  for (int i = 0; i < g->children(); i++) {
+    Fl_Widget *child = g->child(i);
+    if (child->as_group()) recursively_hide_subwindows(child->as_group());
+    if (child->as_window() && child->as_window()->shown()) {
+      child->hide();
+      child->set_visible();
+    }
+  }
 }
 
 
@@ -265,10 +277,10 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *bo
       top->remove(dock);
       top->redraw();
       Fl_Window *win = new Fl_Window(winx, winy, dock->w(), dock->h(), drag_label_);
+      recursively_hide_subwindows(dock);// necessary if dock contains subwindows
       dock->position(0,0);
       win->add(dock);
       win->end();
-      dock->show(); // necessary for tabs
       win->callback((Fl_Callback0*)Fl_Dockable_Group_Driver::delete_win_cb);
       Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DRAG);
       win->border(0);

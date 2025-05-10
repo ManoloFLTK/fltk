@@ -54,6 +54,7 @@ public:
   };
   static Fl_Dockable_Group_Driver *newDockableGroupDriver(Fl_Dockable_Group*);
   static Fl_Box *newTargetBoxClass(int x, int y, int w, int h);
+  static void recursively_hide_subwindows(Fl_Group*);
   Fl_Dockable_Group_Driver(Fl_Dockable_Group *from) { dockable_ = from; }
   void store_docked_position(Fl_Dockable_Group *dock);
   static Fl_Box *new_target_box(int x, int y, int w, int h);

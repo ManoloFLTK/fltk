@@ -102,6 +102,7 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(cmd_box_class *box, const cha
   top->add(*place_holder_while_dragged());
   top->redraw();
   Fl_Window *win = new Fl_Window(dockable_->w(), dockable_->h(), t);
+  recursively_hide_subwindows(dockable_);// necessary if dock contains subwindows
   dockable_->position(0,0);
   win->add(dockable_);
   win->end();

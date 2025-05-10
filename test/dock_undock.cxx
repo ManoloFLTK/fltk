@@ -1,3 +1,4 @@
+#include "config.h"
 #include <FL/Fl_Dockable_Group.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Round_Clock.H>
@@ -5,6 +6,55 @@
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Tabs.H>
 #include <FL/Fl_Tile.H>
+
+#if HAVE_GL
+
+#include <FL/gl.h>
+#include <FL/Fl_Gl_Window.H>
+#include <math.h>
+
+static bool highDPI = (Fl::use_high_res_GL(1), true);
+
+class shape_window : public Fl_Gl_Window {
+  void draw() FL_OVERRIDE;
+public:
+  int sides;
+  shape_window(int x,int y,int w,int h,const char *l=0);
+};
+
+shape_window::shape_window(int x,int y,int w,int h,const char *l) :
+Fl_Gl_Window(x,y,w,h,l) {
+  sides = 3;
+}
+
+void shape_window::draw() {
+  if (!valid()) {
+    valid(1);
+    glLoadIdentity();
+    glViewport(0, 0, pixel_w(), pixel_h());
+  }
+  glClear(GL_COLOR_BUFFER_BIT);
+  glColor3f(.5f, .6f, .7f);
+  glBegin(GL_POLYGON);
+  for (int j=0; j<sides; j++) {
+    double ang = j*2*M_PI/sides;
+    glVertex3f((GLfloat)cos(ang), (GLfloat)sin(ang), 0);
+  }
+  glEnd();
+}
+
+#else // ! HAVE_GL
+
+class shape_window : public Fl_Box {
+public:
+  shape_window(int x,int y,int w,int h) : Fl_Box(FL_DOWN_BOX, x, y, w, h, "GL scene") {
+    align(FL_ALIGN_INSIDE);
+    color(FL_GRAY_RAMP + 10);
+  }
+};
+
+#endif // HAVE_GL
+
 
 void delete_win(Fl_Window *win) {
   delete win;
@@ -75,8 +125,7 @@ int main(int argc, char **argv) {
   dock->color(FL_BLUE);
   dock->command_box(260, 10, 70, 20);
   dock->begin();
-  new Fl_Round_Clock(300, 130, 30, 30);
-  dock->resizable(new Fl_Box(260, 40, 30, 50, ""));
+  dock->resizable(new shape_window(260, 35, 70, 125));
   dock->end();
   tile->end();
   source->end();
