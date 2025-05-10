@@ -12,6 +12,10 @@
 #include <FL/gl.h>
 #include <FL/Fl_Gl_Window.H>
 #include <math.h>
+/* Some <math.h> files do not define M_PI... */
+#ifndef M_PI
+#define M_PI 3.14159265
+#endif
 
 static bool highDPI = (Fl::use_high_res_GL(1), true);
 
