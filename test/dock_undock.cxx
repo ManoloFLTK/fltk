@@ -6,6 +6,7 @@
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Tabs.H>
 #include <FL/Fl_Tile.H>
+#include <FL/Fl_Flex.H>
 
 #if HAVE_GL
 
@@ -73,7 +74,7 @@ void dock_cb_f(Fl_Dockable_Group *dock, Fl_Dockable_Group::dock_event e, void*) 
 }
 
 int main(int argc, char **argv) {
-  Fl_Window *source = new Fl_Window(150, 150, 340, 180, "source (tab)");
+  Fl_Window *source = new Fl_Window(150, 150, 340, 180, "(tab)");
   source->callback((Fl_Callback0*)delete_win);
   Fl_Tabs *tabs = new Fl_Tabs(20, 40, 310, 115);
   Fl_Dockable_Group *dock = new Fl_Dockable_Group(25, 60, 305, 95, "Fl_Dockable_Group-1");
@@ -92,25 +93,34 @@ int main(int argc, char **argv) {
   dock->command_box()->labelsize(10);
   source->show();
   
-  source = new Fl_Window(source->x() + source->w() + 50, source->y(), 340, 180, "source (group)");
+  source = new Fl_Window(source->x() + source->w() + 50, source->y(), 340, 180, "(Fl_Flex)");
   source->callback((Fl_Callback0*)delete_win);
-  dock = new Fl_Dockable_Group(25, 60, 305, 95, "Fl_Dockable_Group-2");
+  Fl_Flex *flex = new Fl_Flex(5, 60, 330, 95, Fl_Flex::HORIZONTAL);
+  Fl_Box *c1 = new Fl_Box(FL_UP_BOX, 0, 0, 0, 0, "Left");
+  flex->fixed(c1, 60);
+//Fl_Box *c2 = new Fl_Box(FL_UP_BOX, 0, 0, 0, 0, "Right");
+//flex->fixed(c2, 60);
+  dock = new Fl_Dockable_Group(0,0,flex->w()-60,flex->h(), "Fl_Dockable_Group-2");
+  dock->begin();
   dock->color(FL_GREEN);
   dock->box(FL_THIN_UP_BOX);
-  new Fl_Clock(160, 65, 60, 60);
-  new Fl_Round_Clock(245, 65, 60, 60);
-  r = new Fl_Box(FL_NO_BOX, 0, 126, 155, 10, NULL);
-  dock->end();
+  new Fl_Clock(200, 20, 60, 60);
+  r = new Fl_Box(FL_NO_BOX, 66, 0, 95, 10, NULL);
   dock->resizable(r);
-  source->end();
-  source->resizable(dock);
-  dock->command_box(27, 140, 60, 13);
+  dock->command_box(5, 75, 60, 13);
   dock->command_box()->labelsize(10);
   dock->dock_cb(dock_cb_f);
+  dock->end();
+//Fl_Box *c1 = new Fl_Box(FL_UP_BOX, 0, 0, 0, 0, "Left");
+//flex->fixed(c1, 60);
+  Fl_Box *c2 = new Fl_Box(FL_UP_BOX, 0, 0, 0, 0, "Right");
+  flex->fixed(c2, 60);
+  flex->end();
+  source->end();
+  source->resizable(flex);
   source->show();
 
-  Fl_Window *destination = new Fl_Window(150, source->y() + source->h() + 50,
-                                         340, 190, "destination (tab)");
+  Fl_Window *destination = new Fl_Window(150, source->y() + source->h() + 50, 340, 190, "(tab)");
   destination->callback((Fl_Callback0*)delete_win);
   new Fl_Input(5,5,100,30, NULL);
   tabs = new Fl_Tabs(5, 40, 310, 140);
@@ -122,13 +132,13 @@ int main(int argc, char **argv) {
   destination->show(argc, argv);
 
   destination = new Fl_Window(destination->x() + destination->w() + 50, source->y() + source->h() + 50,
-                              340, 190, "destination (group)");
+                              340, 190, "(group)");
   destination->callback((Fl_Callback0*)delete_win);
   destination->end();
   Fl_Dockable_Group::target_box(10, 30, 320, 150, destination);
   destination->show();
   
-  source = new Fl_Window(source->x()+source->w()+30, source->y(), 340, 180, "source (Fl_Tile)");
+  source = new Fl_Window(source->x()+source->w()+30, source->y(), 340, 180, "(Fl_Tile)");
   source->callback((Fl_Callback0*)delete_win);
   Fl_Tile *tile = new Fl_Tile(5, 5, 330, 160, "");
   Fl_Box *yellow = new Fl_Box(FL_DOWN_BOX, 5, 5, 250, 160, "");

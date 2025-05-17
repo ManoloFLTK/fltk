@@ -230,11 +230,11 @@ void Fl_Dockable_Group_Driver::delete_win_cb(Fl_Window *win) {
   win->hide();
   win->remove(dock);
   dock->hide();
-  if(dock->place_holder_while_dragged_) {
+  if (dock->place_holder_while_dragged_) {
     dock->resize(dock->place_holder_while_dragged_->x(), dock->place_holder_while_dragged_->y(),
                dock->place_holder_while_dragged_->w(), dock->place_holder_while_dragged_->h());
-    // make sure the dock that returns where it came from is in front if it's in an Fl_Tabs
-    if (parent) parent->insert(*dock, dock->next_in_group_when_docked_);
+    int r = parent->find(dock->place_holder_while_dragged_);
+    parent->insert(*dock, r);
     delete dock->place_holder_while_dragged_;
     dock->place_holder_while_dragged_ = NULL;
   }
@@ -289,7 +289,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *bo
       store_docked_position(dock);
       dock->place_holder_while_dragged_ =
         new place_holder(dock->box(), dock->x(), dock->y(), dock->w(), dock->h(), dock);
-      top->add(dock->place_holder_while_dragged_);
+      top->insert(*dock->place_holder_while_dragged_, dock);
       top->remove(dock);
       top->redraw();
       Fl_Window *win = new Fl_Window(winx, winy, dock->w(), dock->h(), drag_label_);
@@ -324,15 +324,17 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_class *bo
     top->remove(dock);
     delete top;
     Fl_Group *parent_when_docked = dock->parent_when_docked_;
+    int r = parent->find(target), rd = 0;
     if (dock->place_holder_while_dragged_) {
+      if (parent_when_docked) rd = parent_when_docked->find(dock->place_holder_while_dragged_);
       dock->parent_when_docked_->redraw();
       delete dock->place_holder_while_dragged_;
     }
-    parent->add(dock);
+    parent->insert(*dock, r);
     int dock_w = dock->w(), dock_h = dock->h();
     dock->resize(target->x(), target->y(), target->w(), target->h());
     if (parent_when_docked) {
-      parent_when_docked->add(target);
+      parent_when_docked->insert(*target, rd);
       target->set_visible(); // useful if target is an Fl_Tabs child
       target->state(MAY_RECEIVE);
       target->resize(dock->x_when_docked_, dock->y_when_docked_, dock_w, dock_h);
@@ -354,11 +356,6 @@ void Fl_Dockable_Group_Driver::store_docked_position(Fl_Dockable_Group *dock) {
   dock->parent_when_docked_ = gr;
   dock->x_when_docked_ = dock->x();
   dock->y_when_docked_ = dock->y();
-  const int i = gr->find(dock);
-  int count = gr->children();
-  if (i < count) {
-    dock->next_in_group_when_docked_ = (i < count - 1 ? gr->child(i + 1) : gr->child(count - 2));
-  }
 }
 
 

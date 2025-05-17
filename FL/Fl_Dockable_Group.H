@@ -80,7 +80,6 @@ private:
   Fl_Box *command_box_;
   Fl_Group *parent_when_docked_;
   int x_when_docked_, y_when_docked_;
-  Fl_Widget *next_in_group_when_docked_;
   void color_targets_following_dock_();
   Fl_Widget *place_holder_while_dragged_;
 public:

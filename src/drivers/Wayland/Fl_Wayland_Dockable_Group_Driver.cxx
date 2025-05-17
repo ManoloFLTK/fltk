@@ -132,11 +132,12 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(cmd_box_class *box, const cha
   // transform the dockable group into a draggable, borderless toplevel window
   Fl_Group *top = dockable_->parent();
   store_docked_position(dockable_);
+  int r = top->find(dockable_);
   top->remove(dockable_);
   *place_holder_while_dragged() =
     new place_holder(dockable_->box(), dockable_->x(), dockable_->y(), dockable_->w(), dockable_->h(), dockable_);
   (*place_holder_while_dragged())->align(FL_ALIGN_CLIP);
-  top->add(*place_holder_while_dragged());
+  top->insert(**place_holder_while_dragged(), r);
   top->redraw();
   Fl_Window *win = new Fl_Window(dockable_->w(), dockable_->h(), t);
   recursively_hide_subwindows(dockable_);// necessary if dock contains subwindows
@@ -174,7 +175,7 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
     Fl_Dockable_Group::active_dockable = NULL;
     Fl_Group *target_group = this->parent();
     Fl_Group *new_target_box_place;
-    int x_when_docked, y_when_docked;
+    int x_when_docked, y_when_docked, r = 0;
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
     if (xdg_toplevel_drag) {
       Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)driver(dock);
@@ -185,6 +186,8 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
       top->remove(dock);
       delete top;
       new_target_box_place = driver(dock)->parent_when_docked();
+      if (*driver(dock)->place_holder_while_dragged())
+        r = new_target_box_place->find(**driver(dock)->place_holder_while_dragged());
       x_when_docked = driver(dock)->x_when_docked();
       y_when_docked = driver(dock)->y_when_docked();
     } else
@@ -192,6 +195,7 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
     {
       dock->parent()->redraw();
       new_target_box_place = dock->parent();
+      r = new_target_box_place->find(dock);
       x_when_docked = dock->x();
       y_when_docked = dock->y();
     }
@@ -200,7 +204,7 @@ int Fl_Wayland_Dockable_Group_Driver::wld_target_box_class::handle(int event) {
     target_group->insert(*dock, this);
     // move target-box this from its parent to dock's original parent
     if (new_target_box_place) {
-      new_target_box_place->add(this);
+      new_target_box_place->insert(*this, r);
       if (*Fl_Dockable_Group_Driver::driver(dock)->place_holder_while_dragged()) {
         Fl_Dockable_Group_Driver::driver(dock)->parent_when_docked()->redraw();
         delete *Fl_Dockable_Group_Driver::driver(dock)->place_holder_while_dragged();
@@ -286,8 +290,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::cmd_box_c
     wl_data_source_offer(scr_driver->seat->data_source, xdg_toplevel_drag_pseudo_mime);
     wl_data_source_set_actions(scr_driver->seat->data_source, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
     Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
-    dr->drag_ =
-    xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag(xdg_toplevel_drag, scr_driver->seat->data_source);
+    dr->drag_ = xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag(xdg_toplevel_drag, scr_driver->seat->data_source);
     //printf("start_drag surface=%p serial=%u\n",xid->wl_surface, scr_driver->seat->serial);
     wl_data_device_start_drag(scr_driver->seat->data_device, scr_driver->seat->data_source,
                               xid->wl_surface, NULL, scr_driver->seat->serial);

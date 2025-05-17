@@ -780,6 +780,8 @@ int Fl_Text_Editor::handle(int event) {
       // Handle drag'n'drop attempt by the user. This is a simplified
       // implementation which allows dnd operations onto the scroll bars.
     case FL_DND_ENTER: // save the current cursor position
+      extern const char *fl_dnd_content;
+      if (strcmp(fl_dnd_content, Fl::clipboard_plain_text)) return 0;
       if (Fl::visible_focus() && handle(FL_FOCUS))
         Fl::focus(this);
       show_cursor(mCursorOn);
