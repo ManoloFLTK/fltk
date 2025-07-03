@@ -1,7 +1,7 @@
 //
 // Interface with the libdecor library for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 2022-2024 by Bill Spitzak and others.
+// Copyright 2022-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -245,10 +245,10 @@ static const char *get_libdecor_plugin_description() {
      const char *dir = getenv("LIBDECOR_PLUGIN_DIR");
      if (!dir) dir = LIBDECOR_PLUGIN_DIR;
      snprintf(fname, PATH_MAX, "%s/libdecor-gtk.so", dir);
-     void *dl = dlopen(fname, RTLD_LAZY | RTLD_LOCAL);
+     void *dl = dlopen(fname, RTLD_LAZY | RTLD_NOLOAD | RTLD_LOCAL);
      if (!dl) {
        snprintf(fname, PATH_MAX, "%s/libdecor-cairo.so", dir);
-       dl = dlopen(fname, RTLD_LAZY | RTLD_LOCAL);
+       dl = dlopen(fname, RTLD_LAZY | RTLD_NOLOAD | RTLD_LOCAL);
      }
      if (dl) plugin_description = (const struct libdecor_plugin_description*)dlsym(dl, "libdecor_plugin_description");
 #else

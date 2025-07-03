@@ -1,7 +1,7 @@
 //
 // PostScript priting support for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 2010-2023 by Bill Spitzak and others.
+// Copyright 2010-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -52,19 +52,22 @@ class Fl_Posix_Printer_Driver : public Fl_PostScript_File_Device {
 class Fl_GTK_Printer_Driver : public Fl_PostScript_File_Device {
 public:
   typedef int gboolean;
-  typedef struct _GtkPrintUnixDialog GtkPrintUnixDialog;
-  typedef struct _GtkDialog GtkDialog;
-  typedef struct _GtkPrintSettings GtkPrintSettings;
-  typedef struct _GtkPageSetup GtkPageSetup;
+  struct GtkPrintUnixDialog;
+  struct GtkDialog;
+  struct GtkPrintSettings;
+  struct GtkPageSetup;
   enum GtkPageOrientation {GTK_PAGE_ORIENTATION_PORTRAIT, GTK_PAGE_ORIENTATION_LANDSCAPE};
-  typedef struct _GtkPaperSize GtkPaperSize;
-  typedef struct _GtkPrinter GtkPrinter;
-  typedef struct _GtkPrintJob GtkPrintJob;
-  typedef struct _GtkWidget GtkWidget;
+  struct GtkPaperSize;
+  struct GtkPrinter;
+  struct GtkPrintJob;
+  struct GtkWidget;
   struct GError;
+  struct GtkWindow;
+  struct GMainContext;
 
   GtkPrintJob *pjob; // data shared between begin_job() and end_job()
   char tmpfilename[50]; // name of temporary PostScript file containing to-be-printed data
+  GMainContext *main_context;
   int begin_job(int pagecount = 0, int *frompage = NULL, int *topage = NULL, char **perr_message=NULL) FL_OVERRIDE;
   void end_job() FL_OVERRIDE;
   static bool probe_for_GTK();
@@ -84,7 +87,11 @@ public:
   typedef GtkPrintJob *(*gtk_print_job_new_t)(const char *, GtkPrinter *, GtkPrintSettings *, GtkPageSetup *);
   typedef void (*gtk_widget_hide_t)(GtkWidget*);
   typedef void (*gtk_widget_destroy_t)(GtkWidget*);
+  typedef void (*gtk_window_destroy_t)(GtkWindow*);
   typedef gboolean (*gtk_events_pending_t)(void);
+  typedef gboolean (*g_main_context_pending_t)(void*);
+  typedef void (*g_main_context_iteration_t)(GMainContext*, bool);
+  typedef GMainContext* (*g_main_context_default_t)(void);
   typedef void (*gtk_main_iteration_t)(void);
   typedef int (*gtk_print_job_set_source_file_t)(GtkPrintJob *job, const char *filename, GError **error);
   typedef void (*gtk_print_job_send_t)(GtkPrintJob *, void* , gboolean* , void* );
@@ -100,7 +107,10 @@ public:
   typedef void (*g_signal_connect_data_t)(void *,const char *, GCallback, void*, GClosureNotify, int);
   typedef void (*gtk_print_unix_dialog_set_embed_page_setup_t)(GtkPrintUnixDialog *dialog, gboolean embed);
   typedef void (*gtk_widget_show_now_t)(GtkPrintUnixDialog *dialog);
-  typedef const char * (*gtk_check_version_t)(unsigned, unsigned, unsigned);
+  typedef void (*gtk_window_present_t)(GtkWindow *);
+  typedef GtkWindow* (*gtk_window_new_t)();
+  
+  Fl_GTK_Printer_Driver() : Fl_PostScript_File_Device(), main_context(NULL) {}
 };
 
 // the CALL_GTK macro produces the source code to call a GTK function given its name
@@ -112,7 +122,8 @@ void *Fl_GTK_Printer_Driver::ptr_gtk = NULL;
 
 // test wether GTK is available at run-time
 bool Fl_GTK_Printer_Driver::probe_for_GTK() {
-  return Fl_Posix_System_Driver::probe_for_GTK(2, 10, &ptr_gtk);
+  Fl_Posix_System_Driver::probe_for_GTK(3, 0, &ptr_gtk);
+  return (Fl_Posix_System_Driver::gtk_major_version > 0);
 }
 
 static void run_response_handler(void *dialog, int response_id, void* data)
@@ -125,14 +136,33 @@ static int no_dispatch(int /*event*/, Fl_Window* /*win*/) {
   return 0;
 }
 
+/*static void explore(Fl_GTK_Printer_Driver::GtkWidget *w) {
+  typedef Fl_GTK_Printer_Driver::GtkWidget *(*gtk_widget_get_first_child_t)(Fl_GTK_Printer_Driver::GtkWidget*);
+  typedef Fl_GTK_Printer_Driver::GtkWidget *(*gtk_widget_get_next_sibling_t)(Fl_GTK_Printer_Driver::GtkWidget*);
+  typedef char** (*gtk_widget_get_css_classes_t)(Fl_GTK_Printer_Driver::GtkWidget*);
+  w = ((gtk_widget_get_first_child_t)dlsym(Fl_GTK_Printer_Driver::ptr_gtk, "gtk_widget_get_first_child"))(w);
+  while (w) {
+    char **css = ((gtk_widget_get_css_classes_t)dlsym(Fl_GTK_Printer_Driver::ptr_gtk, "gtk_widget_get_css_classes"))(w);
+    while (*css) {puts(*css); css++; }
+    explore(w);
+    w = ((gtk_widget_get_next_sibling_t)dlsym(Fl_GTK_Printer_Driver::ptr_gtk, "gtk_widget_get_next_sibling"))(w);
+  }
+}*/
 
 int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpage, char **perr_message) {
   enum Fl_Paged_Device::Page_Format format = Fl_Paged_Device::A4;
   enum Fl_Paged_Device::Page_Layout layout = Fl_Paged_Device::PORTRAIT ;
 
-  GtkPrintUnixDialog *pdialog = CALL_GTK(gtk_print_unix_dialog_new)(Fl_Printer::dialog_title, NULL); //2.10
-  if (dlsym(ptr_gtk, "gtk_get_major_version") || !CALL_GTK(gtk_check_version)(2, 18, 0))
-    CALL_GTK(gtk_print_unix_dialog_set_embed_page_setup)(pdialog, true); //2.18
+  GtkWindow *tmp_win = NULL;
+  if (Fl_Posix_System_Driver::gtk_major_version == 4) {
+    // Create a temporary GtkWindow and use it as parent of the GtkPrintUnixDialog
+    // which avoids message "GtkDialog mapped without a transient parent".
+    tmp_win = CALL_GTK(gtk_window_new)();
+  }
+
+  GtkPrintUnixDialog *pdialog = CALL_GTK(gtk_print_unix_dialog_new)(Fl_Printer::dialog_title, tmp_win); //2.10
+//explore((GtkWidget*)pdialog);
+  CALL_GTK(gtk_print_unix_dialog_set_embed_page_setup)(pdialog, true); //2.18
   GtkPrintSettings *psettings = CALL_GTK(gtk_print_unix_dialog_get_settings)(pdialog); //2.10
   CALL_GTK(gtk_print_settings_set)(psettings, "output-file-format", "ps"); //2.10
   char line[FL_PATH_MAX + 20], cwd[FL_PATH_MAX];
@@ -142,16 +172,32 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
   CALL_GTK(g_object_unref)(psettings);
   int response_id = GTK_RESPONSE_NONE;
   CALL_GTK(g_signal_connect_data)(pdialog, "response", GCallback(run_response_handler), &response_id, NULL,  0);
-  gtk_events_pending_t fl_gtk_events_pending = CALL_GTK(gtk_events_pending);
-  gtk_main_iteration_t fl_gtk_main_iteration = CALL_GTK(gtk_main_iteration);
-  CALL_GTK(gtk_widget_show_now)(pdialog); // map the GTK window on screen
+  gtk_events_pending_t fl_gtk_events_pending;
+  gtk_main_iteration_t fl_gtk_main_iteration;
+  g_main_context_pending_t fl_g_main_context_pending;
+  g_main_context_iteration_t fl_g_main_context_iteration;
+  if (Fl_Posix_System_Driver::gtk_major_version < 4) {
+    fl_gtk_events_pending = CALL_GTK(gtk_events_pending);
+    fl_gtk_main_iteration = CALL_GTK(gtk_main_iteration);
+    CALL_GTK(gtk_widget_show_now)(pdialog);
+  } else {
+    fl_g_main_context_pending = CALL_GTK(g_main_context_pending);
+    fl_g_main_context_iteration = CALL_GTK(g_main_context_iteration);
+    main_context = CALL_GTK(g_main_context_default)();
+    CALL_GTK(gtk_window_present)((GtkWindow*)pdialog);
+  }
   Fl_Event_Dispatch old_dispatch = Fl::event_dispatch();
   // prevent FLTK from processing any event
   Fl::event_dispatch(no_dispatch);
+  //TODO GUI blocks if type esc while print dialog is open in Ubuntu
   while (response_id == GTK_RESPONSE_NONE) { // loop that shows the GTK dialog window
-    fl_gtk_main_iteration(); // one iteration of the GTK event loop
+    if (Fl_Posix_System_Driver::gtk_major_version < 4) fl_gtk_main_iteration(); // one iteration of the GTK event loop
+    else {
+      fl_g_main_context_iteration(main_context, false);
+    }
     while (Fl::ready()) Fl::check(); // queued iterations of the FLTK event loop
   }
+  if (tmp_win) CALL_GTK(gtk_window_destroy)(tmp_win);
   if (response_id == GTK_RESPONSE_OK) {
     GtkPageSetup *psetup = CALL_GTK(gtk_print_unix_dialog_get_page_setup)(pdialog); //2.10
     GtkPageOrientation orient = CALL_GTK(gtk_page_setup_get_orientation)(psetup); //2.10
@@ -223,9 +269,17 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
     }
     CALL_GTK(g_object_unref)(psettings);
   }
-  CALL_GTK(gtk_widget_hide)((GtkWidget*)pdialog);
-  while (fl_gtk_events_pending()) fl_gtk_main_iteration();
-  CALL_GTK(gtk_widget_destroy)((GtkWidget*)pdialog);
+  if (response_id == GTK_RESPONSE_CANCEL || response_id == GTK_RESPONSE_OK) {
+    typedef void (*gtk_widget_set_visible_t)(GtkWidget*, gboolean);
+    CALL_GTK(gtk_widget_set_visible)((GtkWidget*)pdialog, false);
+    if (Fl_Posix_System_Driver::gtk_major_version < 4) CALL_GTK(gtk_widget_destroy)((GtkWidget*)pdialog);
+  }
+  if (Fl_Posix_System_Driver::gtk_major_version < 4) {
+    while (fl_gtk_events_pending()) fl_gtk_main_iteration();
+  } else {
+    while (fl_g_main_context_pending(main_context))
+      fl_g_main_context_iteration(main_context, false);
+  }
   Fl::event_dispatch(old_dispatch);
   Fl_Window *first = Fl::first_window();
   if (first) {
@@ -244,22 +298,37 @@ static void pJobCompleteFunc(Fl_GTK_Printer_Driver::GtkPrintJob *print_job, Fl_G
 }
 static void pDestroyNotify(void* data) {}
 
+/*static void status_changed_handler(Fl_GTK_Printer_Driver::GtkPrintJob *dialog, void *user_data)
+{
+  typedef int (*gtk_print_job_get_status_t)(Fl_GTK_Printer_Driver::GtkPrintJob *);
+  gtk_print_job_get_status_t f = (gtk_print_job_get_status_t)dlsym(user_data, "gtk_print_job_get_status");
+  printf("status=%d\n", f(dialog));
+}*/
+
+
 void Fl_GTK_Printer_Driver::end_job() {
   Fl_PostScript_File_Device::end_job();
   Fl_PostScript_Graphics_Driver *psgd = driver();
   fclose(psgd->output);
   if (!pjob) return;
   GError *gerr;
+  gtk_main_iteration_t fl_gtk_main_iteration = NULL;
+  g_main_context_iteration_t fl_g_main_context_iteration = NULL;
+  if (Fl_Posix_System_Driver::gtk_major_version >= 4) {
+    fl_g_main_context_iteration = CALL_GTK(g_main_context_iteration);
+  } else fl_gtk_main_iteration = CALL_GTK(gtk_main_iteration);
+  //CALL_GTK(g_signal_connect_data)(pjob, "status-changed", GCallback(status_changed_handler), ptr_gtk, NULL,  0);
   gboolean gb = CALL_GTK(gtk_print_job_set_source_file)(pjob, tmpfilename, &gerr); //2.10
   if (gb) {
     gb = false;
     CALL_GTK(gtk_print_job_send)(pjob, (void*)pJobCompleteFunc, &gb, (void*)pDestroyNotify); //2.10
-    gtk_main_iteration_t fl_gtk_main_iteration = CALL_GTK(gtk_main_iteration);
     while (!gb) {
-      fl_gtk_main_iteration();
+      if (Fl_Posix_System_Driver::gtk_major_version < 4) fl_gtk_main_iteration(); // one iteration of the GTK event loop
+      else fl_g_main_context_iteration(main_context, false);
     }
   }
   fl_unlink(tmpfilename);
+  CALL_GTK(g_object_unref)(pjob);
 }
 #endif // HAVE_DLSYM && HAVE_DLFCN_H
 

@@ -68,10 +68,11 @@ public:
   void *load(const char *filename) FL_OVERRIDE;
 #if HAVE_DLSYM
   static void *ptr_gtk;
+  static int gtk_major_version;
   static bool probe_for_GTK(int major, int minor, void **ptr_gtk);
 #endif
 #endif
-  static void *dlopen_or_dlsym(const char *lib_name, const char *func_name = NULL);
+  static void *dlopen_or_dlsym(const char *lib_name, const char *func_name = NULL, int flags = 0);
   // these 4 are implemented in Fl_lock.cxx
   void awake(void*) FL_OVERRIDE;
   int lock() FL_OVERRIDE;

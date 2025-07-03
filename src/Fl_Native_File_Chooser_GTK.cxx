@@ -1,7 +1,7 @@
 //
 // FLTK native file chooser widget wrapper for GTK's GtkFileChooserDialog
 //
-// Copyright 1998-2023 by Bill Spitzak and others.
+// Copyright 1998-2025 by Bill Spitzak and others.
 // Copyright 2012 IMM
 //
 // This library is free software. Distribution and use rights are outlined in
@@ -53,15 +53,14 @@ struct _GSList
   GSList *next;
 };
 #define  g_slist_next(slist)             ((slist) ? (((GSList *)(slist))->next) : NULL)
-typedef struct _GtkWidget      GtkWidget;
-typedef struct _GtkFileChooser      GtkFileChooser;
-typedef struct _GtkDialog        GtkDialog;
-typedef struct _GtkWindow          GtkWindow;
-typedef struct _GtkFileFilter     GtkFileFilter;
-typedef struct _GtkToggleButton       GtkToggleButton;
-typedef struct _GdkPixbuf GdkPixbuf;
-typedef struct _GtkImage GtkImage;
-typedef struct _GtkTable GtkTable;
+struct GtkWidget;
+struct GtkFileChooser;
+struct GtkDialog;
+struct GtkWindow;
+struct GtkFileFilter;
+struct GtkToggleButton;
+struct GdkPixbuf;
+struct GtkImage;
 typedef enum {
   GTK_FILE_FILTER_FILENAME     = 1 << 0,
   GTK_FILE_FILTER_URI          = 1 << 1,
@@ -121,14 +120,14 @@ private:
   };
   GtkWidget *gtkw_ptr; // used to hold a GtkWidget* without pulling GTK into everything...
   void *gtkw_slist; // used to hold a GLib GSList...
+protected:
   unsigned gtkw_count; // number of files read back - if any
   mutable char *gtkw_filename; // last name we read back
+private:
   char *gtkw_title; // the title to be applied to the dialog
   const char *previous_filter;
 
-  int fl_gtk_chooser_wrapper(); // method that wraps the GTK widget
-  Fl_GTK_Native_File_Chooser_Driver(int val);
-  ~Fl_GTK_Native_File_Chooser_Driver() FL_OVERRIDE;
+  virtual int fl_gtk_chooser_wrapper(); // method that wraps the GTK widget
   static int did_find_GTK_libs;
   static void probe_for_GTK_libs(void);
   void type(int) FL_OVERRIDE;
@@ -143,6 +142,9 @@ private:
   static int custom_gtk_filter_function(const GtkFileFilterInfo*, Fl_GTK_Native_File_Chooser_Driver::pair*);
   static void free_pair(pair *p);
   Fl_Preferences gtk_chooser_prefs;
+protected:
+  Fl_GTK_Native_File_Chooser_Driver(int val);
+  ~Fl_GTK_Native_File_Chooser_Driver() FL_OVERRIDE;
 public:
   static gboolean want_preview; // state of "Preview" button
 };
@@ -313,10 +315,11 @@ typedef GtkWidget* (*XX_gtk_image_new)(void);
 static XX_gtk_image_new fl_gtk_image_new = NULL;
 
 // GtkWidget *gtk_table_new();
+struct GtkTable;
 typedef GtkTable* (*XX_gtk_table_new)(int, int, gboolean);
 static XX_gtk_table_new fl_gtk_table_new = NULL;
 
-// GtkWidget *gtk_table_new();
+// void gtk_widget_show_all(GtkWidget*);
 typedef void (*XX_gtk_widget_show_all)(GtkWidget*);
 static XX_gtk_widget_show_all fl_gtk_widget_show_all = NULL;
 
@@ -342,6 +345,90 @@ static XX_gtk_widget_get_toplevel fl_gtk_widget_get_toplevel = NULL;
 typedef void (*XX_g_object_unref)(void*);
 static XX_g_object_unref fl_g_object_unref = NULL;
 
+typedef struct _GMainContext GMainContext;
+typedef GMainContext* (*XX_g_main_context_default)(void);
+static XX_g_main_context_default fl_g_main_context_default = NULL;
+
+typedef void (*XX_g_main_context_iteration)(GMainContext*, bool);
+static XX_g_main_context_iteration fl_g_main_context_iteration = NULL;
+
+typedef gboolean (*XX_g_main_context_pending)(GMainContext*);
+static XX_g_main_context_pending fl_g_main_context_pending = NULL;
+
+typedef struct _GFile GFile;
+typedef char* (*XX_g_file_get_path)(GFile*);
+static XX_g_file_get_path fl_g_file_get_path = NULL;
+
+typedef GFile* (*XX_g_file_new_for_path)(const char*);
+static XX_g_file_new_for_path fl_g_file_new_for_path = NULL;
+
+typedef struct _GCancellable GCancellable;
+typedef GCancellable *(*XX_g_cancellable_new)();
+static XX_g_cancellable_new fl_g_cancellable_new = NULL;
+
+typedef struct _GListStore GListStore;
+typedef gulong GType;
+typedef GListStore *(*XX_g_list_store_new)(GType);
+static XX_g_list_store_new fl_g_list_store_new = NULL;
+
+struct GObject;
+typedef void *(*XX_g_list_store_append)(GListStore* , GObject*);
+static XX_g_list_store_append fl_g_list_store_append = NULL;
+
+struct GListModel;
+typedef guint (*XX_g_list_model_get_n_items)(GListModel*);
+static XX_g_list_model_get_n_items fl_g_list_model_get_n_items = NULL;
+
+typedef gpointer (*XX_g_list_model_get_item)(GListModel*, guint);
+static XX_g_list_model_get_item fl_g_list_model_get_item = NULL;
+
+struct GtkFileDialog;
+struct GAsyncResult;
+typedef void (*GAsyncReadyCallback)(GObject*, GAsyncResult*, gpointer);
+typedef void (*XX_gtk_file_dialog_open)(GtkFileDialog*,GtkWindow*, GCancellable*, GAsyncReadyCallback, gpointer);
+static XX_gtk_file_dialog_open fl_gtk_file_dialog_open = NULL;
+static XX_gtk_file_dialog_open fl_gtk_file_dialog_open_multiple = NULL;
+static XX_gtk_file_dialog_open fl_gtk_file_dialog_save = NULL;
+static XX_gtk_file_dialog_open fl_gtk_file_dialog_select_folder = NULL;
+
+struct GError;
+typedef GFile* (*XX_gtk_file_dialog_open_finish)(GtkFileDialog* ,GAsyncResult* ,GError**);
+static XX_gtk_file_dialog_open_finish fl_gtk_file_dialog_open_finish = NULL;
+static XX_gtk_file_dialog_open_finish fl_gtk_file_dialog_select_folder_finish = NULL;
+static XX_gtk_file_dialog_open_finish fl_gtk_file_dialog_save_finish = NULL;
+
+typedef GListModel* (*XX_gtk_file_dialog_open_multiple_finish)(GtkFileDialog* ,GAsyncResult* ,GError**);
+static XX_gtk_file_dialog_open_multiple_finish fl_gtk_file_dialog_open_multiple_finish = NULL;
+
+typedef GtkFileDialog* (*XX_gtk_file_dialog_new)();
+static XX_gtk_file_dialog_new fl_gtk_file_dialog_new = NULL;
+
+typedef void (*XX_gtk_file_dialog_set_initial_folder)(GtkFileDialog *, GFile *);
+static XX_gtk_file_dialog_set_initial_folder fl_gtk_file_dialog_set_initial_folder = NULL;
+
+typedef void (*XX_gtk_file_dialog_set_initial_name)(GtkFileDialog *, const char *);
+static XX_gtk_file_dialog_set_initial_name fl_gtk_file_dialog_set_initial_name = NULL;
+
+typedef void (*XX_gtk_file_dialog_set_filters)(GtkFileDialog *, GListModel*);
+static XX_gtk_file_dialog_set_filters fl_gtk_file_dialog_set_filters = NULL;
+
+typedef GType (*XX_gtk_file_filter_get_type)(void);
+static XX_gtk_file_filter_get_type fl_gtk_file_filter_get_type = NULL;
+
+typedef GtkWindow* (*XX_gtk_window_new)();
+XX_gtk_window_new fl_gtk_window_new = NULL;
+
+typedef void (*XX_gtk_window_set_default_size)(GtkWindow* window,int width, int height);
+XX_gtk_window_set_default_size fl_gtk_window_set_default_size = NULL;
+
+typedef void (*XX_gtk_window_set_decorated)(GtkWindow*, gboolean);
+XX_gtk_window_set_decorated fl_gtk_window_set_decorated = NULL;
+
+typedef void (*XX_gtk_widget_set_visible)(GtkWidget*, gboolean);
+XX_gtk_widget_set_visible fl_gtk_widget_set_visible = NULL;
+
+typedef void (*XX_gtk_window_destroy)(GtkWindow*);
+XX_gtk_window_destroy fl_gtk_window_destroy = NULL;
 
 int Fl_GTK_Native_File_Chooser_Driver::have_looked_for_GTK_libs = 0;
 
@@ -843,6 +930,186 @@ int Fl_GTK_Native_File_Chooser_Driver::fl_gtk_chooser_wrapper()
   return result;
 } // fl_gtk_chooser_wrapper
 
+
+struct browser_data_s {
+  int btype;
+  GFile *gf;
+  int result;
+  GListModel *model_files;
+};
+
+
+static void file_opened(GObject* source, GAsyncResult* result, struct browser_data_s *browser_data) {
+  GError *error = NULL;
+  if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_FILE)
+    browser_data->gf = fl_gtk_file_dialog_open_finish((GtkFileDialog*)source, result, &error);
+  else if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_MULTI_FILE) {
+    browser_data->model_files = fl_gtk_file_dialog_open_multiple_finish((GtkFileDialog*)source, result, &error);
+  } else if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_DIRECTORY ||
+             browser_data->btype == Fl_Native_File_Chooser::BROWSE_MULTI_DIRECTORY)
+    browser_data->gf = fl_gtk_file_dialog_select_folder_finish((GtkFileDialog*)source, result, &error);
+  else if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_SAVE_FILE)
+    browser_data->gf = fl_gtk_file_dialog_save_finish((GtkFileDialog*)source, result, &error);
+  
+  if (!browser_data->gf && !browser_data->model_files) browser_data->result = 1;
+  else browser_data->result = 0;
+}
+
+
+/* GTK4 doesn't support patterns such as "*.{C,h,cxx}"
+ It's necessary to split them in pieces such as "*.cxx" and call gtk_file_filter_add_pattern()
+ for each piece.
+ */
+static void decode_file_filter_for_GTK4(GtkFileFilter *gtk_filter, char *p) {
+  const int l = strlen(p);
+  char *gtk4_pattern = new char[l + 1];
+  char *pattern = strdup(p);
+  if ((p = strchr(pattern, '{')) && !strchr(p + 1, '{')) { // if {} occurs once
+    char *q = strchr(p, '}');
+    if (!q) return; // should not occur
+    *p = 0;
+    *q = 0;
+    char *context;
+    char *tok = strtok_r(p+1, ",", &context);
+    do {
+      snprintf(gtk4_pattern, l, "%s%s%s", pattern, tok, q+1);
+      fl_gtk_file_filter_add_pattern(gtk_filter, gtk4_pattern);
+    } while ((tok = strtok_r(NULL, ",", &context)));
+  } else fl_gtk_file_filter_add_pattern(gtk_filter, pattern);
+  free(pattern);
+  delete[] gtk4_pattern;
+}
+
+
+class Fl_GTK410_Native_File_Chooser_Driver : public Fl_GTK_Native_File_Chooser_Driver {
+public:
+  GListModel *model_files; // holds the list of selected files
+  Fl_GTK410_Native_File_Chooser_Driver(int val) : Fl_GTK_Native_File_Chooser_Driver(val) {
+    model_files = NULL;
+  }
+  ~Fl_GTK410_Native_File_Chooser_Driver();
+  int fl_gtk_chooser_wrapper() override; // method that wraps the GTK widget
+  const char *filename() const override;
+  const char *filename(int) const override;
+};
+
+
+Fl_GTK410_Native_File_Chooser_Driver::~Fl_GTK410_Native_File_Chooser_Driver() {
+  if (model_files) fl_g_object_unref(model_files);
+}
+
+
+int Fl_GTK410_Native_File_Chooser_Driver::fl_gtk_chooser_wrapper() {
+  GtkFileDialog *dialog = fl_gtk_file_dialog_new();
+  GCancellable *cancellable = fl_g_cancellable_new();
+  struct browser_data_s browser_data = { this->_btype, NULL, -1, NULL };
+  
+  if (_directory && _directory[0]) {
+    char *p = extract_dir_from_path(_directory);
+    if (p) {
+      GFile *gf = fl_g_file_new_for_path(p);
+      fl_gtk_file_dialog_set_initial_folder(dialog, gf);
+      fl_g_object_unref(gf);
+    }
+  }
+  else if (_preset_file) {
+    char *p = extract_dir_from_path(_preset_file);
+    if (p) {
+      GFile *gf = fl_g_file_new_for_path(p);
+      fl_gtk_file_dialog_set_initial_folder(dialog, gf);
+      fl_g_object_unref(gf);
+    }
+    if (_btype == Fl_Native_File_Chooser::BROWSE_SAVE_FILE)
+      fl_gtk_file_dialog_set_initial_name(dialog, _preset_file);
+  }
+  
+  if (_parsedfilt) {
+    GListStore *filters = fl_g_list_store_new(fl_gtk_file_filter_get_type()/*GTK_TYPE_FILE_FILTER*/);
+    char *filter = fl_strdup(_parsedfilt);
+    char *p = strtok(filter, "\t");
+    while (p) {
+      GtkFileFilter *filter1 = fl_gtk_file_filter_new();
+      fl_g_list_store_append(filters, (GObject*)filter1);
+      fl_gtk_file_filter_set_name(filter1, p);
+      p = strchr(p, '(') + 1;
+      char *q = strchr(p, ')'); *q = 0;
+      decode_file_filter_for_GTK4(filter1, p);
+      p = strtok(NULL, "\t");
+      fl_g_object_unref(filter1);
+    }
+    free(filter);
+    if (_btype == Fl_Native_File_Chooser::BROWSE_FILE ||
+        _btype == Fl_Native_File_Chooser::BROWSE_MULTI_FILE) {
+      GtkFileFilter *filter1 = fl_gtk_file_filter_new();
+      fl_g_list_store_append(filters, (GObject*)filter1);
+      fl_gtk_file_filter_set_name(filter1, "All files (*)");
+      fl_gtk_file_filter_add_pattern(filter1, "*");
+      fl_g_object_unref(filter1);
+    }
+    fl_gtk_file_dialog_set_filters(dialog, (GListModel*)filters);
+    fl_g_object_unref(filters);
+  }
+
+  // Create a temporary, non-decorated, small GtkWindow and use it as parent of the GtkFileDialog
+  // which makes that dialog without minimize/maximize buttons.
+  GtkWindow *tmp_win = fl_gtk_window_new();
+  fl_gtk_window_set_default_size(tmp_win, 1, 1);
+  fl_gtk_window_set_decorated(tmp_win, false);
+  fl_gtk_widget_set_visible((GtkWidget*)tmp_win, true);
+
+  if (_btype == Fl_Native_File_Chooser::BROWSE_DIRECTORY ||
+      _btype == Fl_Native_File_Chooser::BROWSE_SAVE_DIRECTORY
+      || _btype == Fl_Native_File_Chooser::BROWSE_MULTI_DIRECTORY) {
+    fl_gtk_file_dialog_select_folder(dialog, tmp_win, cancellable, (GAsyncReadyCallback)file_opened,
+                                  &browser_data);
+  } else if (_btype == Fl_Native_File_Chooser::BROWSE_FILE) {
+    fl_gtk_file_dialog_open(dialog, tmp_win, cancellable, (GAsyncReadyCallback)file_opened, &browser_data);
+  } else if (_btype == Fl_Native_File_Chooser::BROWSE_MULTI_FILE) {
+    fl_gtk_file_dialog_open_multiple(dialog, tmp_win, cancellable, (GAsyncReadyCallback)file_opened,
+                                  &browser_data);
+  } else if (_btype == Fl_Native_File_Chooser::BROWSE_SAVE_FILE) {
+    fl_gtk_file_dialog_save(dialog, tmp_win, cancellable, (GAsyncReadyCallback)file_opened, &browser_data);
+  }
+    
+  while (browser_data.result == -1) { // loop that shows the GtkFileDialog window
+    fl_g_main_context_iteration(fl_g_main_context_default(), false);
+    while (Fl::ready()) Fl::check(); // queued iterations of the FLTK event loop
+  }
+  fl_gtk_window_destroy(tmp_win);
+
+  if (browser_data.gf) {
+    gtkw_filename = fl_g_file_get_path(browser_data.gf);
+    fl_g_object_unref(browser_data.gf);
+    if (gtkw_filename) {
+      gtkw_count = 1;
+    }
+  } else if (browser_data.model_files) {
+    model_files = browser_data.model_files;
+    gtkw_count = fl_g_list_model_get_n_items(model_files);
+  }
+  while (fl_g_main_context_pending(fl_g_main_context_default()))
+     fl_g_main_context_iteration(fl_g_main_context_default(), false);
+    
+  fl_g_object_unref(cancellable);
+  fl_g_object_unref(dialog);
+
+  return browser_data.result;
+}
+
+
+const char *Fl_GTK410_Native_File_Chooser_Driver::filename() const
+{
+  return gtkw_filename;
+}
+
+const char *Fl_GTK410_Native_File_Chooser_Driver::filename(int i) const {
+  GFile *gf = (GFile*)fl_g_list_model_get_item(model_files, i);
+  const char *p =  fl_g_file_get_path(gf);
+  fl_g_object_unref(gf);
+  return p;
+}
+
+
 // macro to help with the symbol loading boilerplate...
 #  define GET_SYM(SSS, LLL) \
 dlerror();    /* Clear any existing error */  \
@@ -860,66 +1127,103 @@ return; }
  */
 void Fl_GTK_Native_File_Chooser_Driver::probe_for_GTK_libs(void) {
   void  *ptr_gtk;
-  if ( !Fl_Posix_System_Driver::probe_for_GTK(2, 4, &ptr_gtk)) {
-    did_find_GTK_libs = 0;
+  did_find_GTK_libs = Fl_Posix_System_Driver::probe_for_GTK(4, 10, &ptr_gtk);
+  if (!did_find_GTK_libs)
+    did_find_GTK_libs = Fl_Posix_System_Driver::probe_for_GTK(3, 0, &ptr_gtk) &&
+                        (Fl_Posix_System_Driver::gtk_major_version == 3);
+  if (!did_find_GTK_libs) {
     return;
   }
   void *ptr_glib = ptr_gtk;
   char *pc_dl_error; // used to report errors by the GET_SYM macro...
+  if (Fl_Posix_System_Driver::gtk_major_version == 4) {
+    GET_SYM(g_file_get_path, ptr_gtk);
+    GET_SYM(g_main_context_iteration, ptr_gtk);
+    GET_SYM(g_main_context_default, ptr_gtk);
+    GET_SYM(g_main_context_pending, ptr_gtk);
+    GET_SYM(g_file_new_for_path, ptr_gtk);
+    GET_SYM(g_cancellable_new, ptr_gtk);
+    GET_SYM(g_list_store_new, ptr_gtk);
+    GET_SYM(g_list_store_append, ptr_gtk);
+    GET_SYM(g_list_model_get_n_items, ptr_gtk);
+    GET_SYM(g_list_model_get_item, ptr_gtk);
+    GET_SYM(gtk_file_dialog_open, ptr_gtk);
+    fl_gtk_file_dialog_open_multiple = (XX_gtk_file_dialog_open)dlsym(ptr_gtk, "gtk_file_dialog_open_multiple");
+    fl_gtk_file_dialog_save = (XX_gtk_file_dialog_open)dlsym(ptr_gtk, "gtk_file_dialog_save");
+    fl_gtk_file_dialog_select_folder = (XX_gtk_file_dialog_open)dlsym(ptr_gtk, "gtk_file_dialog_select_folder");
+    GET_SYM(gtk_file_dialog_open_finish, ptr_gtk);
+    fl_gtk_file_dialog_save_finish = (XX_gtk_file_dialog_open_finish)dlsym(ptr_gtk, "gtk_file_dialog_save_finish");
+    fl_gtk_file_dialog_select_folder_finish = (XX_gtk_file_dialog_open_finish)
+      dlsym(ptr_gtk, "gtk_file_dialog_select_folder_finish");
+    GET_SYM(gtk_file_dialog_open_multiple_finish, ptr_gtk);
+    GET_SYM(gtk_file_dialog_new, ptr_gtk);
+    GET_SYM(gtk_file_dialog_set_initial_folder, ptr_gtk);
+    GET_SYM(gtk_file_dialog_set_initial_name, ptr_gtk);
+    GET_SYM(gtk_file_dialog_set_filters, ptr_gtk);
+    GET_SYM(gtk_file_filter_get_type, ptr_gtk);
+    GET_SYM(gtk_window_new, ptr_gtk);
+    GET_SYM(gtk_window_set_default_size, ptr_gtk);
+    GET_SYM(gtk_window_set_decorated, ptr_gtk);
+    GET_SYM(gtk_widget_set_visible, ptr_gtk);
+    GET_SYM(gtk_window_destroy, ptr_gtk);
+  }
   // items we need from GLib
   GET_SYM(g_free, ptr_glib);
   GET_SYM(g_slist_nth_data, ptr_glib);
   GET_SYM(g_slist_length, ptr_glib);
   GET_SYM(g_slist_free, ptr_glib);
   // items we need from GTK
-  GET_SYM(gtk_widget_destroy, ptr_gtk);
   GET_SYM(gtk_file_chooser_set_select_multiple, ptr_gtk);
-  GET_SYM(gtk_file_chooser_set_do_overwrite_confirmation, ptr_gtk);
   GET_SYM(gtk_file_chooser_set_current_name, ptr_gtk);
-  GET_SYM(gtk_file_chooser_set_current_folder, ptr_gtk);
   GET_SYM(gtk_file_chooser_set_create_folders, ptr_gtk);
   GET_SYM(gtk_file_chooser_get_select_multiple, ptr_gtk);
   GET_SYM(gtk_widget_hide, ptr_gtk);
-  GET_SYM(gtk_file_chooser_get_filename, ptr_gtk);
-  GET_SYM(gtk_file_chooser_get_filenames, ptr_gtk);
-  GET_SYM(gtk_main_iteration, ptr_gtk);
-  GET_SYM(gtk_events_pending, ptr_gtk);
   GET_SYM(gtk_file_chooser_dialog_new, ptr_gtk);
   GET_SYM(gtk_file_chooser_add_filter, ptr_gtk);
   GET_SYM(gtk_file_chooser_get_filter, ptr_gtk);
   GET_SYM(gtk_file_chooser_set_filter, ptr_gtk);
   GET_SYM(gtk_file_filter_new, ptr_gtk);
   GET_SYM(gtk_file_filter_add_pattern, ptr_gtk);
-  GET_SYM(gtk_file_filter_add_custom, ptr_gtk);
   GET_SYM(gtk_file_filter_set_name, ptr_gtk);
   GET_SYM(gtk_file_filter_get_name, ptr_gtk);
-  GET_SYM(gtk_file_chooser_set_extra_widget, ptr_gtk);
-  GET_SYM(gtk_widget_show_now, ptr_gtk);
-  GET_SYM(gtk_file_chooser_set_preview_widget_active, ptr_gtk);
-  GET_SYM(gtk_file_chooser_set_preview_widget, ptr_gtk);
-  GET_SYM(gtk_file_chooser_get_preview_widget, ptr_gtk);
   GET_SYM(gtk_widget_set_sensitive, ptr_gtk);
   GET_SYM(gtk_button_new_with_label, ptr_gtk);
-  GET_SYM(gtk_widget_get_toplevel, ptr_gtk);
-  GET_SYM(gtk_file_chooser_get_preview_filename, ptr_gtk);
   GET_SYM(gdk_pixbuf_new_from_data, ptr_gtk);
   GET_SYM(gtk_image_set_from_pixbuf, ptr_gtk);
   GET_SYM(gtk_image_new, ptr_gtk);
-  GET_SYM(gtk_table_new, ptr_gtk);
-  GET_SYM(gtk_widget_show_all, ptr_gtk);
-  GET_SYM(gtk_table_attach_defaults, ptr_gtk);
   GET_SYM(g_object_unref, ptr_gtk);
   GET_SYM(gtk_check_button_new_with_label, ptr_gtk);
   GET_SYM(g_signal_connect_data, ptr_gtk);
   GET_SYM(gtk_toggle_button_get_active, ptr_gtk);
-  GET_SYM(gtk_file_chooser_set_show_hidden, ptr_gtk);
-  GET_SYM(gtk_file_chooser_get_show_hidden, ptr_gtk);
-  GET_SYM(gtk_toggle_button_set_active, ptr_gtk);
+  if (Fl_Posix_System_Driver::gtk_major_version < 4) {
+    GET_SYM(gtk_widget_destroy, ptr_gtk);
+    GET_SYM(gtk_file_chooser_set_do_overwrite_confirmation, ptr_gtk);
+    GET_SYM(gtk_file_chooser_set_current_folder, ptr_gtk);
+    GET_SYM(gtk_file_chooser_get_filename, ptr_gtk);
+    GET_SYM(gtk_file_chooser_get_filenames, ptr_gtk);
+    GET_SYM(gtk_main_iteration, ptr_gtk);
+    GET_SYM(gtk_events_pending, ptr_gtk);
+    GET_SYM(gtk_file_filter_add_custom, ptr_gtk);
+    GET_SYM(gtk_file_chooser_set_extra_widget, ptr_gtk);
+    GET_SYM(gtk_widget_show_now, ptr_gtk);
+    GET_SYM(gtk_file_chooser_set_preview_widget_active, ptr_gtk);
+    GET_SYM(gtk_file_chooser_set_preview_widget, ptr_gtk);
+    GET_SYM(gtk_file_chooser_get_preview_widget, ptr_gtk);
+    GET_SYM(gtk_file_chooser_get_preview_filename, ptr_gtk);
+    GET_SYM(gtk_widget_get_toplevel, ptr_gtk);
+    GET_SYM(gtk_table_new, ptr_gtk);
+    GET_SYM(gtk_table_attach_defaults, ptr_gtk);
+    GET_SYM(gtk_widget_show_all, ptr_gtk);
+    GET_SYM(gtk_file_chooser_set_show_hidden, ptr_gtk);
+    GET_SYM(gtk_file_chooser_get_show_hidden, ptr_gtk);
+    GET_SYM(gtk_toggle_button_set_active, ptr_gtk);
+  }
 
   did_find_GTK_libs = 1;
 } // probe_for_GTK_libs
 
 #endif // HAVE_DLSYM && HAVE_DLFCN_H
+
 
 Fl_Native_File_Chooser::Fl_Native_File_Chooser(int val) {
   // Use zenity if available at run-time even if using the KDE desktop,
@@ -968,7 +1272,11 @@ Fl_Native_File_Chooser::Fl_Native_File_Chooser(int val) {
         Fl_GTK_Native_File_Chooser_Driver::have_looked_for_GTK_libs = -1;
       }
       // if we found all the GTK functions we need, we will use the GtkFileChooserDialog
-      if (Fl_GTK_Native_File_Chooser_Driver::did_find_GTK_libs) platform_fnfc = new Fl_GTK_Native_File_Chooser_Driver(val);
+      if (Fl_GTK_Native_File_Chooser_Driver::did_find_GTK_libs) {
+        platform_fnfc = ( Fl_Posix_System_Driver::gtk_major_version == 4 ?
+                          new Fl_GTK410_Native_File_Chooser_Driver(val) :
+                          new Fl_GTK_Native_File_Chooser_Driver(val) );
+      }
     }
   }
 #endif // HAVE_DLSYM && HAVE_DLFCN_H

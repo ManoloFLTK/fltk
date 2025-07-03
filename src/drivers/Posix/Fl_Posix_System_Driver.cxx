@@ -1,7 +1,7 @@
 //
 // Definition of Posix system driver (used by the X11, Wayland and macOS platforms).
 //
-// Copyright 1998-2023 by Bill Spitzak and others.
+// Copyright 1998-2025 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -174,20 +174,20 @@ int Fl_Posix_System_Driver::run_program(const char *program, char **argv, char *
 
 #if HAVE_DLSYM && HAVE_DLFCN_H && !defined (__APPLE_CC__)
 
-static void* quadruple_dlopen(const char *libname)
+static void* quadruple_dlopen(const char *libname, int flags)
 {
   char filename2[FL_PATH_MAX];
   snprintf(filename2, FL_PATH_MAX, "%s.so", libname);
-  void *ptr = dlopen(filename2, RTLD_LAZY | RTLD_GLOBAL);
+  void *ptr = dlopen(filename2, flags);
   if (!ptr) {
     snprintf(filename2, FL_PATH_MAX, "%s.so.2", libname);
-    ptr = dlopen(filename2, RTLD_LAZY | RTLD_GLOBAL);
+    ptr = dlopen(filename2, flags);
     if (!ptr) {
       snprintf(filename2, FL_PATH_MAX, "%s.so.1", libname);
-      ptr = dlopen(filename2, RTLD_LAZY | RTLD_GLOBAL);
+      ptr = dlopen(filename2, flags);
       if (!ptr) {
         snprintf(filename2, FL_PATH_MAX, "%s.so.0", libname);
-        ptr = dlopen(filename2, RTLD_LAZY | RTLD_GLOBAL);
+        ptr = dlopen(filename2, flags);
       }
     }
   }
@@ -200,9 +200,10 @@ static void* quadruple_dlopen(const char *libname)
  Returns the run-time address of a function or of a shared library.
  \param lib_name shared library name (without its extension) or NULL to search the function in the running program
  \param func_name  function name or NULL
+ \param flags 0 or 2nd argument of function dlopen()
  \return the address of the function (when func_name != NULL) or of the shared library, or NULL if not found.
  */
-void *Fl_Posix_System_Driver::dlopen_or_dlsym(const char *lib_name, const char *func_name)
+void *Fl_Posix_System_Driver::dlopen_or_dlsym(const char *lib_name, const char *func_name, int flags)
 {
   void *lib_address = NULL;
 #if HAVE_DLSYM && HAVE_DLFCN_H
@@ -216,30 +217,27 @@ void *Fl_Posix_System_Driver::dlopen_or_dlsym(const char *lib_name, const char *
 #endif
     if (func_ptr) return func_ptr;
   }
+  if (lib_name && flags == 0) flags = RTLD_LAZY | RTLD_GLOBAL;
 #ifdef __APPLE_CC__ // allows using on Darwin + XQuartz + (homebrew or fink)
   if (lib_name) {
     char path[FL_PATH_MAX];
     snprintf(path, FL_PATH_MAX, "/opt/X11/lib/%s.dylib", lib_name);
-    lib_address = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
+    lib_address = dlopen(path, flags);
     if (!lib_address) {
       snprintf(path, FL_PATH_MAX, "/opt/homebrew/lib/%s.dylib", lib_name);
-      lib_address = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
+      lib_address = dlopen(path, flags);
       if (!lib_address) {
         snprintf(path, FL_PATH_MAX, "/opt/sw/lib/%s.dylib", lib_name);
-        lib_address = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
+        lib_address = dlopen(path, flags);
         if (!lib_address) {
           snprintf(path, FL_PATH_MAX, "/sw/lib/%s.dylib", lib_name);
-          lib_address = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
-          // the GTK2 shared lib has a new name under homebrew in macOS, try it:
-          if (!lib_address && !strcmp(lib_name, "libgtk-x11-2.0")) {
-            lib_address = dlopen("/opt/homebrew/lib/libgtkmacintegration-gtk2.dylib", RTLD_LAZY | RTLD_GLOBAL);
-          }
+          lib_address = dlopen(path, flags);
         }
       }
     }
   }
 #else
-  if (lib_name) lib_address = quadruple_dlopen(lib_name);
+  if (lib_name) lib_address = quadruple_dlopen(lib_name, flags);
 #endif // __APPLE_CC__
   if (func_name && lib_address) return ::dlsym(lib_address, func_name);
 #endif // HAVE_DLFCN_H
@@ -249,63 +247,80 @@ void *Fl_Posix_System_Driver::dlopen_or_dlsym(const char *lib_name, const char *
 #if HAVE_DLSYM && HAVE_DLFCN_H
 
 void *Fl_Posix_System_Driver::ptr_gtk = NULL;
+int Fl_Posix_System_Driver::gtk_major_version = 0;
 
 bool Fl_Posix_System_Driver::probe_for_GTK(int major, int minor, void **p_ptr_gtk) {
-  typedef int (*init_t)(int*, char***);
-  init_t init_f = NULL;
   // was GTK previously loaded?
-  if (Fl_Posix_System_Driver::ptr_gtk) { // yes, it was.
-    *p_ptr_gtk = Fl_Posix_System_Driver::ptr_gtk;
-    return true;
+  if (Fl_Posix_System_Driver::gtk_major_version) { // yes, it was.
+    typedef int (*f_t)(void);
+    int minor_found = ((f_t)dlsym(ptr_gtk, "gtk_get_minor_version"))();
+    if (Fl_Posix_System_Driver::gtk_major_version > major ||
+        (Fl_Posix_System_Driver::gtk_major_version == major && minor_found >= minor)) {
+      *p_ptr_gtk = Fl_Posix_System_Driver::ptr_gtk;
+      return true;
+    } else return false;
   }
-    // Try first with GTK3
-    Fl_Posix_System_Driver::ptr_gtk = Fl_Posix_System_Driver::dlopen_or_dlsym("libgtk-3");
-    if (Fl_Posix_System_Driver::ptr_gtk) {
-#ifdef DEBUG
-      puts("selected GTK-3\n");
-#endif
-    } else {
-      // Try then with GTK2
-      Fl_Posix_System_Driver::ptr_gtk = Fl_Posix_System_Driver::dlopen_or_dlsym("libgtk-x11-2.0");
-#ifdef DEBUG
-      if (Fl_Posix_System_Driver::ptr_gtk) {
-        puts("selected GTK-2\n");
-      }
-#endif
+  // was GTK3 or GTK4 linked to the prog?
+  void *dl = dlopen_or_dlsym("libgtk-4", NULL, RTLD_LAZY | RTLD_NOLOAD | RTLD_LOCAL);
+  if (!dl) dl = dlopen_or_dlsym("libgtk-3", NULL, RTLD_LAZY | RTLD_NOLOAD | RTLD_LOCAL);
+  
+  bool found;
+  if (dl) {
+    Fl_Posix_System_Driver::ptr_gtk = dl;
+    found = true;
+  } else {
+    // Try first with GTK4
+    Fl_Posix_System_Driver::ptr_gtk = dlopen_or_dlsym("libgtk-4");
+    if (major == 4 && ptr_gtk) {
+      typedef int (*get_minor_t)(void);
+      int minor_found = ((get_minor_t)dlsym(ptr_gtk, "gtk_get_minor_version"))();
+      if (minor_found < minor) ptr_gtk = NULL;
     }
-    if (!Fl_Posix_System_Driver::ptr_gtk) {
+    if (major <= 3 && !Fl_Posix_System_Driver::ptr_gtk) {
+      // Try next with GTK3
+      Fl_Posix_System_Driver::ptr_gtk = Fl_Posix_System_Driver::dlopen_or_dlsym("libgtk-3");
+      if (Fl_Posix_System_Driver::ptr_gtk) {
+#ifdef DEBUG
+        puts("selected GTK-3\n");
+#endif
+      }
+    }
+    found = (Fl_Posix_System_Driver::ptr_gtk != NULL);
+  }
+  if (!found) {
 #ifdef DEBUG
       puts("Failure to load libgtk");
 #endif
-      return false;
-    }
-    init_f = (init_t)dlsym(Fl_Posix_System_Driver::ptr_gtk, "gtk_init_check");
-    if (!init_f) return false;
-
-  *p_ptr_gtk = Fl_Posix_System_Driver::ptr_gtk;
-  // The point here is that after running gtk_init_check, the calling program's current locale can be modified.
-  // To avoid that, we memorize the calling program's current locale and restore the locale
-  // before returning.
-  char *before = NULL;
-  // record in "before" the calling program's current locale
-  char *p = setlocale(LC_ALL, NULL);
-  if (p) before = fl_strdup(p);
-  int ac = 0;
-  if ( !init_f(&ac, NULL) ) { // may change the locale
-    free(before);
     return false;
   }
-  if (before) {
-    setlocale(LC_ALL, before); // restore calling program's current locale
-    free(before);
-  }
-
   // now check if running version is high enough
-  if (dlsym(Fl_Posix_System_Driver::ptr_gtk, "gtk_get_major_version") == NULL) { // YES indicates V 3
-    typedef const char* (*check_t)(int, int, int);
-    check_t check_f = (check_t)dlsym(Fl_Posix_System_Driver::ptr_gtk, "gtk_check_version");
-    if (!check_f || check_f(major, minor, 0) ) return false;
+  typedef int (*get_version_t)(void);
+  int major_found = ((get_version_t)dlsym(ptr_gtk, "gtk_get_major_version"))();
+  int minor_found = ((get_version_t)dlsym(ptr_gtk, "gtk_get_minor_version"))();
+//printf("major_found=%d\n",major_found);
+  if (major_found < major || (major_found == major && minor_found < minor)) return false;
+
+  bool need_gtk_init; // initialize GTK unless that was done before
+  if (major_found == 4) {
+    typedef bool (*is_initialized_t)();
+    need_gtk_init = ! ((is_initialized_t)dlsym(ptr_gtk, "gtk_is_initialized"))();
+  } else {
+    typedef void *(*gdk_display_get_default_t)();
+    void *p = ((gdk_display_get_default_t)dlsym(ptr_gtk, "gdk_display_get_default"))();
+    need_gtk_init = (p == NULL);
   }
+  if (need_gtk_init) {
+    typedef void (*disable_setlocale_t)(void);
+    ((disable_setlocale_t)dlsym(ptr_gtk, "gtk_disable_setlocale"))();
+    int ac = 0;
+    typedef bool (*init_t)(int*, char***);
+    init_t init_f = (init_t)dlsym(Fl_Posix_System_Driver::ptr_gtk, "gtk_init_check");
+    if ( !init_f(&ac, NULL) ) {
+      return false;
+    }
+  }
+  *p_ptr_gtk = Fl_Posix_System_Driver::ptr_gtk;
+  gtk_major_version = major_found;
   return true;
 }
 
