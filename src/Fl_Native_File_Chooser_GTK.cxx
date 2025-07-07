@@ -940,16 +940,15 @@ struct browser_data_s {
 
 
 static void file_opened(GObject* source, GAsyncResult* result, struct browser_data_s *browser_data) {
-  GError *error = NULL;
   if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_FILE)
-    browser_data->gf = fl_gtk_file_dialog_open_finish((GtkFileDialog*)source, result, &error);
+    browser_data->gf = fl_gtk_file_dialog_open_finish((GtkFileDialog*)source, result, NULL);
   else if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_MULTI_FILE) {
-    browser_data->model_files = fl_gtk_file_dialog_open_multiple_finish((GtkFileDialog*)source, result, &error);
+    browser_data->model_files = fl_gtk_file_dialog_open_multiple_finish((GtkFileDialog*)source, result, NULL);
   } else if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_DIRECTORY ||
              browser_data->btype == Fl_Native_File_Chooser::BROWSE_MULTI_DIRECTORY)
-    browser_data->gf = fl_gtk_file_dialog_select_folder_finish((GtkFileDialog*)source, result, &error);
+    browser_data->gf = fl_gtk_file_dialog_select_folder_finish((GtkFileDialog*)source, result, NULL);
   else if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_SAVE_FILE)
-    browser_data->gf = fl_gtk_file_dialog_save_finish((GtkFileDialog*)source, result, &error);
+    browser_data->gf = fl_gtk_file_dialog_save_finish((GtkFileDialog*)source, result, NULL);
   
   if (!browser_data->gf && !browser_data->model_files) browser_data->result = 1;
   else browser_data->result = 0;

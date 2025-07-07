@@ -49,6 +49,10 @@ class Fl_Posix_Printer_Driver : public Fl_PostScript_File_Device {
 #define GTK_RESPONSE_CANCEL -6
 #define GTK_RESPONSE_DELETE_EVENT -4
 #define GTK_PRINT_PAGES_RANGES 2
+
+/* Class Fl_GTK_Printer_Driver uses libgtk3 or libgtk4 to construct a printer chooser dialog.
+   That dialog is from class GtkPrintUnixDialog unless GTK version ≥ 4.14 runs which allows to use
+   class GtkPrintDialog */
 class Fl_GTK_Printer_Driver : public Fl_PostScript_File_Device {
 public:
   typedef int gboolean;
@@ -64,8 +68,17 @@ public:
   struct GError;
   struct GtkWindow;
   struct GMainContext;
+  struct GtkPrintDialog;
+  struct GObject;
+  struct GCancellable;
+  struct GAsyncResult;
+  struct GtkPrintSetup;
+  struct GFile;
 
   GtkPrintJob *pjob; // data shared between begin_job() and end_job()
+  GtkPrintDialog *dialog414;
+  GtkPrintSetup *print_setup;
+  GFile *gfile; // when using GtkPrintDialog and not printing to file
   char tmpfilename[50]; // name of temporary PostScript file containing to-be-printed data
   GMainContext *main_context;
   int begin_job(int pagecount = 0, int *frompage = NULL, int *topage = NULL, char **perr_message=NULL) FL_OVERRIDE;
@@ -109,8 +122,31 @@ public:
   typedef void (*gtk_widget_show_now_t)(GtkPrintUnixDialog *dialog);
   typedef void (*gtk_window_present_t)(GtkWindow *);
   typedef GtkWindow* (*gtk_window_new_t)();
+  typedef GtkPrintDialog *(*gtk_print_dialog_new_t)();
+  typedef void (*GAsyncReadyCallback)(GObject*, GAsyncResult*, void*);
+  typedef void (*gtk_print_dialog_setup_t)(GtkPrintDialog*, GtkWindow*, GCancellable*,
+                                           GAsyncReadyCallback, void *);
+  typedef GtkPrintSetup* (*gtk_print_dialog_setup_finish_t)(GtkPrintDialog*, GAsyncResult*,GError**);
+  typedef GFile* (*g_file_new_for_path_t)(const char*);
+  typedef void (*gtk_print_dialog_print_file_t)(GtkPrintDialog*, GtkWindow*, GtkPrintSetup*,
+                                            GFile*, GCancellable*, GAsyncReadyCallback, void *);
+  typedef GtkPrintSettings* (*gtk_print_dialog_get_print_settings_t)(GtkPrintDialog*);
+  typedef void (*gtk_print_dialog_set_print_settings_t)(GtkPrintDialog*, GtkPrintSettings*);
+  typedef bool (*gtk_widget_is_visible_t)(GtkWidget*);
+  typedef GtkPrintSettings* (*gtk_print_settings_new_t)();
+  typedef GtkPageSetup *(*gtk_print_dialog_get_page_setup_t)(GtkPrintDialog*);
+  typedef GtkPageSetup* (*gtk_print_setup_get_page_setup_t)(GtkPrintSetup*);
+  typedef const char* (*gtk_print_settings_get_printer_t)(GtkPrintSettings*);
+  typedef gboolean (*gtk_print_dialog_print_file_finish_t)(GtkPrintDialog*,GAsyncResult*,GError**);
+  typedef GtkPrintSettings* (*gtk_print_setup_get_print_settings_t)(GtkPrintSetup*);
+  struct response_and_printsetup {
+    int *response;
+    Fl_GTK_Printer_Driver::GtkPrintSetup *print_setup;
+  };
   
-  Fl_GTK_Printer_Driver() : Fl_PostScript_File_Device(), main_context(NULL) {}
+  Fl_GTK_Printer_Driver() : Fl_PostScript_File_Device(), gfile(NULL), main_context(NULL) {}
+  static void print_dialog_response_cb(GObject*, GAsyncResult*, response_and_printsetup *pair);
+  static void print_file_cb(GObject* source_object, GAsyncResult* res, int *p_response);
 };
 
 // the CALL_GTK macro produces the source code to call a GTK function given its name
@@ -136,42 +172,61 @@ static int no_dispatch(int /*event*/, Fl_Window* /*win*/) {
   return 0;
 }
 
-/*static void explore(Fl_GTK_Printer_Driver::GtkWidget *w) {
-  typedef Fl_GTK_Printer_Driver::GtkWidget *(*gtk_widget_get_first_child_t)(Fl_GTK_Printer_Driver::GtkWidget*);
-  typedef Fl_GTK_Printer_Driver::GtkWidget *(*gtk_widget_get_next_sibling_t)(Fl_GTK_Printer_Driver::GtkWidget*);
-  typedef char** (*gtk_widget_get_css_classes_t)(Fl_GTK_Printer_Driver::GtkWidget*);
-  w = ((gtk_widget_get_first_child_t)dlsym(Fl_GTK_Printer_Driver::ptr_gtk, "gtk_widget_get_first_child"))(w);
-  while (w) {
-    char **css = ((gtk_widget_get_css_classes_t)dlsym(Fl_GTK_Printer_Driver::ptr_gtk, "gtk_widget_get_css_classes"))(w);
-    while (*css) {puts(*css); css++; }
-    explore(w);
-    w = ((gtk_widget_get_next_sibling_t)dlsym(Fl_GTK_Printer_Driver::ptr_gtk, "gtk_widget_get_next_sibling"))(w);
+
+void Fl_GTK_Printer_Driver::print_dialog_response_cb(GObject* source, GAsyncResult* res,
+                                                     response_and_printsetup *pair) {
+  GtkPrintSetup *setup = CALL_GTK(gtk_print_dialog_setup_finish)((GtkPrintDialog*)source, res, NULL); // 4.14
+  if (setup) {
+    *(pair->response) = GTK_RESPONSE_OK;
+    pair->print_setup = setup;
+  } else {
+    *(pair->response) = GTK_RESPONSE_CANCEL;
   }
-}*/
+}
+
 
 int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpage, char **perr_message) {
   enum Fl_Paged_Device::Page_Format format = Fl_Paged_Device::A4;
   enum Fl_Paged_Device::Page_Layout layout = Fl_Paged_Device::PORTRAIT ;
 
   GtkWindow *tmp_win = NULL;
-  if (Fl_Posix_System_Driver::gtk_major_version == 4) {
+  typedef int (*int_void_f_t)();
+  int minor = ((int_void_f_t)dlsym(ptr_gtk, "gtk_get_minor_version"))();
+  bool use_GtkPrintDialog = (100 * Fl_Posix_System_Driver::gtk_major_version + minor >= 414);
+  if (Fl_Posix_System_Driver::gtk_major_version == 4 && !use_GtkPrintDialog) {
     // Create a temporary GtkWindow and use it as parent of the GtkPrintUnixDialog
     // which avoids message "GtkDialog mapped without a transient parent".
     tmp_win = CALL_GTK(gtk_window_new)();
   }
-
-  GtkPrintUnixDialog *pdialog = CALL_GTK(gtk_print_unix_dialog_new)(Fl_Printer::dialog_title, tmp_win); //2.10
-//explore((GtkWidget*)pdialog);
-  CALL_GTK(gtk_print_unix_dialog_set_embed_page_setup)(pdialog, true); //2.18
-  GtkPrintSettings *psettings = CALL_GTK(gtk_print_unix_dialog_get_settings)(pdialog); //2.10
+  
+  GtkPrintUnixDialog *pdialog = NULL;
+  dialog414 = NULL;
+  GtkPrintSettings *psettings = NULL;
+  int response_id = GTK_RESPONSE_NONE;
+  struct response_and_printsetup data_pair = {&response_id, NULL};
+  if (!use_GtkPrintDialog) {
+    pdialog = CALL_GTK(gtk_print_unix_dialog_new)(Fl_Printer::dialog_title, tmp_win); //2.10
+    CALL_GTK(gtk_print_unix_dialog_set_embed_page_setup)(pdialog, true); //2.18
+    psettings = CALL_GTK(gtk_print_unix_dialog_get_settings)(pdialog); //2.10
+  } else {
+    dialog414 = CALL_GTK(gtk_print_dialog_new)(); // 4.14
+    psettings = CALL_GTK(gtk_print_settings_new)();
+  }
+  char line[FL_PATH_MAX + 20];
   CALL_GTK(gtk_print_settings_set)(psettings, "output-file-format", "ps"); //2.10
-  char line[FL_PATH_MAX + 20], cwd[FL_PATH_MAX];
+  char cwd[FL_PATH_MAX];
   snprintf(line, FL_PATH_MAX + 20, "file://%s/FLTK.ps", fl_getcwd(cwd, FL_PATH_MAX));
   CALL_GTK(gtk_print_settings_set)(psettings, "output-uri", line); //2.10
-  CALL_GTK(gtk_print_unix_dialog_set_settings)(pdialog, psettings); //2.10
-  CALL_GTK(g_object_unref)(psettings);
-  int response_id = GTK_RESPONSE_NONE;
-  CALL_GTK(g_signal_connect_data)(pdialog, "response", GCallback(run_response_handler), &response_id, NULL,  0);
+  if (!use_GtkPrintDialog) {
+    CALL_GTK(gtk_print_unix_dialog_set_settings)(pdialog, psettings); //2.10
+    CALL_GTK(g_object_unref)(psettings);
+    CALL_GTK(g_signal_connect_data)(pdialog, "response", GCallback(run_response_handler),
+                                    &response_id, NULL,  0);
+  } else {
+    CALL_GTK(gtk_print_dialog_set_print_settings)(dialog414, psettings); // 4.14
+    CALL_GTK(gtk_print_dialog_setup)(dialog414, NULL, NULL,  // 4.14
+                                     (GAsyncReadyCallback)print_dialog_response_cb, &data_pair);
+  }
   gtk_events_pending_t fl_gtk_events_pending;
   gtk_main_iteration_t fl_gtk_main_iteration;
   g_main_context_pending_t fl_g_main_context_pending;
@@ -184,12 +239,11 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
     fl_g_main_context_pending = CALL_GTK(g_main_context_pending);
     fl_g_main_context_iteration = CALL_GTK(g_main_context_iteration);
     main_context = CALL_GTK(g_main_context_default)();
-    CALL_GTK(gtk_window_present)((GtkWindow*)pdialog);
+    if (pdialog) CALL_GTK(gtk_window_present)((GtkWindow*)pdialog);
   }
   Fl_Event_Dispatch old_dispatch = Fl::event_dispatch();
   // prevent FLTK from processing any event
   Fl::event_dispatch(no_dispatch);
-  //TODO GUI blocks if type esc while print dialog is open in Ubuntu
   while (response_id == GTK_RESPONSE_NONE) { // loop that shows the GTK dialog window
     if (Fl_Posix_System_Driver::gtk_major_version < 4) fl_gtk_main_iteration(); // one iteration of the GTK event loop
     else {
@@ -199,10 +253,17 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
   }
   if (tmp_win) CALL_GTK(gtk_window_destroy)(tmp_win);
   if (response_id == GTK_RESPONSE_OK) {
-    GtkPageSetup *psetup = CALL_GTK(gtk_print_unix_dialog_get_page_setup)(pdialog); //2.10
-    GtkPageOrientation orient = CALL_GTK(gtk_page_setup_get_orientation)(psetup); //2.10
+    GtkPageSetup *page_setup = NULL;
+    if (!use_GtkPrintDialog) {
+      page_setup = CALL_GTK(gtk_print_unix_dialog_get_page_setup)(pdialog); //2.10
+    } else {
+      print_setup = data_pair.print_setup;
+      page_setup = CALL_GTK(gtk_print_setup_get_page_setup)(print_setup);
+      psettings = CALL_GTK(gtk_print_setup_get_print_settings)(print_setup);
+    }
+    GtkPageOrientation orient = CALL_GTK(gtk_page_setup_get_orientation)(page_setup); //2.10
     if (orient == GTK_PAGE_ORIENTATION_LANDSCAPE) layout = Fl_Paged_Device::LANDSCAPE;
-    GtkPaperSize* psize = CALL_GTK(gtk_page_setup_get_paper_size)(psetup); //2.10
+    GtkPaperSize* psize = CALL_GTK(gtk_page_setup_get_paper_size)(page_setup); //2.10
     const char *pname = CALL_GTK(gtk_paper_size_get_name)(psize); //2.10
     if (strcmp(pname, GTK_PAPER_NAME_LETTER) == 0) format = Fl_Paged_Device::LETTER;
     else if (strcmp(pname, GTK_PAPER_NAME_LEGAL) == 0) format = Fl_Paged_Device::LEGAL;
@@ -211,10 +272,14 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
     else if (strcmp(pname, GTK_PAPER_NAME_JB5) == 0) format = Fl_Paged_Device::B5;
     else if (strcmp(pname, GTK_PAPER_NAME_TABLOID) == 0) format = Fl_Paged_Device::TABLOID;
     else if (strcmp(pname, GTK_PAPER_NAME_DLE) == 0) format = Fl_Paged_Device::DLE;
-    GtkPrinter *gprinter = CALL_GTK(gtk_print_unix_dialog_get_selected_printer)(pdialog); //2.10
-    psettings = CALL_GTK(gtk_print_unix_dialog_get_settings)(pdialog); //2.10
-    const char* p = CALL_GTK(gtk_print_settings_get)(psettings, "output-uri"); //2.10
-    bool printing_to_file = (p != NULL);
+    GtkPrinter *gprinter = NULL;
+    if (!use_GtkPrintDialog) {
+      gprinter = CALL_GTK(gtk_print_unix_dialog_get_selected_printer)(pdialog); //2.10
+      psettings = CALL_GTK(gtk_print_unix_dialog_get_settings)(pdialog); //2.10
+    }
+    bool printing_to_file;
+    const char* p = CALL_GTK(gtk_print_settings_get)(psettings, "output-uri"); //2.10;
+    printing_to_file = (p != NULL);
     if (printing_to_file) {
       p += 6; // skip "file://" prefix
       strcpy(line, p);
@@ -250,14 +315,20 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
           snprintf(*perr_message, strlen(line)+50, "Can't open output file %s", line);
         }
       }
-    } else if ( CALL_GTK(gtk_printer_accepts_ps)(gprinter) && //2.10
-        CALL_GTK(gtk_printer_is_active)(gprinter) ) { // 2.10
+      if (dialog414) CALL_GTK(g_object_unref)(dialog414);
+    } else if ( !gprinter || (CALL_GTK(gtk_printer_accepts_ps)(gprinter) && //2.10
+        CALL_GTK(gtk_printer_is_active)(gprinter)) ) { // 2.10
       strcpy(tmpfilename, "/tmp/FLTKprintjobXXXXXX");
       int fd = mkstemp(tmpfilename);
       if (fd >= 0) {
         FILE *output = fdopen(fd, "w");
         Fl_PostScript_File_Device::begin_job(output, 0, format, layout);
-        pjob = CALL_GTK(gtk_print_job_new)("FLTK print job", gprinter, psettings, psetup); //2.10
+        if (!use_GtkPrintDialog) {
+          pjob = CALL_GTK(gtk_print_job_new)("FLTK print job", gprinter, psettings, page_setup); //2.10
+        } else {
+          pjob = NULL;
+          gfile = CALL_GTK(g_file_new_for_path)(tmpfilename);
+        }
         response_id = GTK_RESPONSE_OK;
       } else {
         response_id = GTK_RESPONSE_REJECT;
@@ -271,12 +342,12 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
   }
   if (response_id == GTK_RESPONSE_CANCEL || response_id == GTK_RESPONSE_OK) {
     typedef void (*gtk_widget_set_visible_t)(GtkWidget*, gboolean);
-    CALL_GTK(gtk_widget_set_visible)((GtkWidget*)pdialog, false);
+    if (pdialog) CALL_GTK(gtk_widget_set_visible)((GtkWidget*)pdialog, false);
     if (Fl_Posix_System_Driver::gtk_major_version < 4) CALL_GTK(gtk_widget_destroy)((GtkWidget*)pdialog);
   }
   if (Fl_Posix_System_Driver::gtk_major_version < 4) {
     while (fl_gtk_events_pending()) fl_gtk_main_iteration();
-  } else {
+  } else if (!use_GtkPrintDialog) {
     while (fl_g_main_context_pending(main_context))
       fl_g_main_context_iteration(main_context, false);
   }
@@ -298,37 +369,42 @@ static void pJobCompleteFunc(Fl_GTK_Printer_Driver::GtkPrintJob *print_job, Fl_G
 }
 static void pDestroyNotify(void* data) {}
 
-/*static void status_changed_handler(Fl_GTK_Printer_Driver::GtkPrintJob *dialog, void *user_data)
-{
-  typedef int (*gtk_print_job_get_status_t)(Fl_GTK_Printer_Driver::GtkPrintJob *);
-  gtk_print_job_get_status_t f = (gtk_print_job_get_status_t)dlsym(user_data, "gtk_print_job_get_status");
-  printf("status=%d\n", f(dialog));
-}*/
+
+void Fl_GTK_Printer_Driver::print_file_cb(GObject* source, GAsyncResult* res, int *p_response) {
+  gboolean b = CALL_GTK(gtk_print_dialog_print_file_finish)((GtkPrintDialog*)source, res, NULL); // 4.14
+  if (b) *p_response = GTK_RESPONSE_OK;
+  else *p_response = GTK_RESPONSE_CANCEL;
+}
 
 
 void Fl_GTK_Printer_Driver::end_job() {
   Fl_PostScript_File_Device::end_job();
   Fl_PostScript_Graphics_Driver *psgd = driver();
   fclose(psgd->output);
-  if (!pjob) return;
-  GError *gerr;
+  if (!pjob && !gfile) return;
   gtk_main_iteration_t fl_gtk_main_iteration = NULL;
   g_main_context_iteration_t fl_g_main_context_iteration = NULL;
   if (Fl_Posix_System_Driver::gtk_major_version >= 4) {
     fl_g_main_context_iteration = CALL_GTK(g_main_context_iteration);
   } else fl_gtk_main_iteration = CALL_GTK(gtk_main_iteration);
-  //CALL_GTK(g_signal_connect_data)(pjob, "status-changed", GCallback(status_changed_handler), ptr_gtk, NULL,  0);
-  gboolean gb = CALL_GTK(gtk_print_job_set_source_file)(pjob, tmpfilename, &gerr); //2.10
-  if (gb) {
-    gb = false;
-    CALL_GTK(gtk_print_job_send)(pjob, (void*)pJobCompleteFunc, &gb, (void*)pDestroyNotify); //2.10
-    while (!gb) {
-      if (Fl_Posix_System_Driver::gtk_major_version < 4) fl_gtk_main_iteration(); // one iteration of the GTK event loop
-      else fl_g_main_context_iteration(main_context, false);
+  if (pjob) {
+    gboolean gb = CALL_GTK(gtk_print_job_set_source_file)(pjob, tmpfilename, NULL); //2.10
+    if (gb) {
+      gb = false;
+      CALL_GTK(gtk_print_job_send)(pjob, (void*)pJobCompleteFunc, &gb, (void*)pDestroyNotify); //2.10
+      while (!gb) {
+        if (Fl_Posix_System_Driver::gtk_major_version < 4) fl_gtk_main_iteration(); // one iteration of the GTK event loop
+        else fl_g_main_context_iteration(main_context, false);
+      }
     }
+  } else {
+    int response_id = GTK_RESPONSE_NONE;
+    CALL_GTK(gtk_print_dialog_print_file)(dialog414, NULL, print_setup, gfile, NULL, // 4.14
+                                          (GAsyncReadyCallback)print_file_cb, &response_id);
   }
   fl_unlink(tmpfilename);
-  CALL_GTK(g_object_unref)(pjob);
+  if (pjob) CALL_GTK(g_object_unref)(pjob);
+  if (dialog414) CALL_GTK(g_object_unref)(dialog414);
 }
 #endif // HAVE_DLSYM && HAVE_DLFCN_H
 
