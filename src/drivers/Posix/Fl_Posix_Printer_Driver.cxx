@@ -220,8 +220,6 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
   snprintf(line, FL_PATH_MAX + 20, "file://%s/FLTK.pdf", fl_getcwd(cwd, FL_PATH_MAX));
   CALL_GTK(gtk_print_settings_set)(psettings, "output-uri", line); //2.10
   if (!use_GtkPrintDialog) {
-    CALL_GTK(gtk_print_unix_dialog_set_settings)(pdialog, psettings); //2.10
-    CALL_GTK(g_object_unref)(psettings);
     CALL_GTK(g_signal_connect_data)(pdialog, "response", GCallback(run_response_handler),
                                     &response_id, NULL,  0);
   } else {
@@ -330,8 +328,8 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
         }
       }
     }
-    CALL_GTK(g_object_unref)(psettings);
   }
+  CALL_GTK(g_object_unref)(psettings);
   if (response_id == GTK_RESPONSE_CANCEL || response_id == GTK_RESPONSE_OK) {
     typedef void (*gtk_widget_set_visible_t)(GtkWidget*, gboolean);
     if (pdialog) CALL_GTK(gtk_widget_set_visible)((GtkWidget*)pdialog, false);
