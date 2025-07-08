@@ -220,7 +220,7 @@ void Fl_Printer::set_current(void)
 }
 
 bool Fl_Printer::is_current() {
-  return surface() == printer;
+  return printer->is_current();
 }
 
 Fl_Printer::~Fl_Printer(void)

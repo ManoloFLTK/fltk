@@ -22,6 +22,7 @@
 #include "../PostScript/Fl_PostScript_Graphics_Driver.H"
 #include <FL/Fl_Printer.H>
 #include <FL/fl_ask.H>
+#include <FL/Fl_PDF_File_Surface.H>
 
 #include <src/print_panel.cxx>
 
@@ -53,7 +54,7 @@ class Fl_Posix_Printer_Driver : public Fl_PostScript_File_Device {
 /* Class Fl_GTK_Printer_Driver uses libgtk3 or libgtk4 to construct a printer chooser dialog.
    That dialog is from class GtkPrintUnixDialog unless GTK version ≥ 4.14 runs which allows to use
    class GtkPrintDialog */
-class Fl_GTK_Printer_Driver : public Fl_PostScript_File_Device {
+class Fl_GTK_Printer_Driver : public Fl_PDF_File_Surface {
 public:
   typedef int gboolean;
   struct GtkPrintUnixDialog;
@@ -81,7 +82,7 @@ public:
   GFile *gfile; // when using GtkPrintDialog and not printing to file
   char tmpfilename[50]; // name of temporary PostScript file containing to-be-printed data
   GMainContext *main_context;
-  int begin_job(int pagecount = 0, int *frompage = NULL, int *topage = NULL, char **perr_message=NULL) FL_OVERRIDE;
+  int begin_job(int pagecount, int *frompage, int *topage, char **perr_message) FL_OVERRIDE;
   void end_job() FL_OVERRIDE;
   static bool probe_for_GTK();
   static void *ptr_gtk; // points to the GTK dynamic lib or NULL
@@ -95,7 +96,7 @@ public:
   typedef GtkPaperSize* (*gtk_page_setup_get_paper_size_t)(GtkPageSetup*);
   typedef const char * (*gtk_paper_size_get_name_t)(GtkPaperSize*);
   typedef GtkPrinter * (*gtk_print_unix_dialog_get_selected_printer_t)(GtkPrintUnixDialog*);
-  typedef int (*gtk_printer_accepts_ps_t)(GtkPrinter*);
+  typedef int (*gtk_printer_accepts_pdf_t)(GtkPrinter*);
   typedef int (*gtk_printer_is_active_t)(GtkPrinter*);
   typedef GtkPrintJob *(*gtk_print_job_new_t)(const char *, GtkPrinter *, GtkPrintSettings *, GtkPageSetup *);
   typedef void (*gtk_widget_hide_t)(GtkWidget*);
@@ -144,7 +145,7 @@ public:
     Fl_GTK_Printer_Driver::GtkPrintSetup *print_setup;
   };
   
-  Fl_GTK_Printer_Driver() : Fl_PostScript_File_Device(), gfile(NULL), main_context(NULL) {}
+  Fl_GTK_Printer_Driver() : Fl_PDF_File_Surface(), gfile(NULL), main_context(NULL) {}
   static void print_dialog_response_cb(GObject*, GAsyncResult*, response_and_printsetup *pair);
   static void print_file_cb(GObject* source_object, GAsyncResult* res, int *p_response);
 };
@@ -213,9 +214,9 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
     psettings = CALL_GTK(gtk_print_settings_new)();
   }
   char line[FL_PATH_MAX + 20];
-  CALL_GTK(gtk_print_settings_set)(psettings, "output-file-format", "ps"); //2.10
+  CALL_GTK(gtk_print_settings_set)(psettings, "output-file-format", "pdf"); //2.10
   char cwd[FL_PATH_MAX];
-  snprintf(line, FL_PATH_MAX + 20, "file://%s/FLTK.ps", fl_getcwd(cwd, FL_PATH_MAX));
+  snprintf(line, FL_PATH_MAX + 20, "file://%s/FLTK.pdf", fl_getcwd(cwd, FL_PATH_MAX));
   CALL_GTK(gtk_print_settings_set)(psettings, "output-uri", line); //2.10
   if (!use_GtkPrintDialog) {
     CALL_GTK(gtk_print_unix_dialog_set_settings)(pdialog, psettings); //2.10
@@ -277,16 +278,15 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
       gprinter = CALL_GTK(gtk_print_unix_dialog_get_selected_printer)(pdialog); //2.10
       psettings = CALL_GTK(gtk_print_unix_dialog_get_settings)(pdialog); //2.10
     }
-    bool printing_to_file;
     const char* p = CALL_GTK(gtk_print_settings_get)(psettings, "output-uri"); //2.10;
-    printing_to_file = (p != NULL);
+    bool printing_to_file = (p != NULL);
     if (printing_to_file) {
       p += 6; // skip "file://" prefix
       strcpy(line, p);
       int l = strlen(p);
-      if (strcmp(p+l-4, "/.ps") == 0) {
-        line[l-3] = 0;
-        strcat(line, "FLTK.ps");
+      if (strcmp(p+l-5, "/.pdf") == 0) {
+        line[l-4] = 0;
+        strcat(line, "FLTK.pdf");
       }
     }
     if (firstpage && lastpage) {
@@ -304,25 +304,16 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
     response_id = GTK_RESPONSE_NONE;
     if (printing_to_file) {
       pjob = NULL;
-      FILE *output = fopen(line, "w");
-      if (output) {
-        Fl_PostScript_File_Device::begin_job(output, 0, format, layout);
-        response_id = GTK_RESPONSE_OK;
-      } else {
-        response_id = GTK_RESPONSE_REJECT;
-        if (perr_message) {
-          *perr_message = new char[strlen(line)+50];
-          snprintf(*perr_message, strlen(line)+50, "Can't open output file %s", line);
-        }
-      }
+      int err = Fl_PDF_File_Surface::begin_document(line, format, layout, perr_message);
+      response_id = (err ? GTK_RESPONSE_REJECT : GTK_RESPONSE_OK);
       if (dialog414) CALL_GTK(g_object_unref)(dialog414);
-    } else if ( !gprinter || (CALL_GTK(gtk_printer_accepts_ps)(gprinter) && //2.10
+    } else if ( !gprinter || (CALL_GTK(gtk_printer_accepts_pdf)(gprinter) && //2.10
         CALL_GTK(gtk_printer_is_active)(gprinter)) ) { // 2.10
       strcpy(tmpfilename, "/tmp/FLTKprintjobXXXXXX");
       int fd = mkstemp(tmpfilename);
       if (fd >= 0) {
-        FILE *output = fdopen(fd, "w");
-        Fl_PostScript_File_Device::begin_job(output, 0, format, layout);
+        close(fd);
+        Fl_PDF_File_Surface::begin_document(tmpfilename, format, layout);
         if (!use_GtkPrintDialog) {
           pjob = CALL_GTK(gtk_print_job_new)("FLTK print job", gprinter, psettings, page_setup); //2.10
         } else {
@@ -378,9 +369,7 @@ void Fl_GTK_Printer_Driver::print_file_cb(GObject* source, GAsyncResult* res, in
 
 
 void Fl_GTK_Printer_Driver::end_job() {
-  Fl_PostScript_File_Device::end_job();
-  Fl_PostScript_Graphics_Driver *psgd = driver();
-  fclose(psgd->output);
+  Fl_PDF_File_Surface::end_job();
   if (!pjob && !gfile) return;
   gtk_main_iteration_t fl_gtk_main_iteration = NULL;
   g_main_context_iteration_t fl_g_main_context_iteration = NULL;
@@ -401,10 +390,14 @@ void Fl_GTK_Printer_Driver::end_job() {
     int response_id = GTK_RESPONSE_NONE;
     CALL_GTK(gtk_print_dialog_print_file)(dialog414, NULL, print_setup, gfile, NULL, // 4.14
                                           (GAsyncReadyCallback)print_file_cb, &response_id);
+    while (response_id == GTK_RESPONSE_NONE) {
+      fl_g_main_context_iteration(main_context, false);
+    }
   }
   fl_unlink(tmpfilename);
   if (pjob) CALL_GTK(g_object_unref)(pjob);
   if (dialog414) CALL_GTK(g_object_unref)(dialog414);
+  if (gfile) CALL_GTK(g_object_unref)(gfile);
 }
 #endif // HAVE_DLSYM && HAVE_DLFCN_H
 
