@@ -140,12 +140,13 @@ public:
   typedef const char* (*gtk_print_settings_get_printer_t)(GtkPrintSettings*);
   typedef gboolean (*gtk_print_dialog_print_file_finish_t)(GtkPrintDialog*,GAsyncResult*,GError**);
   typedef GtkPrintSettings* (*gtk_print_setup_get_print_settings_t)(GtkPrintSetup*);
+  typedef void (*gtk_print_setup_unref_t)(GtkPrintSetup*);
   struct response_and_printsetup {
     int *response;
     Fl_GTK_Printer_Driver::GtkPrintSetup *print_setup;
   };
   
-  Fl_GTK_Printer_Driver() : Fl_PDF_File_Surface(), gfile(NULL), main_context(NULL) {}
+  Fl_GTK_Printer_Driver() : Fl_PDF_File_Surface(), print_setup(NULL), gfile(NULL), main_context(NULL) {}
   static void print_dialog_response_cb(GObject*, GAsyncResult*, response_and_printsetup *pair);
   static void print_file_cb(GObject* source_object, GAsyncResult* res, int *p_response);
 };
@@ -341,6 +342,8 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
   } else if (!use_GtkPrintDialog) {
     while (fl_g_main_context_pending(main_context))
       fl_g_main_context_iteration(main_context, false);
+  } else if (response_id == GTK_RESPONSE_CANCEL) {
+    CALL_GTK(g_object_unref)(dialog414);
   }
   Fl::event_dispatch(old_dispatch);
   Fl_Window *first = Fl::first_window();
@@ -396,6 +399,7 @@ void Fl_GTK_Printer_Driver::end_job() {
   }
   fl_unlink(tmpfilename);
   if (pjob) CALL_GTK(g_object_unref)(pjob);
+  if (print_setup) CALL_GTK(gtk_print_setup_unref)(print_setup);
   if (dialog414) CALL_GTK(g_object_unref)(dialog414);
   if (gfile) CALL_GTK(g_object_unref)(gfile);
 }
