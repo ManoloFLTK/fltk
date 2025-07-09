@@ -147,8 +147,8 @@ public:
   };
   
   Fl_GTK_Printer_Driver() : Fl_PDF_File_Surface(), print_setup(NULL), gfile(NULL), main_context(NULL) {}
-  static void print_dialog_response_cb(GObject*, GAsyncResult*, response_and_printsetup *pair);
-  static void print_file_cb(GObject* source_object, GAsyncResult* res, int *p_response);
+  static void print_dialog_response_cb(GtkPrintDialog*, GAsyncResult*, response_and_printsetup *);
+  static void print_file_cb(GtkPrintDialog *, GAsyncResult*, int *);
 };
 
 // the CALL_GTK macro produces the source code to call a GTK function given its name
@@ -175,9 +175,9 @@ static int no_dispatch(int /*event*/, Fl_Window* /*win*/) {
 }
 
 
-void Fl_GTK_Printer_Driver::print_dialog_response_cb(GObject* source, GAsyncResult* res,
+void Fl_GTK_Printer_Driver::print_dialog_response_cb(GtkPrintDialog* dialog, GAsyncResult* res,
                                                      response_and_printsetup *pair) {
-  GtkPrintSetup *setup = CALL_GTK(gtk_print_dialog_setup_finish)((GtkPrintDialog*)source, res, NULL); // 4.14
+  GtkPrintSetup *setup = CALL_GTK(gtk_print_dialog_setup_finish)(dialog, res, NULL); // 4.14
   if (setup) {
     *(pair->response) = GTK_RESPONSE_OK;
     pair->print_setup = setup;
@@ -356,16 +356,19 @@ int Fl_GTK_Printer_Driver::begin_job(int pagecount, int *firstpage, int *lastpag
   return 2;
 }
 
-static void pJobCompleteFunc(Fl_GTK_Printer_Driver::GtkPrintJob *print_job, Fl_GTK_Printer_Driver::gboolean *user_data, const Fl_GTK_Printer_Driver::GError *error) {
+
+static void pJobCompleteFunc(Fl_GTK_Printer_Driver::GtkPrintJob *print_job,
+                             Fl_GTK_Printer_Driver::gboolean *user_data,
+                             const Fl_GTK_Printer_Driver::GError *error) {
   *user_data = true;
 }
+
 static void pDestroyNotify(void* data) {}
 
 
-void Fl_GTK_Printer_Driver::print_file_cb(GObject* source, GAsyncResult* res, int *p_response) {
-  gboolean b = CALL_GTK(gtk_print_dialog_print_file_finish)((GtkPrintDialog*)source, res, NULL); // 4.14
-  if (b) *p_response = GTK_RESPONSE_OK;
-  else *p_response = GTK_RESPONSE_CANCEL;
+void Fl_GTK_Printer_Driver::print_file_cb(GtkPrintDialog* dialog, GAsyncResult* res, int *p_response) {
+  gboolean b = CALL_GTK(gtk_print_dialog_print_file_finish)(dialog, res, NULL); // 4.14
+  *p_response = (b ? GTK_RESPONSE_OK : GTK_RESPONSE_CANCEL);
 }
 
 
