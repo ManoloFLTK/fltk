@@ -939,16 +939,16 @@ struct browser_data_s {
 };
 
 
-static void file_opened(GObject* source, GAsyncResult* result, struct browser_data_s *browser_data) {
+static void file_opened(GtkFileDialog* source, GAsyncResult* result, struct browser_data_s *browser_data) {
   if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_FILE)
-    browser_data->gf = fl_gtk_file_dialog_open_finish((GtkFileDialog*)source, result, NULL);
+    browser_data->gf = fl_gtk_file_dialog_open_finish(source, result, NULL);
   else if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_MULTI_FILE) {
-    browser_data->model_files = fl_gtk_file_dialog_open_multiple_finish((GtkFileDialog*)source, result, NULL);
+    browser_data->model_files = fl_gtk_file_dialog_open_multiple_finish(source, result, NULL);
   } else if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_DIRECTORY ||
              browser_data->btype == Fl_Native_File_Chooser::BROWSE_MULTI_DIRECTORY)
-    browser_data->gf = fl_gtk_file_dialog_select_folder_finish((GtkFileDialog*)source, result, NULL);
+    browser_data->gf = fl_gtk_file_dialog_select_folder_finish(source, result, NULL);
   else if (browser_data->btype == Fl_Native_File_Chooser::BROWSE_SAVE_FILE)
-    browser_data->gf = fl_gtk_file_dialog_save_finish((GtkFileDialog*)source, result, NULL);
+    browser_data->gf = fl_gtk_file_dialog_save_finish(source, result, NULL);
   
   if (!browser_data->gf && !browser_data->model_files) browser_data->result = 1;
   else browser_data->result = 0;
@@ -1000,7 +1000,6 @@ Fl_GTK410_Native_File_Chooser_Driver::~Fl_GTK410_Native_File_Chooser_Driver() {
 
 int Fl_GTK410_Native_File_Chooser_Driver::fl_gtk_chooser_wrapper() {
   GtkFileDialog *dialog = fl_gtk_file_dialog_new();
-  GCancellable *cancellable = fl_g_cancellable_new();
   struct browser_data_s browser_data = { this->_btype, NULL, -1, NULL };
   
   if (_directory && _directory[0]) {
@@ -1059,15 +1058,15 @@ int Fl_GTK410_Native_File_Chooser_Driver::fl_gtk_chooser_wrapper() {
   if (_btype == Fl_Native_File_Chooser::BROWSE_DIRECTORY ||
       _btype == Fl_Native_File_Chooser::BROWSE_SAVE_DIRECTORY
       || _btype == Fl_Native_File_Chooser::BROWSE_MULTI_DIRECTORY) {
-    fl_gtk_file_dialog_select_folder(dialog, tmp_win, cancellable, (GAsyncReadyCallback)file_opened,
+    fl_gtk_file_dialog_select_folder(dialog, tmp_win, NULL, (GAsyncReadyCallback)file_opened,
                                   &browser_data);
   } else if (_btype == Fl_Native_File_Chooser::BROWSE_FILE) {
-    fl_gtk_file_dialog_open(dialog, tmp_win, cancellable, (GAsyncReadyCallback)file_opened, &browser_data);
+    fl_gtk_file_dialog_open(dialog, tmp_win, NULL, (GAsyncReadyCallback)file_opened, &browser_data);
   } else if (_btype == Fl_Native_File_Chooser::BROWSE_MULTI_FILE) {
-    fl_gtk_file_dialog_open_multiple(dialog, tmp_win, cancellable, (GAsyncReadyCallback)file_opened,
+    fl_gtk_file_dialog_open_multiple(dialog, tmp_win, NULL, (GAsyncReadyCallback)file_opened,
                                   &browser_data);
   } else if (_btype == Fl_Native_File_Chooser::BROWSE_SAVE_FILE) {
-    fl_gtk_file_dialog_save(dialog, tmp_win, cancellable, (GAsyncReadyCallback)file_opened, &browser_data);
+    fl_gtk_file_dialog_save(dialog, tmp_win, NULL, (GAsyncReadyCallback)file_opened, &browser_data);
   }
     
   while (browser_data.result == -1) { // loop that shows the GtkFileDialog window
@@ -1089,7 +1088,6 @@ int Fl_GTK410_Native_File_Chooser_Driver::fl_gtk_chooser_wrapper() {
   while (fl_g_main_context_pending(fl_g_main_context_default()))
      fl_g_main_context_iteration(fl_g_main_context_default(), false);
     
-  fl_g_object_unref(cancellable);
   fl_g_object_unref(dialog);
 
   return browser_data.result;
