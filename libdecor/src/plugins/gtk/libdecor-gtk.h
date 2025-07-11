@@ -94,7 +94,6 @@ struct libdecor_plugin_gtk {
 
   bool handle_cursor;
   
-  int shm_fd;
   off_t shm_size;
   void *shm_mmap;
 };

@@ -781,9 +781,12 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 	off_t surface_size = buffer->buffer_height *
 	  cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
 	if (surface_size > plugin_gtk->shm_size) {
+		if (plugin_gtk->shm_size) munmap(plugin_gtk->shm_mmap, plugin_gtk->shm_size);
 		plugin_gtk->shm_size = surface_size;
-		ftruncate(plugin_gtk->shm_fd, surface_size);
-		plugin_gtk->shm_mmap = mmap(NULL, surface_size, PROT_WRITE, MAP_SHARED, plugin_gtk->shm_fd, 0);
+		plugin_gtk->shm_mmap = mmap(NULL, surface_size, PROT_READ|PROT_WRITE,
+					    MAP_SHARED | MAP_ANONYMOUS,
+					    -1,
+					    0);
 	}
 
 	/* background */
@@ -2479,9 +2482,6 @@ libdecor_plugin_new(struct libdecor *context)
 		return NULL;
 	}
 	
-	char shm_name[50];
-	snprintf(shm_name, sizeof(shm_name), "LIBDECOR-GTK%X", getpid());
-	plugin_gtk->shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
 	plugin_gtk->shm_size = 0;
 	plugin_gtk->shm_mmap = NULL;
 	return &plugin_gtk->plugin;
