@@ -93,6 +93,10 @@ struct libdecor_plugin_gtk {
   int drag_threshold;
 
   bool handle_cursor;
+  
+  int shm_fd;
+  off_t shm_size;
+  void *shm_mmap;
 };
 
 

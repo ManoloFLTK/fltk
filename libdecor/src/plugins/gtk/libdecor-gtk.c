@@ -45,6 +45,7 @@
 
 #include "common/libdecor-cairo-blur.h"
 #include <poll.h>
+#include <fcntl.h> /* shm_open() */
 
 typedef enum
 {
@@ -141,7 +142,7 @@ struct cursor_output {
 extern struct header_element_data get_header_focus(const GtkHeaderBar *header_bar, const int x, const int y);
 extern void destroy_window_header(GtkWidget *window, GtkWidget *header);
 extern void child_get_allocated_WH(struct libdecor_frame_gtk *frame_gtk, int *pW, int *pH);
-extern void draw_header(struct libdecor_frame_gtk *, cairo_t *, cairo_surface_t *);
+extern void draw_header(struct libdecor_frame_gtk *, int W, int H, int scale);
 extern void draw_title_bar_child(struct libdecor_frame_gtk *frame_gtk);
 extern void ensure_title_bar_surfaces(struct libdecor_frame_gtk *frame_gtk);
 extern bool child_gtk_init(struct libdecor_plugin_gtk *);
@@ -770,29 +771,35 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 		       int component_height,
 		       enum component component)
 {
-	cairo_surface_t *surface;
-	cairo_t *cr;
+	cairo_surface_t *surface = NULL;
+	cairo_t *cr = NULL;
 
 	/* clear buffer */
 	memset(buffer->data, 0, buffer->data_size);
-
-	surface = cairo_image_surface_create_for_data(
-			  buffer->data, CAIRO_FORMAT_ARGB32,
-			  buffer->buffer_width, buffer->buffer_height,
-			  cairo_format_stride_for_width(
-				  CAIRO_FORMAT_ARGB32,
-				  buffer->buffer_width)
-			  );
-
-	cr = cairo_create(surface);
-
-	cairo_surface_set_device_scale(surface, buffer->scale, buffer->scale);
+	
+	struct libdecor_plugin_gtk *plugin_gtk = frame_gtk->plugin_gtk;
+	off_t surface_size = buffer->buffer_height *
+	  cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
+	if (surface_size > plugin_gtk->shm_size) {
+		plugin_gtk->shm_size = surface_size;
+		ftruncate(plugin_gtk->shm_fd, surface_size);
+		plugin_gtk->shm_mmap = mmap(NULL, surface_size, PROT_WRITE, MAP_SHARED, plugin_gtk->shm_fd, 0);
+	}
 
 	/* background */
 	switch (component) {
 	case NONE:
 		break;
 	case SHADOW:
+		surface = cairo_image_surface_create_for_data(
+					  buffer->data, CAIRO_FORMAT_ARGB32,
+					  buffer->buffer_width, buffer->buffer_height,
+					  cairo_format_stride_for_width(
+						  CAIRO_FORMAT_ARGB32,
+						  buffer->buffer_width)
+					  );
+		cairo_surface_set_device_scale(surface, buffer->scale, buffer->scale);
+		cr = cairo_create(surface);
 		render_shadow(cr,
 			      frame_gtk->shadow_blur,
 			      -(int)SHADOW_MARGIN/2,
@@ -803,7 +810,8 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 			      64);
 		break;
 	case HEADER:
-		draw_header(frame_gtk, cr, surface);
+		draw_header(frame_gtk, buffer->buffer_width, buffer->buffer_height, buffer->scale);
+		memcpy(buffer->data, plugin_gtk->shm_mmap, surface_size);
 		break;
 	}
 
@@ -821,9 +829,10 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 					&frame_gtk->frame));
 		cairo_fill(cr);
 	}
-
-	cairo_destroy(cr);
-	cairo_surface_destroy(surface);
+	if (cr) {
+		cairo_destroy(cr);
+		cairo_surface_destroy(surface);
+	}
 }
 
 static void
@@ -2469,6 +2478,12 @@ libdecor_plugin_new(struct libdecor *context)
 		libdecor_plugin_gtk_destroy(&plugin_gtk->plugin);
 		return NULL;
 	}
+	
+	char shm_name[50];
+	snprintf(shm_name, sizeof(shm_name), "LIBDECOR-GTK%X", getpid());
+	plugin_gtk->shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+	plugin_gtk->shm_size = 0;
+	plugin_gtk->shm_mmap = NULL;
 	return &plugin_gtk->plugin;
 }
 

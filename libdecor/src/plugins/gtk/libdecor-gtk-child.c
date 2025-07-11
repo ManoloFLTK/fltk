@@ -29,6 +29,11 @@ bool child_gtk_init(struct libdecor_plugin_gtk *plugin_gtk) {
     fprintf(stderr, "libdecor-gtk-WARNING: Failed to initialize GTK\n");
     return true;
   }
+#if GTK_MAJOR_VERSION == 4
+  /* Drawing the titlebar the GTK4 way makes client apps using EGL fail, unless
+     env variable GSK_RENDERER is set to "cairo" or to "vulkan". */
+  setenv("GSK_RENDERER", "cairo", 1);
+#endif
 
   g_object_set(gtk_settings_get_default(),
          "gtk-application-prefer-dark-theme",
@@ -599,10 +604,15 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
 }
 #endif
 
-void draw_header(struct libdecor_frame_gtk *frame_gtk,
-      cairo_t *cr,
-      cairo_surface_t *surface)
+void draw_header(struct libdecor_frame_gtk *frame_gtk, int W, int H, int scale)
 {
+  struct libdecor_plugin_gtk *plugin_gtk = frame_gtk->plugin_gtk;
+  cairo_surface_t *surface = cairo_image_surface_create_for_data(
+        plugin_gtk->shm_mmap, CAIRO_FORMAT_ARGB32,
+        W, H, cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W));
+  cairo_surface_set_device_scale(surface, scale, scale);
+  cairo_t *cr = cairo_create(surface);
+
 #if GTK_MAJOR_VERSION == 3
   draw_header_background(frame_gtk, cr);
   draw_header_title(frame_gtk, surface);
@@ -612,10 +622,6 @@ void draw_header(struct libdecor_frame_gtk *frame_gtk,
   graphene_rect_t out_bounds;
   GtkSnapshot *snapshot;
   GskRenderNode *rendernode;
-  /* Drawing the titlebar the GTK4 way makes client apps using EGL fail, unless
-     env variable GSK_RENDERER is set to "cairo" or to "vulkan". */
-  char *old_renderer_value = getenv("GSK_RENDERER");
-  setenv("GSK_RENDERER", "cairo", 1);
   snapshot = gtk_snapshot_new();
   gtk_widget_set_visible(frame_gtk->window, true);
   if (gtk_widget_compute_bounds(frame_gtk->header, frame_gtk->header, &out_bounds)) {
@@ -628,8 +634,8 @@ void draw_header(struct libdecor_frame_gtk *frame_gtk,
   rendernode = gtk_snapshot_free_to_node(snapshot);
   gsk_render_node_draw(rendernode, cr);
   gsk_render_node_unref(rendernode);
-  if (old_renderer_value) setenv("GSK_RENDERER", old_renderer_value, 1);
-  else unsetenv("GSK_RENDERER");
 #endif
+  cairo_surface_destroy(surface);
+  cairo_destroy(cr);
 }
 
