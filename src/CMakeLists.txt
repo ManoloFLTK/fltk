@@ -565,6 +565,7 @@ if(FLTK_USE_WAYLAND)
     set_source_files_properties(
       ${FLTK_SOURCE_DIR}/libdecor/build/fl_libdecor.c
       ${FLTK_SOURCE_DIR}/libdecor/build/fl_libdecor-plugins.c
+      ${FLTK_SOURCE_DIR}/libdecor/src/plugins/gtk/libdecor-gtk-child.c
       ${FLTK_SOURCE_DIR}/libdecor/src/os-compatibility.c
       ${FLTK_SOURCE_DIR}/libdecor/src/desktop-settings.c
       PROPERTIES
@@ -592,6 +593,7 @@ if(FLTK_USE_WAYLAND)
     list(APPEND CFILES
       ../libdecor/build/fl_libdecor.c
       ../libdecor/src/plugins/common/libdecor-cairo-blur.c
+      ../libdecor/src/plugins/gtk/libdecor-gtk-child.c
     )
   endif(NOT USE_SYSTEM_LIBDECOR)
 endif(FLTK_USE_WAYLAND)

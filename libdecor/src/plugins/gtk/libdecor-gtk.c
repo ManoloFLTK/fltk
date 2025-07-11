@@ -46,7 +46,15 @@
 #include "common/libdecor-cairo-blur.h"
 #include <poll.h>
 
-#include <gtk/gtk.h>
+typedef enum
+{
+  GTK_STATE_FLAG_ACTIVE        = 1 << 0,
+  GTK_STATE_FLAG_PRELIGHT      = 1 << 1,
+} GtkStateFlags;
+typedef struct GtkWidget GtkWidget;
+typedef struct GtkHeaderBar GtkHeaderBar;
+
+#include "libdecor-gtk.h"
 
 static const size_t SHADOW_MARGIN = 24;	/* grabbable part of the border */
 
@@ -61,108 +69,6 @@ static const char *cursor_names[] = {
 	"bottom_right_corner"
 };
 
-enum header_element {
-	HEADER_NONE,
-	HEADER_FULL, /* entire header bar */
-	HEADER_TITLE, /* label */
-	HEADER_MIN,
-	HEADER_MAX,
-	HEADER_CLOSE,
-};
-
-enum titlebar_gesture_state {
-	TITLEBAR_GESTURE_STATE_INIT,
-	TITLEBAR_GESTURE_STATE_BUTTON_PRESSED,
-	TITLEBAR_GESTURE_STATE_CONSUMED,
-	TITLEBAR_GESTURE_STATE_DISCARDED,
-};
-
-struct header_element_data {
-	const char *name;
-	enum header_element type;
-	/* pointer to button or NULL if not found*/
-	GtkWidget *widget;
-	GtkStateFlags state;
-};
-
-static void
-find_widget_by_name(GtkWidget *widget, void *data)
-{
-	if (GTK_IS_WIDGET(widget)) {
-		char *style_ctx = gtk_style_context_to_string(
-					  gtk_widget_get_style_context(widget),
-					  GTK_STYLE_CONTEXT_PRINT_SHOW_STYLE);
-		if (strstr(style_ctx, ((struct header_element_data *)data)->name)) {
-			((struct header_element_data *)data)->widget = widget;
-			free(style_ctx);
-			return;
-		}
-		free(style_ctx);
-	}
-
-	if (GTK_IS_CONTAINER(widget)) {
-		/* recursively traverse container */
-		gtk_container_forall(GTK_CONTAINER(widget), &find_widget_by_name, data);
-	}
-}
-
-static struct header_element_data
-find_widget_by_type(GtkWidget *widget, enum header_element type)
-{
-	char* name = NULL;
-	switch (type) {
-	case HEADER_FULL:
-		name = "headerbar.titlebar:";
-		break;
-	case HEADER_TITLE:
-		name = "label.title:";
-		break;
-	case HEADER_MIN:
-		name = ".minimize";
-		break;
-	case HEADER_MAX:
-		name = ".maximize";
-		break;
-	case HEADER_CLOSE:
-		name = ".close";
-		break;
-	default:
-		break;
-	}
-
-	struct header_element_data data = {.name = name, .type = type, .widget = NULL};
-	find_widget_by_name(widget, &data);
-	return data;
-}
-
-static bool
-in_region(const cairo_rectangle_int_t *rect, const int *x, const int *y)
-{
-	return (*x>=rect->x) & (*y>=rect->y) &
-		(*x<(rect->x+rect->width)) & (*y<(rect->y+rect->height));
-}
-
-static struct header_element_data
-get_header_focus(const GtkHeaderBar *header_bar, const int x, const int y)
-{
-	/* we have to check child widgets (buttons, title) before the 'HDR_HDR' root widget */
-	static const enum header_element elems[] =
-		{HEADER_TITLE, HEADER_MIN, HEADER_MAX, HEADER_CLOSE};
-
-	for (size_t i = 0; i < ARRAY_SIZE(elems); i++) {
-		struct header_element_data elem =
-			find_widget_by_type(GTK_WIDGET(header_bar), elems[i]);
-		if (elem.widget) {
-			GtkAllocation allocation;
-			gtk_widget_get_allocation(GTK_WIDGET(elem.widget), &allocation);
-			if (in_region(&allocation, &x, &y))
-				return elem;
-		}
-	}
-
-	struct header_element_data elem_none = { .widget=NULL};
-	return elem_none;
-}
 
 static bool
 streq(const char *str1,
@@ -177,17 +83,6 @@ streq(const char *str1,
 	return false;
 }
 
-enum decoration_type {
-	DECORATION_TYPE_NONE,
-	DECORATION_TYPE_ALL,
-	DECORATION_TYPE_TITLE_ONLY
-};
-
-enum component {
-	NONE = 0,
-	SHADOW,
-	HEADER,
-};
 
 struct seat {
 	struct libdecor_plugin_gtk *plugin_gtk;
@@ -232,33 +127,6 @@ struct output {
 	struct wl_list link;
 };
 
-struct buffer {
-	struct wl_buffer *wl_buffer;
-	bool in_use;
-	bool is_detached;
-
-	void *data;
-	size_t data_size;
-	int width;
-	int height;
-	int scale;
-	int buffer_width;
-	int buffer_height;
-};
-
-struct border_component {
-	enum component type;
-	struct wl_surface *wl_surface;
-	struct wl_subsurface *wl_subsurface;
-	struct buffer *buffer;
-	bool opaque;
-	struct wl_list output_list;
-	int scale;
-
-	struct wl_list child_components; /* border_component::link */
-	struct wl_list link; /* border_component::child_components */
-};
-
 struct surface_output {
 	struct output *output;
 	struct wl_list link;
@@ -269,82 +137,15 @@ struct cursor_output {
 	struct wl_list link;
 };
 
-struct libdecor_frame_gtk {
-	struct libdecor_frame frame;
 
-	struct libdecor_plugin_gtk *plugin_gtk;
+extern struct header_element_data get_header_focus(const GtkHeaderBar *header_bar, const int x, const int y);
+extern void destroy_window_header(GtkWidget *window, GtkWidget *header);
+extern void child_get_allocated_WH(struct libdecor_frame_gtk *frame_gtk, int *pW, int *pH);
+extern void draw_header(struct libdecor_frame_gtk *, cairo_t *, cairo_surface_t *);
+extern void draw_title_bar_child(struct libdecor_frame_gtk *frame_gtk);
+extern void ensure_title_bar_surfaces(struct libdecor_frame_gtk *frame_gtk);
+extern bool child_gtk_init(struct libdecor_plugin_gtk *);
 
-	int content_width;
-	int content_height;
-
-	enum libdecor_window_state window_state;
-
-	enum decoration_type decoration_type;
-
-	char *title;
-
-	enum libdecor_capabilities capabilities;
-
-	struct border_component *active;
-	struct border_component *touch_active;
-
-	struct border_component *focus;
-	struct border_component *grab;
-
-	bool shadow_showing;
-	struct border_component shadow;
-
-	GtkWidget *window; /* offscreen window for rendering */
-	GtkWidget *header; /* header bar with widgets */
-	struct border_component headerbar;
-	struct header_element_data hdr_focus;
-
-	/* store pre-processed shadow tile */
-	cairo_surface_t *shadow_blur;
-
-	struct wl_list link;
-
-	struct {
-		enum titlebar_gesture_state state;
-		int button_pressed_count;
-		uint32_t first_pressed_button;
-		uint32_t first_pressed_time;
-		double pressed_x;
-		double pressed_y;
-		uint32_t pressed_serial;
-	} titlebar_gesture;
-};
-
-struct libdecor_plugin_gtk {
-	struct libdecor_plugin plugin;
-
-	struct wl_callback *globals_callback;
-	struct wl_callback *globals_callback_shm;
-
-	struct libdecor *context;
-
-	struct wl_registry *wl_registry;
-	struct wl_subcompositor *wl_subcompositor;
-	struct wl_compositor *wl_compositor;
-
-	struct wl_shm *wl_shm;
-	struct wl_callback *shm_callback;
-	bool has_argb;
-
-	struct wl_list visible_frame_list;
-	struct wl_list seat_list;
-	struct wl_list output_list;
-
-	char *cursor_theme_name;
-	int cursor_size;
-
-	uint32_t color_scheme_setting;
-
-	int double_click_time_ms;
-	int drag_threshold;
-
-	bool handle_cursor;
-};
 
 static const char *libdecor_gtk_proxy_tag = "libdecor-gtk";
 
@@ -705,9 +506,10 @@ libdecor_plugin_gtk_frame_free(struct libdecor_plugin *plugin,
 	struct libdecor_frame_gtk *frame_gtk =
 		(struct libdecor_frame_gtk *) frame;
 
-	g_clear_pointer (&frame_gtk->header, gtk_widget_destroy);
-	g_clear_pointer (&frame_gtk->window, gtk_widget_destroy);
-
+	destroy_window_header(frame_gtk->window, frame_gtk->header);
+	frame_gtk->window = NULL;
+	frame_gtk->header = NULL;
+	
 	free_border_component(&frame_gtk->headerbar);
 	free_border_component(&frame_gtk->shadow);
 	frame_gtk->shadow_showing = false;
@@ -915,55 +717,6 @@ ensure_border_surfaces(struct libdecor_frame_gtk *frame_gtk)
 	ensure_component(frame_gtk, &frame_gtk->shadow);
 }
 
-static void
-ensure_title_bar_surfaces(struct libdecor_frame_gtk *frame_gtk)
-{
-	GtkStyleContext *context_hdr;
-
-	frame_gtk->headerbar.type = HEADER;
-	frame_gtk->headerbar.opaque = false;
-	ensure_component(frame_gtk, &frame_gtk->headerbar);
-
-	/* create an offscreen window with a header bar */
-	/* TODO: This should only be done once at frame consutrction, but then
-	 *       the window and headerbar would not change style (e.g. backdrop)
-	 *       after construction. So we just destroy and re-create them.
-	 */
-	/* avoid warning when restoring previously turned off decoration */
-	if (GTK_IS_WIDGET(frame_gtk->header)) {
-		gtk_widget_destroy(frame_gtk->header);
-		frame_gtk->header = NULL;
-	}
-	/* avoid warning when restoring previously turned off decoration */
-	if (GTK_IS_WIDGET(frame_gtk->window)) {
-		gtk_widget_destroy(frame_gtk->window);
-		frame_gtk->window = NULL;
-	}
-	frame_gtk->window = gtk_offscreen_window_new();
-	frame_gtk->header = gtk_header_bar_new();
-
-	g_object_get(gtk_widget_get_settings(frame_gtk->window),
-		     "gtk-double-click-time",
-		     &frame_gtk->plugin_gtk->double_click_time_ms,
-		     "gtk-dnd-drag-threshold",
-		     &frame_gtk->plugin_gtk->drag_threshold,
-		     NULL);
-	/* set as "default" decoration */
-	g_object_set(frame_gtk->header,
-		     "title", libdecor_frame_get_title(&frame_gtk->frame),
-		     "has-subtitle", FALSE,
-		     "show-close-button", TRUE,
-		     NULL);
-
-	context_hdr = gtk_widget_get_style_context(frame_gtk->header);
-	gtk_style_context_add_class(context_hdr, GTK_STYLE_CLASS_TITLEBAR);
-	gtk_style_context_add_class(context_hdr, "default-decoration");
-
-	gtk_window_set_titlebar(GTK_WINDOW(frame_gtk->window), frame_gtk->header);
-	gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(frame_gtk->header), TRUE);
-
-	gtk_window_set_resizable(GTK_WINDOW(frame_gtk->window), resizable(frame_gtk));
-}
 
 static void
 calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
@@ -980,9 +733,8 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 	content_height = libdecor_frame_get_content_height(frame);
 
 	/* avoid warning when restoring previously turned off decoration */
-	const int title_height =
-	 	GTK_IS_WIDGET(frame_gtk->header)
-	 	? gtk_widget_get_allocated_height(frame_gtk->header) : 0;
+	int title_height;
+	child_get_allocated_WH(frame_gtk, NULL, &title_height);
 
 	switch (component) {
 	case NONE:
@@ -1001,7 +753,7 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 		*component_x = 0;
 		/* reuse product of function call above */
 		*component_y = - title_height;
-		*component_width = gtk_widget_get_allocated_width(frame_gtk->header);
+		child_get_allocated_WH(frame_gtk, component_width, NULL);
 		/* reuse product of function call above */
 		*component_height = title_height;
 		return;
@@ -1010,229 +762,6 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 	abort();
 }
 
-static void
-array_append(enum header_element **array, size_t *n, enum header_element item)
-{
-	(*n)++;
-	*array = realloc(*array, (*n) * sizeof (enum header_element));
-	(*array)[(*n)-1] = item;
-}
-
-static void
-draw_header_background(struct libdecor_frame_gtk *frame_gtk,
-		       cairo_t *cr)
-{
-	/* background */
-	GtkAllocation allocation;
-	GtkStyleContext* style;
-
-	gtk_widget_get_allocation(GTK_WIDGET(frame_gtk->header), &allocation);
-	style = gtk_widget_get_style_context(frame_gtk->header);
-	gtk_render_background(style, cr, allocation.x, allocation.y, allocation.width, allocation.height);
-}
-
-static void
-draw_header_title(struct libdecor_frame_gtk *frame_gtk,
-		  cairo_surface_t *surface)
-{
-	/* title */
-	GtkWidget *label;
-	GtkAllocation allocation;
-	cairo_surface_t *label_surface = NULL;
-	cairo_t *cr;
-
-	label = find_widget_by_type(frame_gtk->header, HEADER_TITLE).widget;
-	gtk_widget_get_allocation(label, &allocation);
-
-	/* create subsection in which to draw label */
-	label_surface = cairo_surface_create_for_rectangle(
-				surface,
-				allocation.x, allocation.y,
-				allocation.width, allocation.height);
-	cr = cairo_create(label_surface);
-	gtk_widget_size_allocate(label, &allocation);
-	gtk_widget_draw(label, cr);
-	cairo_destroy(cr);
-	cairo_surface_destroy(label_surface);
-}
-
-static void
-draw_header_button(struct libdecor_frame_gtk *frame_gtk,
-		   cairo_t *cr,
-		   cairo_surface_t *surface,
-		   enum header_element button_type,
-		   enum libdecor_window_state window_state)
-{
-	struct header_element_data elem;
-	GtkWidget *button;
-	GtkStyleContext* button_style;
-	GtkStateFlags style_state;
-
-	GtkAllocation allocation;
-
-	gchar *icon_name;
-	int scale;
-	GtkWidget *icon_widget;
-	GtkAllocation allocation_icon;
-	GtkIconInfo* icon_info;
-
-	double sx, sy;
-
-	gint icon_width, icon_height;
-
-	GdkPixbuf* icon_pixbuf;
-	cairo_surface_t* icon_surface;
-
-	gint width = 0, height = 0;
-
-	gint left = 0, top = 0, right = 0, bottom = 0;
-	GtkBorder border;
-
-	GtkBorder padding;
-
-	elem = find_widget_by_type(frame_gtk->header, button_type);
-	button = elem.widget;
-	if (!button)
-		return;
-	button_style = gtk_widget_get_style_context(button);
-	style_state = elem.state;
-
-	/* change style based on window state and focus */
-	if (!(window_state & LIBDECOR_WINDOW_STATE_ACTIVE)) {
-		style_state |= GTK_STATE_FLAG_BACKDROP;
-	}
-	if (frame_gtk->hdr_focus.widget == button) {
-		style_state |= GTK_STATE_FLAG_PRELIGHT;
-		if (frame_gtk->hdr_focus.state & GTK_STATE_FLAG_ACTIVE) {
-			style_state |= GTK_STATE_FLAG_ACTIVE;
-		}
-	}
-
-	/* background */
-	gtk_widget_get_clip(button, &allocation);
-
-	gtk_style_context_save(button_style);
-	gtk_style_context_set_state(button_style, style_state);
-	gtk_render_background(button_style, cr,
-			      allocation.x, allocation.y,
-			      allocation.width, allocation.height);
-	gtk_render_frame(button_style, cr,
-			 allocation.x, allocation.y,
-			 allocation.width, allocation.height);
-	gtk_style_context_restore(button_style);
-
-	/* symbol */
-	switch (button_type) {
-	case HEADER_MIN:
-		icon_name = "window-minimize-symbolic";
-		break;
-	case HEADER_MAX:
-		icon_name = (window_state & LIBDECOR_WINDOW_STATE_MAXIMIZED) ?
-				    "window-restore-symbolic" :
-				    "window-maximize-symbolic";
-		break;
-	case HEADER_CLOSE:
-		icon_name = "window-close-symbolic";
-		break;
-	default:
-		icon_name = NULL;
-		break;
-	}
-
-	/* get scale */
-	cairo_surface_get_device_scale(surface, &sx, &sy);
-	scale = (sx+sy) / 2.0;
-
-	/* get original icon dimensions */
-	icon_widget = gtk_bin_get_child(GTK_BIN(button));
-	gtk_widget_get_allocation(icon_widget, &allocation_icon);
-
-	/* icon info */
-	if (!gtk_icon_size_lookup(GTK_ICON_SIZE_MENU, &icon_width, &icon_height)) {
-		icon_width = 16;
-		icon_height = 16;
-	}
-	icon_info = gtk_icon_theme_lookup_icon_for_scale(
-		gtk_icon_theme_get_default(), icon_name,
-		icon_width, scale, (GtkIconLookupFlags)0);
-
-	/* icon pixel buffer*/
-	gtk_style_context_save(button_style);
-	gtk_style_context_set_state(button_style, style_state);
-	icon_pixbuf = gtk_icon_info_load_symbolic_for_context(
-		icon_info, button_style, NULL, NULL);
-	icon_surface = gdk_cairo_surface_create_from_pixbuf(icon_pixbuf, scale, NULL);
-	gtk_style_context_restore(button_style);
-
-	/* dimensions and position */
-	gtk_style_context_get(button_style, gtk_style_context_get_state(button_style),
-			      "min-width", &width, "min-height", &height, NULL);
-
-	if (width < icon_width)
-		width = icon_width;
-	if (height < icon_height)
-		height = icon_height;
-
-	gtk_style_context_get_border(button_style, gtk_style_context_get_state(button_style), &border);
-	left += border.left;
-	right += border.right;
-	top += border.top;
-	bottom += border.bottom;
-
-	gtk_style_context_get_padding(button_style, gtk_style_context_get_state(button_style), &padding);
-	left += padding.left;
-	right += padding.right;
-	top += padding.top;
-	bottom += padding.bottom;
-
-	width += left + right;
-	height += top + bottom;
-
-	gtk_render_icon_surface(gtk_widget_get_style_context(icon_widget),
-				cr, icon_surface,
-				allocation.x + ((width - icon_width) / 2),
-				allocation.y + ((height - icon_height) / 2));
-	cairo_paint(cr);
-	cairo_surface_destroy(icon_surface);
-	g_object_unref(icon_pixbuf);
-}
-
-static void
-draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
-		    cairo_t *cr,
-		    cairo_surface_t *surface)
-{
-	/* buttons */
-	enum libdecor_window_state window_state;
-	enum header_element *buttons = NULL;
-	size_t nbuttons = 0;
-
-	window_state = libdecor_frame_get_window_state(
-			       (struct libdecor_frame*)frame_gtk);
-
-	/* set buttons by capability */
-	if (minimizable(frame_gtk))
-		array_append(&buttons, &nbuttons, HEADER_MIN);
-	if (resizable(frame_gtk))
-		array_append(&buttons, &nbuttons, HEADER_MAX);
-	if (closeable(frame_gtk))
-		array_append(&buttons, &nbuttons, HEADER_CLOSE);
-
-	for (size_t i = 0; i < nbuttons; i++) {
-		draw_header_button(frame_gtk, cr, surface, buttons[i], window_state);
-	} /* loop buttons */
-	free(buttons);
-}
-
-static void
-draw_header(struct libdecor_frame_gtk *frame_gtk,
-	    cairo_t *cr,
-	    cairo_surface_t *surface)
-{
-	draw_header_background(frame_gtk, cr);
-	draw_header_title(frame_gtk, surface);
-	draw_header_buttons(frame_gtk, cr, surface);
-}
 
 static void
 draw_component_content(struct libdecor_frame_gtk *frame_gtk,
@@ -1395,62 +924,12 @@ draw_border(struct libdecor_frame_gtk *frame_gtk)
 	frame_gtk->shadow_showing = true;
 }
 
-static void
-draw_title_bar(struct libdecor_frame_gtk *frame_gtk)
-{
-	GtkAllocation allocation = {0, 0, frame_gtk->content_width, 0};
-	enum libdecor_window_state state;
-	GtkStyleContext *style;
-	int pref_width;
-	int current_min_w, current_min_h, current_max_w, current_max_h, W, H;
 
-	state = libdecor_frame_get_window_state((struct libdecor_frame*)frame_gtk);
-	style = gtk_widget_get_style_context(frame_gtk->window);
-
-	if (!(state & LIBDECOR_WINDOW_STATE_ACTIVE)) {
-		gtk_widget_set_state_flags(frame_gtk->window, GTK_STATE_FLAG_BACKDROP, true);
-	} else {
-		gtk_widget_unset_state_flags(frame_gtk->window, GTK_STATE_FLAG_BACKDROP);
-	}
-
-	if (libdecor_frame_is_floating(&frame_gtk->frame)) {
-		gtk_style_context_remove_class(style, "maximized");
-	} else {
-		gtk_style_context_add_class(style, "maximized");
-	}
-
-	gtk_widget_show_all(frame_gtk->window);
-
-	/* set default width, using an empty title to estimate its smallest admissible value */
-	gtk_header_bar_set_title(GTK_HEADER_BAR(frame_gtk->header), "");
-	gtk_widget_get_preferred_width(frame_gtk->header, NULL, &pref_width);
-	gtk_header_bar_set_title(GTK_HEADER_BAR(frame_gtk->header),
-		libdecor_frame_get_title(&frame_gtk->frame));
-	libdecor_frame_get_min_content_size(&frame_gtk->frame, &current_min_w, &current_min_h);
-	if (current_min_w < pref_width) {
-		current_min_w = pref_width;
-		libdecor_frame_set_min_content_size(&frame_gtk->frame, current_min_w, current_min_h);
-	}
-	libdecor_frame_get_max_content_size(&frame_gtk->frame, &current_max_w, &current_max_h);
-	if (current_max_w && current_max_w < current_min_w) {
-		libdecor_frame_set_max_content_size(&frame_gtk->frame, current_min_w, current_max_h);
-	}
-	W = libdecor_frame_get_content_width(&frame_gtk->frame);
-	H = libdecor_frame_get_content_height(&frame_gtk->frame);
-	if (W < current_min_w) {
-		W = current_min_w;
-		struct libdecor_state *libdecor_state = libdecor_state_new(W, H);
-		libdecor_frame_commit(&frame_gtk->frame, libdecor_state, NULL);
-		libdecor_state_free(libdecor_state);
-		return;
-	}
-	/* set default height */
-	gtk_widget_get_preferred_height(frame_gtk->header, NULL, &allocation.height);
-
-	gtk_widget_size_allocate(frame_gtk->header, &allocation);
-
+static void draw_title_bar(struct libdecor_frame_gtk *frame_gtk) {
+	draw_title_bar_child(frame_gtk);
 	draw_border_component(frame_gtk, &frame_gtk->headerbar, HEADER);
 }
+
 
 static void
 draw_decoration(struct libdecor_frame_gtk *frame_gtk)
@@ -1468,6 +947,9 @@ draw_decoration(struct libdecor_frame_gtk *frame_gtk)
 		ensure_border_surfaces(frame_gtk);
 		draw_border(frame_gtk);
 		/* show title bar */
+frame_gtk->headerbar.type = HEADER;
+frame_gtk->headerbar.opaque = false;
+ensure_component(frame_gtk, &frame_gtk->headerbar);
 		ensure_title_bar_surfaces(frame_gtk);
 		draw_title_bar(frame_gtk);
 		/* link frame */
@@ -1481,6 +963,9 @@ draw_decoration(struct libdecor_frame_gtk *frame_gtk)
 		if (is_border_surfaces_showing(frame_gtk))
 			hide_border_surfaces(frame_gtk);
 		/* show title bar */
+frame_gtk->headerbar.type = HEADER;
+frame_gtk->headerbar.opaque = false;
+ensure_component(frame_gtk, &frame_gtk->headerbar);
 		ensure_title_bar_surfaces(frame_gtk);
 		draw_title_bar(frame_gtk);
 		/* link frame */
@@ -1572,7 +1057,7 @@ libdecor_plugin_gtk_frame_property_changed(struct libdecor_plugin *plugin,
 	 * when in SSD mode, the window title is not to be managed by GTK;
 	 * this is detected by frame_gtk->header not being a proper GTK widget
 	 */
-	if (!GTK_IS_WIDGET(frame_gtk->header)) return;
+	if (!frame_gtk->header) return;
 
 	new_title = libdecor_frame_get_title(frame);
 	if (!streq(frame_gtk->title, new_title))
@@ -1782,11 +1267,11 @@ libdecor_plugin_gtk_frame_get_border_size(struct libdecor_plugin *plugin,
 		enum decoration_type type = window_state_to_decoration_type(window_state);
 
 		/* avoid warnings after decoration has been turned off */
-		if (GTK_IS_WIDGET(header) && (type != DECORATION_TYPE_NONE)) {
+		if (header && (type != DECORATION_TYPE_NONE)) {
 			/* Redraw title bar to ensure size will be up-to-date */
 			if (configuration && type == DECORATION_TYPE_TITLE_ONLY)
 				draw_title_bar((struct libdecor_frame_gtk *) frame);
-			*top = gtk_widget_get_allocated_height(header);
+			child_get_allocated_WH((struct libdecor_frame_gtk *)frame, NULL, top);
 		} else {
 			*top = 0;
 		}
@@ -2191,11 +1676,10 @@ pointer_motion(void *data,
 
 	frame_gtk = wl_surface_get_user_data(seat->pointer_focus);
 	/* avoid warnings after decoration has been turned off */
-	if (!GTK_IS_WIDGET(frame_gtk->header) || frame_gtk->active->type != HEADER) {
+	if (!frame_gtk->header || frame_gtk->active->type != HEADER) {
 		frame_gtk->hdr_focus.type = HEADER_NONE;
 	}
-
-	new_focus =  get_header_focus(GTK_HEADER_BAR(frame_gtk->header),
+	new_focus =  get_header_focus((GtkHeaderBar*)frame_gtk->header,
 				      seat->pointer_x, seat->pointer_y);
 
 	/* only update if widget change so that we keep the state */
@@ -2271,7 +1755,8 @@ handle_titlebar_gesture(struct libdecor_frame_gtk *frame_gtk,
 		break;
 	case TITLEBAR_GESTURE_RIGHT_CLICK:
 		{
-		const int title_height = gtk_widget_get_allocated_height(frame_gtk->header);
+		int title_height;
+		child_get_allocated_WH(frame_gtk, NULL, &title_height);
 		libdecor_frame_show_window_menu(&frame_gtk->frame,
 						seat->wl_seat,
 						serial,
@@ -2375,7 +1860,7 @@ handle_button_on_header(struct libdecor_frame_gtk *frame_gtk,
 					}
 
 					frame_gtk->hdr_focus.state &= ~GTK_STATE_FLAG_ACTIVE;
-					if (GTK_IS_WIDGET(frame_gtk->header)) {
+					if (frame_gtk->header) {
 						draw_title_bar(frame_gtk);
 						libdecor_frame_toplevel_commit(&frame_gtk->frame);
 					}
@@ -2383,7 +1868,7 @@ handle_button_on_header(struct libdecor_frame_gtk *frame_gtk,
 				}
 			} else {
 				frame_gtk->hdr_focus.state &= ~GTK_STATE_FLAG_ACTIVE;
-				if (GTK_IS_WIDGET(frame_gtk->header)) {
+				if (frame_gtk->header) {
 					draw_title_bar(frame_gtk);
 					libdecor_frame_toplevel_commit(&frame_gtk->frame);
 				}
@@ -2461,9 +1946,9 @@ update_touch_focus(struct seat *seat,
 		   wl_fixed_t y)
 {
 	/* avoid warnings after decoration has been turned off */
-	if (GTK_IS_WIDGET(frame_gtk->header) && frame_gtk->touch_active->type == HEADER) {
+	if (frame_gtk->header && frame_gtk->touch_active->type == HEADER) {
 		struct header_element_data new_focus = get_header_focus(
-					  GTK_HEADER_BAR(frame_gtk->header),
+					  (GtkHeaderBar*)frame_gtk->header,
 					  wl_fixed_to_int(x), wl_fixed_to_int(y));
 		/* only update if widget change so that we keep the state */
 		if (frame_gtk->hdr_focus.widget != new_focus.widget) {
@@ -2600,7 +2085,7 @@ touch_up(void *data,
 		}
 		/* unset active/clicked state once released */
 		frame_gtk->hdr_focus.state &= ~GTK_STATE_FLAG_ACTIVE;
-		if (GTK_IS_WIDGET(frame_gtk->header)) {
+		if (frame_gtk->header) {
 			draw_title_bar(frame_gtk);
 			libdecor_frame_toplevel_commit(&frame_gtk->frame);
 		}
@@ -2980,20 +2465,10 @@ libdecor_plugin_new(struct libdecor *context)
 	}
 
 	/* setup GTK context */
-	gdk_set_allowed_backends("wayland");
-	gtk_disable_setlocale();
-
-	if (!gtk_init_check(NULL, NULL)) {
-		fprintf(stderr, "libdecor-gtk-WARNING: Failed to initialize GTK\n");
+	if (child_gtk_init(plugin_gtk)) {
 		libdecor_plugin_gtk_destroy(&plugin_gtk->plugin);
 		return NULL;
 	}
-
-	g_object_set(gtk_settings_get_default(),
-		     "gtk-application-prefer-dark-theme",
-		     plugin_gtk->color_scheme_setting == LIBDECOR_COLOR_SCHEME_PREFER_DARK,
-		     NULL);
-
 	return &plugin_gtk->plugin;
 }
 
@@ -3010,7 +2485,7 @@ libdecor_plugin_description = {
 	.constructor = libdecor_plugin_new,
 	.conflicting_symbols = {
 		"png_free",
-		"gdk_get_use_xshm",
+/*		"gdk_get_use_xshm",*/
 		NULL,
 	},
 };
