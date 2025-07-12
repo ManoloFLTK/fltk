@@ -183,12 +183,18 @@ in_region(const cairo_rectangle_int_t *rect, const int *x, const int *y)
 }
 
 
-struct header_element_data get_header_focus(const GtkHeaderBar *header_bar, const int x, const int y)
+void get_header_focus(char *shm_mmap)
 {
+  char *p = shm_mmap;
+  GtkHeaderBar *header_bar;
+  int x, y;
   /* we have to check child widgets (buttons, title) before the 'HDR_HDR' root widget */
   static const enum header_element elems[] =
     {HEADER_TITLE, HEADER_MIN, HEADER_MAX, HEADER_CLOSE};
 
+  header_bar = *(GtkHeaderBar**)p; p += sizeof(GtkHeaderBar*);
+  x = *(int*)p; p += sizeof(int);
+  y = *(int*)p;
   if (GTK_HEADER_BAR(header_bar)) for (size_t i = 0; i < ARRAY_SIZE(elems); i++) {
     struct header_element_data elem =
       find_widget_by_type(GTK_WIDGET(header_bar), elems[i]);
@@ -206,13 +212,16 @@ struct header_element_data get_header_focus(const GtkHeaderBar *header_bar, cons
         allocation.height = (int)out_bounds.size.height;
       }
 #endif
-      if (in_region(&allocation, &x, &y))
-        return elem;
+      if (in_region(&allocation, &x, &y)) {
+        elem.name = NULL; // for security because that's a pointer in child's address space
+        memcpy(shm_mmap, &elem, sizeof(struct header_element_data));
+        return;
+      }
     }
   }
 
   struct header_element_data elem_none = { .widget=NULL};
-  return elem_none;
+  memcpy(shm_mmap, &elem_none, sizeof(struct header_element_data));
 }
 
 
