@@ -17,7 +17,7 @@
 #include "libdecor-gtk.h"
 
 
-bool child_gtk_init(struct libdecor_plugin_gtk *plugin_gtk) {
+bool child_gtk_init(uint32_t color_scheme) {
   gdk_set_allowed_backends("wayland");
   gtk_disable_setlocale();
 
@@ -35,10 +35,8 @@ bool child_gtk_init(struct libdecor_plugin_gtk *plugin_gtk) {
   setenv("GSK_RENDERER", "cairo", 1);
 #endif
 
-  g_object_set(gtk_settings_get_default(),
-         "gtk-application-prefer-dark-theme",
-         plugin_gtk->color_scheme_setting == LIBDECOR_COLOR_SCHEME_PREFER_DARK,
-         NULL);
+  g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
+         color_scheme == LIBDECOR_COLOR_SCHEME_PREFER_DARK, NULL);
   return false;
 }
 

@@ -45,7 +45,6 @@
 
 #include "common/libdecor-cairo-blur.h"
 #include <poll.h>
-#include <fcntl.h> /* shm_open() */
 
 typedef enum
 {
@@ -145,7 +144,7 @@ extern void child_get_allocated_WH(struct libdecor_frame_gtk *frame_gtk, int *pW
 extern void draw_header(struct libdecor_frame_gtk *, int W, int H, int scale);
 extern void draw_title_bar_child(struct libdecor_frame_gtk *frame_gtk);
 extern void ensure_title_bar_surfaces(struct libdecor_frame_gtk *frame_gtk);
-extern bool child_gtk_init(struct libdecor_plugin_gtk *);
+extern bool child_gtk_init(uint32_t color_scheme);
 
 
 static const char *libdecor_gtk_proxy_tag = "libdecor-gtk";
@@ -780,7 +779,7 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 	struct libdecor_plugin_gtk *plugin_gtk = frame_gtk->plugin_gtk;
 	off_t surface_size = buffer->buffer_height *
 	  cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
-	if (surface_size > plugin_gtk->shm_size) {
+	if (component == HEADER && surface_size > plugin_gtk->shm_size) {
 		if (plugin_gtk->shm_size) munmap(plugin_gtk->shm_mmap, plugin_gtk->shm_size);
 		plugin_gtk->shm_size = surface_size;
 		plugin_gtk->shm_mmap = mmap(NULL, surface_size, PROT_READ|PROT_WRITE,
@@ -831,8 +830,6 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 				libdecor_frame_get_content_height(
 					&frame_gtk->frame));
 		cairo_fill(cr);
-	}
-	if (cr) {
 		cairo_destroy(cr);
 		cairo_surface_destroy(surface);
 	}
@@ -2475,15 +2472,20 @@ libdecor_plugin_new(struct libdecor *context)
 		libdecor_plugin_gtk_destroy(&plugin_gtk->plugin);
 		return NULL;
 	}
-
+/* initialize shared memory trunk */
+	plugin_gtk->shm_size = 50000;
+	plugin_gtk->shm_mmap = mmap(NULL, plugin_gtk->shm_size, PROT_READ|PROT_WRITE,
+				    MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+	//pipe(plugin_gtk->pipeio);
+	//write(plugin_gtk->pipeio[1], plugin_gtk->shm_mmap, sizeof(uint32_t));
 	/* setup GTK context */
-	if (child_gtk_init(plugin_gtk)) {
+	if (child_gtk_init(plugin_gtk->color_scheme_setting)) {
 		libdecor_plugin_gtk_destroy(&plugin_gtk->plugin);
+		munmap(plugin_gtk->shm_mmap, plugin_gtk->shm_size);
+		plugin_gtk->shm_size = 0;
+		plugin_gtk->shm_mmap = NULL;
 		return NULL;
 	}
-	
-	plugin_gtk->shm_size = 0;
-	plugin_gtk->shm_mmap = NULL;
 	return &plugin_gtk->plugin;
 }
 
