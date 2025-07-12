@@ -140,12 +140,12 @@ struct cursor_output {
 //todo:
 extern struct header_element_data get_header_focus(const GtkHeaderBar *header_bar, const int x, const int y);
 extern void child_get_allocated_WH(struct libdecor_frame_gtk *frame_gtk, int *pW, int *pH);
-extern void ensure_title_bar_surfaces(struct libdecor_frame_gtk *frame_gtk);
 //done:
 extern void child_gtk_init(char *shm_mmap);
 extern void draw_header(char *shm_mmap);
 extern void destroy_window_header(char *shm_mmap);
 extern void draw_title_bar_child(char *shm_mmap);
+extern void ensure_title_bar_surfaces(char *shm_mmap);
 
 
 static const char *libdecor_gtk_proxy_tag = "libdecor-gtk";
@@ -772,7 +772,7 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 {
 	cairo_surface_t *surface = NULL;
 	cairo_t *cr = NULL;
-	int window_state;
+	int window_state, capabilities;
 
 	/* clear buffer */
 	memset(buffer->data, 0, buffer->data_size);
@@ -818,7 +818,9 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 		*(int*)((char*)plugin_gtk->shm_mmap + 2 * sizeof(int)) = buffer->scale;
 		window_state = libdecor_frame_get_window_state((struct libdecor_frame*)frame_gtk);
 		*(int*)((char*)plugin_gtk->shm_mmap + 3 * sizeof(int)) = window_state;
-		memcpy((char*)plugin_gtk->shm_mmap + 4 * sizeof(int), frame_gtk,
+		capabilities = libdecor_frame_get_capabilities((struct libdecor_frame*)frame_gtk);
+		*(int*)((char*)plugin_gtk->shm_mmap + 4 * sizeof(int)) = capabilities;
+		memcpy((char*)plugin_gtk->shm_mmap + 5 * sizeof(int), frame_gtk,
 		       sizeof(struct libdecor_frame_gtk));
 		draw_header((char*)plugin_gtk->shm_mmap);
 		memcpy(buffer->data, plugin_gtk->shm_mmap, surface_size);
@@ -981,6 +983,28 @@ static void draw_title_bar(struct libdecor_frame_gtk *frame_gtk) {
 	draw_border_component(frame_gtk, &frame_gtk->headerbar, HEADER);
 }
 
+static void call_ensure_surfaces(struct libdecor_frame_gtk *frame_gtk)
+{
+	char *p;
+	const char *title;
+	struct libdecor_plugin_gtk *plugin_gtk = frame_gtk->plugin_gtk;
+	int resizable;
+	p = plugin_gtk->shm_mmap;
+	memcpy(p, frame_gtk, sizeof(struct libdecor_frame_gtk));
+	p += sizeof(struct libdecor_frame_gtk);
+	resizable = libdecor_frame_has_capability(&frame_gtk->frame, LIBDECOR_ACTION_RESIZE);
+	*(int*)p = resizable; p += sizeof(int);
+	title = libdecor_frame_get_title(&frame_gtk->frame);
+	memcpy(p, title, strlen(title) + 1);
+	
+	ensure_title_bar_surfaces(plugin_gtk->shm_mmap);
+	
+	p = plugin_gtk->shm_mmap;
+	memcpy(frame_gtk, p, sizeof(struct libdecor_frame_gtk));
+	p += sizeof(struct libdecor_frame_gtk);
+	frame_gtk->plugin_gtk->double_click_time_ms = *(int*)p; p += sizeof(int);
+	frame_gtk->plugin_gtk->drag_threshold = *(int*)p;
+}
 
 static void
 draw_decoration(struct libdecor_frame_gtk *frame_gtk)
@@ -1001,7 +1025,7 @@ draw_decoration(struct libdecor_frame_gtk *frame_gtk)
 frame_gtk->headerbar.type = HEADER;
 frame_gtk->headerbar.opaque = false;
 ensure_component(frame_gtk, &frame_gtk->headerbar);
-		ensure_title_bar_surfaces(frame_gtk);
+		call_ensure_surfaces(frame_gtk);
 		draw_title_bar(frame_gtk);
 		/* link frame */
 		if (frame_gtk->link.next == NULL)
@@ -1017,7 +1041,7 @@ ensure_component(frame_gtk, &frame_gtk->headerbar);
 frame_gtk->headerbar.type = HEADER;
 frame_gtk->headerbar.opaque = false;
 ensure_component(frame_gtk, &frame_gtk->headerbar);
-		ensure_title_bar_surfaces(frame_gtk);
+		call_ensure_surfaces(frame_gtk);
 		draw_title_bar(frame_gtk);
 		/* link frame */
 		if (frame_gtk->link.next == NULL)

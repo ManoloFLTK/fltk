@@ -231,73 +231,82 @@ void destroy_window_header(char *shm_mmap) {
 
 
 void
-ensure_title_bar_surfaces(struct libdecor_frame_gtk *frame_gtk)
+ensure_title_bar_surfaces(char *shm_mmap)
 {
+  struct libdecor_frame_gtk frame_gtk;
+  const char *title;
+  int double_click_time_ms, drag_threshold, resizable;
+  char *p;
 #if GTK_MAJOR_VERSION == 3
   GtkStyleContext *context_hdr;
 #endif
 
-  /*frame_gtk->headerbar.type = HEADER;
-  frame_gtk->headerbar.opaque = false;
-  ensure_component(frame_gtk, &frame_gtk->headerbar);*/
-
+  p = shm_mmap;
+  memcpy(&frame_gtk, p, sizeof(struct libdecor_frame_gtk));
+  p += sizeof(struct libdecor_frame_gtk);
+  resizable = *(int*)p; p += sizeof(int);
+  title = p;
   /* create an offscreen window with a header bar */
   /* TODO: This should only be done once at frame construction, but then
    *       the window and headerbar would not change style (e.g. backdrop)
    *       after construction. So we just destroy and re-create them.
    */
   /* avoid warning when restoring previously turned off decoration */
-  if (GTK_IS_WIDGET(frame_gtk->header)) {
+  if (GTK_IS_WIDGET(frame_gtk.header)) {
 #if GTK_MAJOR_VERSION == 3
-    gtk_widget_destroy(frame_gtk->header);
+    gtk_widget_destroy(frame_gtk.header);
 #else
-    gtk_widget_set_visible(frame_gtk->header, false);
+    gtk_widget_set_visible(frame_gtk.header, false);
 #endif
-    frame_gtk->header = NULL;
+    frame_gtk.header = NULL;
   }
   /* avoid warning when restoring previously turned off decoration */
-  if (GTK_IS_WIDGET(frame_gtk->window)) {
+  if (GTK_IS_WIDGET(frame_gtk.window)) {
 #if GTK_MAJOR_VERSION == 3
-    gtk_widget_destroy(frame_gtk->window);
+    gtk_widget_destroy(frame_gtk.window);
 #else
-    gtk_window_destroy((GtkWindow*)frame_gtk->window);
+    gtk_window_destroy((GtkWindow*)frame_gtk.window);
 #endif
-    frame_gtk->window = NULL;
+    frame_gtk.window = NULL;
   }
 #if GTK_MAJOR_VERSION == 3
-  frame_gtk->window = gtk_offscreen_window_new();
+  frame_gtk.window = gtk_offscreen_window_new();
 #else
-  frame_gtk->window = gtk_window_new();
-  gtk_widget_set_visible(frame_gtk->window, false);
+  frame_gtk.window = gtk_window_new();
+  gtk_widget_set_visible(frame_gtk.window, false);
 #endif
-  frame_gtk->header = gtk_header_bar_new();
+  frame_gtk.header = gtk_header_bar_new();
 
-  g_object_get(gtk_widget_get_settings(frame_gtk->window),
+  g_object_get(gtk_widget_get_settings(frame_gtk.window),
          "gtk-double-click-time",
-         &frame_gtk->plugin_gtk->double_click_time_ms,
+         &double_click_time_ms,
          "gtk-dnd-drag-threshold",
-         &frame_gtk->plugin_gtk->drag_threshold,
+         &drag_threshold,
          NULL);
 #if GTK_MAJOR_VERSION == 3
   /* set as "default" decoration */
-  g_object_set(frame_gtk->header,
-         "title", libdecor_frame_get_title(&frame_gtk->frame),
+  g_object_set(frame_gtk.header,
+         "title", title,
          "has-subtitle", FALSE,
          "show-close-button", TRUE,
          NULL);
 
-  context_hdr = gtk_widget_get_style_context(frame_gtk->header);
+  context_hdr = gtk_widget_get_style_context(frame_gtk.header);
   gtk_style_context_add_class(context_hdr, GTK_STYLE_CLASS_TITLEBAR);
   gtk_style_context_add_class(context_hdr, "default-decoration");
 
-  gtk_window_set_titlebar(GTK_WINDOW(frame_gtk->window), frame_gtk->header);
-  gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(frame_gtk->header), TRUE);
+  gtk_window_set_titlebar(GTK_WINDOW(frame_gtk.window), frame_gtk.header);
+  gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(frame_gtk.header), TRUE);
 #else
-  gtk_window_set_child(GTK_WINDOW(frame_gtk->window), frame_gtk->header);
+  gtk_window_set_child(GTK_WINDOW(frame_gtk.window), frame_gtk.header);
 #endif
 
-  gtk_window_set_resizable(GTK_WINDOW(frame_gtk->window),
-                           libdecor_frame_has_capability(&frame_gtk->frame, LIBDECOR_ACTION_RESIZE));
+  gtk_window_set_resizable(GTK_WINDOW(frame_gtk.window), resizable);
+  p = shm_mmap;
+  memcpy(p, &frame_gtk, sizeof(struct libdecor_frame_gtk));
+    p += sizeof(struct libdecor_frame_gtk);
+  *(int*)p = double_click_time_ms; p += sizeof(int);
+  *(int*)p = drag_threshold;
 }
 
 
@@ -598,7 +607,8 @@ draw_header_button(struct libdecor_frame_gtk *frame_gtk,
 static void
 draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
         cairo_t *cr,
-        cairo_surface_t *surface, enum libdecor_window_state window_state)
+        cairo_surface_t *surface, enum libdecor_window_state window_state,
+                    enum libdecor_capabilities capabilities)
 {
   /* buttons */
   //enum libdecor_window_state window_state;
@@ -606,11 +616,11 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
   size_t nbuttons = 0;
 
   /* set buttons by capability */
-  if (libdecor_frame_has_capability(&frame_gtk->frame, LIBDECOR_ACTION_MINIMIZE))
+  if (capabilities & LIBDECOR_ACTION_MINIMIZE)
     array_append(&buttons, &nbuttons, HEADER_MIN);
-  if (libdecor_frame_has_capability(&frame_gtk->frame, LIBDECOR_ACTION_RESIZE))
+  if (capabilities & LIBDECOR_ACTION_RESIZE)
     array_append(&buttons, &nbuttons, HEADER_MAX);
-  if (libdecor_frame_has_capability(&frame_gtk->frame, LIBDECOR_ACTION_CLOSE))
+  if (capabilities & LIBDECOR_ACTION_CLOSE)
     array_append(&buttons, &nbuttons, HEADER_CLOSE);
 
   for (size_t i = 0; i < nbuttons; i++) {
@@ -623,13 +633,14 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
 
 void draw_header(char *shm_mmap)
 {
-  int W, H, scale, window_state;
+  int W, H, scale, window_state, capabilities;
   struct libdecor_frame_gtk frame_gtk;
   W = *(int*)shm_mmap;
   H = *(int*)(shm_mmap + sizeof(int));
   scale = *(int*)(shm_mmap + 2 * sizeof(int));
   window_state = *(int*)(shm_mmap + 3 * sizeof(int));
-  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)(shm_mmap + 4 * sizeof(int)), sizeof(struct libdecor_frame_gtk));
+  capabilities = *(int*)(shm_mmap + 4 * sizeof(int));
+  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)(shm_mmap + 5 * sizeof(int)), sizeof(struct libdecor_frame_gtk));
   cairo_surface_t *surface = cairo_image_surface_create_for_data((unsigned char*)shm_mmap, CAIRO_FORMAT_ARGB32,
         W, H, cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W));
   cairo_surface_set_device_scale(surface, scale, scale);
@@ -638,7 +649,7 @@ void draw_header(char *shm_mmap)
 #if GTK_MAJOR_VERSION == 3
   draw_header_background(&frame_gtk, cr);
   draw_header_title(&frame_gtk, surface);
-  draw_header_buttons(&frame_gtk, cr, surface, window_state);
+  draw_header_buttons(&frame_gtk, cr, surface, window_state, capabilities);
 #else
   GtkAllocation allocation = {0, 0, 0, 0};
   graphene_rect_t out_bounds;
