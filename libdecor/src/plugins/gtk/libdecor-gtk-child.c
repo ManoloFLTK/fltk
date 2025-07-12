@@ -301,94 +301,108 @@ ensure_title_bar_surfaces(struct libdecor_frame_gtk *frame_gtk)
 }
 
 
-void draw_title_bar_child(struct libdecor_frame_gtk *frame_gtk)
+void draw_title_bar_child(char *shm_mmap)
 {
-  GtkAllocation allocation = {0, 0, frame_gtk->content_width, 0};
-  enum libdecor_window_state state;
+  char *p, *title;
+  int state, floating, need_commit = false;
+  GtkAllocation allocation = {0, 0, 0, 0};
 #if GTK_MAJOR_VERSION == 3
   GtkStyleContext *style;
 #endif
   int pref_width;
   int current_min_w, current_min_h, current_max_w, current_max_h, W, H;
+  struct libdecor_frame_gtk frame_gtk;
+  p = shm_mmap;
+  memcpy(&frame_gtk, p, sizeof(struct libdecor_frame_gtk));
+    p += sizeof(struct libdecor_frame_gtk);
+  state = *(int*)p; p += sizeof(int);
+  floating = *(int*)p; p += sizeof(int);
+  current_min_w = *(int*)p; p += sizeof(int);
+  current_min_h = *(int*)p; p += sizeof(int);
+  current_max_w = *(int*)p; p += sizeof(int);
+  current_max_h = *(int*)p; p += sizeof(int);
+  W = *(int*)p; p += sizeof(int);
+  H = *(int*)p; p += sizeof(int);
+  title = p;
+  allocation.width = frame_gtk.content_width;
 
 #if GTK_MAJOR_VERSION == 4
-  if (GTK_IS_WIDGET(frame_gtk->hdr_focus.widget)) {
-    gtk_widget_set_state_flags(frame_gtk->hdr_focus.widget,
+  if (GTK_IS_WIDGET(frame_gtk.hdr_focus.widget)) {
+    gtk_widget_set_state_flags(frame_gtk.hdr_focus.widget,
              GTK_STATE_FLAG_PRELIGHT|GTK_STATE_FLAG_ACTIVE, 1);
   }
 #endif
 
-  state = libdecor_frame_get_window_state((struct libdecor_frame*)frame_gtk);
 #if GTK_MAJOR_VERSION == 3
-  style = gtk_widget_get_style_context(frame_gtk->window);
+  style = gtk_widget_get_style_context(frame_gtk.window);
 #endif
 
-  if (frame_gtk->window) {
+  if (frame_gtk.window) {
     if (!(state & LIBDECOR_WINDOW_STATE_ACTIVE)) {
-      gtk_widget_set_state_flags(frame_gtk->window, GTK_STATE_FLAG_BACKDROP, true);
+      gtk_widget_set_state_flags(frame_gtk.window, GTK_STATE_FLAG_BACKDROP, true);
     } else {
-      gtk_widget_unset_state_flags(frame_gtk->window, GTK_STATE_FLAG_BACKDROP);
+      gtk_widget_unset_state_flags(frame_gtk.window, GTK_STATE_FLAG_BACKDROP);
     }
   }
   
 #if GTK_MAJOR_VERSION == 3
-  if (libdecor_frame_is_floating(&frame_gtk->frame)) {
+  if (floating) {
     gtk_style_context_remove_class(style, "maximized");
   } else {
     gtk_style_context_add_class(style, "maximized");
   }
 
-  gtk_widget_show_all(frame_gtk->window);
+  gtk_widget_show_all(frame_gtk.window);
 
   /* set default width, using an empty title to estimate its smallest admissible value */
-  gtk_header_bar_set_title(GTK_HEADER_BAR(frame_gtk->header), "");
-  gtk_widget_get_preferred_width(frame_gtk->header, NULL, &pref_width);
-  gtk_header_bar_set_title(GTK_HEADER_BAR(frame_gtk->header),
-    libdecor_frame_get_title(&frame_gtk->frame));
+  gtk_header_bar_set_title(GTK_HEADER_BAR(frame_gtk.header), "");
+  gtk_widget_get_preferred_width(frame_gtk.header, NULL, &pref_width);
+  gtk_header_bar_set_title(GTK_HEADER_BAR(frame_gtk.header), title);
 #else
-  if (libdecor_frame_is_floating(&frame_gtk->frame)) {
-    gtk_widget_remove_css_class(frame_gtk->window, "maximized");
+  if (floating) {
+    gtk_widget_remove_css_class(frame_gtk.window, "maximized");
   } else {
-    gtk_widget_add_css_class(frame_gtk->window, "maximized");
+    gtk_widget_add_css_class(frame_gtk.window, "maximized");
   }
   pref_width = 12; /* smallest value that doesn't trigger GTK errors */
-  gtk_window_set_title(GTK_WINDOW(frame_gtk->window), libdecor_frame_get_title(&frame_gtk->frame));
+  gtk_window_set_title(GTK_WINDOW(frame_gtk.window), title/*libdecor_frame_get_title(&frame_gtk.frame)*/);
 #endif
-  libdecor_frame_get_min_content_size(&frame_gtk->frame, &current_min_w, &current_min_h);
   if (current_min_w < pref_width) {
     current_min_w = pref_width;
-    libdecor_frame_set_min_content_size(&frame_gtk->frame, current_min_w, current_min_h);
   }
-  libdecor_frame_get_max_content_size(&frame_gtk->frame, &current_max_w, &current_max_h);
   if (current_max_w && current_max_w < current_min_w) {
-    libdecor_frame_set_max_content_size(&frame_gtk->frame, current_min_w, current_max_h);
+    current_max_w = current_min_w;
   }
-  W = libdecor_frame_get_content_width(&frame_gtk->frame);
-  H = libdecor_frame_get_content_height(&frame_gtk->frame);
   if (W < current_min_w) {
+    need_commit = true;
     W = current_min_w;
-    struct libdecor_state *libdecor_state = libdecor_state_new(W, H);
-    libdecor_frame_commit(&frame_gtk->frame, libdecor_state, NULL);
-    libdecor_state_free(libdecor_state);
-    return;
-  }
-  /* set default height */
+  } else {
+    /* set default height */
 #if GTK_MAJOR_VERSION == 3
-  gtk_widget_get_preferred_height(frame_gtk->header, NULL, &allocation.height);
+    gtk_widget_get_preferred_height(frame_gtk.header, NULL, &allocation.height);
 #else
-  {
-    GtkRequisition *rq = gtk_requisition_new();
-    gtk_widget_get_preferred_size(frame_gtk->header, NULL, rq);
-    allocation.height = rq->height;
-    gtk_requisition_free(rq);
-  }
+    {
+      GtkRequisition *rq = gtk_requisition_new();
+      gtk_widget_get_preferred_size(frame_gtk.header, NULL, rq);
+      allocation.height = rq->height;
+      gtk_requisition_free(rq);
+    }
 #endif
-
-  gtk_widget_size_allocate(frame_gtk->header, &allocation
+    
+    gtk_widget_size_allocate(frame_gtk.header, &allocation
 #if GTK_MAJOR_VERSION == 4
-         , -1
+                             , -1
 #endif
-         );
+                             );
+  }
+  p = shm_mmap;
+  memcpy(p, &need_commit, sizeof(int)); p += sizeof(int);
+  memcpy(p, &current_min_w, sizeof(int)); p += sizeof(int);
+  memcpy(p, &current_min_h, sizeof(int)); p += sizeof(int);
+  memcpy(p, &current_max_w, sizeof(int)); p += sizeof(int);
+  memcpy(p, &current_max_h, sizeof(int)); p += sizeof(int);
+  memcpy(p, &W, sizeof(int)); p += sizeof(int);
+  memcpy(p, &H, sizeof(int)); p += sizeof(int);
 }
 
 
@@ -584,15 +598,12 @@ draw_header_button(struct libdecor_frame_gtk *frame_gtk,
 static void
 draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
         cairo_t *cr,
-        cairo_surface_t *surface)
+        cairo_surface_t *surface, enum libdecor_window_state window_state)
 {
   /* buttons */
-  enum libdecor_window_state window_state;
+  //enum libdecor_window_state window_state;
   enum header_element *buttons = NULL;
   size_t nbuttons = 0;
-
-  window_state = libdecor_frame_get_window_state(
-             (struct libdecor_frame*)frame_gtk);
 
   /* set buttons by capability */
   if (libdecor_frame_has_capability(&frame_gtk->frame, LIBDECOR_ACTION_MINIMIZE))
@@ -612,12 +623,13 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
 
 void draw_header(char *shm_mmap)
 {
-  int W, H, scale;
+  int W, H, scale, window_state;
   struct libdecor_frame_gtk frame_gtk;
   W = *(int*)shm_mmap;
   H = *(int*)(shm_mmap + sizeof(int));
   scale = *(int*)(shm_mmap + 2 * sizeof(int));
-  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)(shm_mmap + 3 * sizeof(int)), sizeof(struct libdecor_frame_gtk));
+  window_state = *(int*)(shm_mmap + 3 * sizeof(int));
+  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)(shm_mmap + 4 * sizeof(int)), sizeof(struct libdecor_frame_gtk));
   cairo_surface_t *surface = cairo_image_surface_create_for_data((unsigned char*)shm_mmap, CAIRO_FORMAT_ARGB32,
         W, H, cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W));
   cairo_surface_set_device_scale(surface, scale, scale);
@@ -626,7 +638,7 @@ void draw_header(char *shm_mmap)
 #if GTK_MAJOR_VERSION == 3
   draw_header_background(&frame_gtk, cr);
   draw_header_title(&frame_gtk, surface);
-  draw_header_buttons(&frame_gtk, cr, surface);
+  draw_header_buttons(&frame_gtk, cr, surface, window_state);
 #else
   GtkAllocation allocation = {0, 0, 0, 0};
   graphene_rect_t out_bounds;

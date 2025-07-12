@@ -140,12 +140,12 @@ struct cursor_output {
 //todo:
 extern struct header_element_data get_header_focus(const GtkHeaderBar *header_bar, const int x, const int y);
 extern void child_get_allocated_WH(struct libdecor_frame_gtk *frame_gtk, int *pW, int *pH);
-extern void draw_title_bar_child(struct libdecor_frame_gtk *frame_gtk);
 extern void ensure_title_bar_surfaces(struct libdecor_frame_gtk *frame_gtk);
 //done:
 extern void child_gtk_init(char *shm_mmap);
 extern void draw_header(char *shm_mmap);
 extern void destroy_window_header(char *shm_mmap);
+extern void draw_title_bar_child(char *shm_mmap);
 
 
 static const char *libdecor_gtk_proxy_tag = "libdecor-gtk";
@@ -772,6 +772,7 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 {
 	cairo_surface_t *surface = NULL;
 	cairo_t *cr = NULL;
+	int window_state;
 
 	/* clear buffer */
 	memset(buffer->data, 0, buffer->data_size);
@@ -815,7 +816,9 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 		*(int*)plugin_gtk->shm_mmap = buffer->buffer_width;
 		*(int*)((char*)plugin_gtk->shm_mmap + sizeof(int)) = buffer->buffer_height;
 		*(int*)((char*)plugin_gtk->shm_mmap + 2 * sizeof(int)) = buffer->scale;
-		memcpy((char*)plugin_gtk->shm_mmap + 3 * sizeof(int), frame_gtk,
+		window_state = libdecor_frame_get_window_state((struct libdecor_frame*)frame_gtk);
+		*(int*)((char*)plugin_gtk->shm_mmap + 3 * sizeof(int)) = window_state;
+		memcpy((char*)plugin_gtk->shm_mmap + 4 * sizeof(int), frame_gtk,
 		       sizeof(struct libdecor_frame_gtk));
 		draw_header((char*)plugin_gtk->shm_mmap);
 		memcpy(buffer->data, plugin_gtk->shm_mmap, surface_size);
@@ -940,7 +943,41 @@ draw_border(struct libdecor_frame_gtk *frame_gtk)
 
 
 static void draw_title_bar(struct libdecor_frame_gtk *frame_gtk) {
-	draw_title_bar_child(frame_gtk);
+	int need_commit, current_min_w, current_min_h, current_max_w, current_max_h, W, H;
+	const char *title;
+	char *p = frame_gtk->plugin_gtk->shm_mmap;
+	memcpy(p, frame_gtk, sizeof(struct libdecor_frame_gtk));
+		p += sizeof(struct libdecor_frame_gtk);
+	int state = libdecor_frame_get_window_state((struct libdecor_frame*)frame_gtk);
+	memcpy(p, &state, sizeof(int)); p += sizeof(int);
+	int floating = libdecor_frame_is_floating((struct libdecor_frame*)frame_gtk);
+	memcpy(p, &floating, sizeof(int)); p += sizeof(int);
+	libdecor_frame_get_min_content_size((struct libdecor_frame*)frame_gtk, &W, &H);
+	memcpy(p, &W, sizeof(int)); p += sizeof(int);
+	memcpy(p, &H, sizeof(int)); p += sizeof(int);
+	libdecor_frame_get_max_content_size((struct libdecor_frame*)frame_gtk, &W, &H);
+	memcpy(p, &W, sizeof(int)); p += sizeof(int);
+	memcpy(p, &H, sizeof(int)); p += sizeof(int);
+	W = libdecor_frame_get_content_width((struct libdecor_frame*)frame_gtk);
+	memcpy(p, &W, sizeof(int)); p += sizeof(int);
+	H = libdecor_frame_get_content_height((struct libdecor_frame*)frame_gtk);
+	memcpy(p, &W, sizeof(int)); p += sizeof(int);
+	title = libdecor_frame_get_title((struct libdecor_frame*)frame_gtk);
+	memcpy(p, title, strlen(title) + 1);
+	draw_title_bar_child((char*)frame_gtk->plugin_gtk->shm_mmap);
+	p = frame_gtk->plugin_gtk->shm_mmap;
+	need_commit = *(int*)p; p += sizeof(int);
+	current_min_w = *(int*)p; p += sizeof(int);
+	current_min_h = *(int*)p; p += sizeof(int);
+	current_max_w = *(int*)p; p += sizeof(int);
+	current_max_h = *(int*)p; p += sizeof(int);
+	W = *(int*)p; p += sizeof(int);
+	H = *(int*)p; p += sizeof(int);
+	if (need_commit) {
+		struct libdecor_state *libdecor_state = libdecor_state_new(W, H);
+		libdecor_frame_commit(&frame_gtk->frame, libdecor_state, NULL);
+		libdecor_state_free(libdecor_state);
+	}
 	draw_border_component(frame_gtk, &frame_gtk->headerbar, HEADER);
 }
 
