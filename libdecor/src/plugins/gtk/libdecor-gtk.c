@@ -137,14 +137,15 @@ struct cursor_output {
 	struct wl_list link;
 };
 
-
+//todo:
 extern struct header_element_data get_header_focus(const GtkHeaderBar *header_bar, const int x, const int y);
-extern void destroy_window_header(GtkWidget *window, GtkWidget *header);
 extern void child_get_allocated_WH(struct libdecor_frame_gtk *frame_gtk, int *pW, int *pH);
-extern void draw_header(struct libdecor_frame_gtk *, int W, int H, int scale);
 extern void draw_title_bar_child(struct libdecor_frame_gtk *frame_gtk);
 extern void ensure_title_bar_surfaces(struct libdecor_frame_gtk *frame_gtk);
-extern bool child_gtk_init(uint32_t color_scheme);
+//done:
+extern void child_gtk_init(char *shm_mmap);
+extern void draw_header(char *shm_mmap);
+extern void destroy_window_header(char *shm_mmap);
 
 
 static const char *libdecor_gtk_proxy_tag = "libdecor-gtk";
@@ -500,13 +501,12 @@ free_border_component(struct border_component *border_component)
 }
 
 static void
-libdecor_plugin_gtk_frame_free(struct libdecor_plugin *plugin,
-				 struct libdecor_frame *frame)
+libdecor_plugin_gtk_frame_free(struct libdecor_plugin *plugin, struct libdecor_frame *frame)
 {
-	struct libdecor_frame_gtk *frame_gtk =
-		(struct libdecor_frame_gtk *) frame;
-
-	destroy_window_header(frame_gtk->window, frame_gtk->header);
+	struct libdecor_frame_gtk *frame_gtk = (struct libdecor_frame_gtk *)frame;
+	struct libdecor_plugin_gtk *plugin_gtk = (struct libdecor_plugin_gtk *)plugin;
+	memcpy(plugin_gtk->shm_mmap, frame_gtk, sizeof(struct libdecor_frame_gtk));
+	destroy_window_header((char*)plugin_gtk->shm_mmap);
 	frame_gtk->window = NULL;
 	frame_gtk->header = NULL;
 	
@@ -812,7 +812,12 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 			      64);
 		break;
 	case HEADER:
-		draw_header(frame_gtk, buffer->buffer_width, buffer->buffer_height, buffer->scale);
+		*(int*)plugin_gtk->shm_mmap = buffer->buffer_width;
+		*(int*)((char*)plugin_gtk->shm_mmap + sizeof(int)) = buffer->buffer_height;
+		*(int*)((char*)plugin_gtk->shm_mmap + 2 * sizeof(int)) = buffer->scale;
+		memcpy((char*)plugin_gtk->shm_mmap + 3 * sizeof(int), frame_gtk,
+		       sizeof(struct libdecor_frame_gtk));
+		draw_header((char*)plugin_gtk->shm_mmap);
 		memcpy(buffer->data, plugin_gtk->shm_mmap, surface_size);
 		break;
 	}
@@ -2429,6 +2434,7 @@ libdecor_plugin_new(struct libdecor *context)
 {
 	struct libdecor_plugin_gtk *plugin_gtk;
 	struct wl_display *wl_display;
+	bool b;
 
 #ifdef HAVE_GETTID
 	/* Only support running on the main thread. */
@@ -2476,10 +2482,11 @@ libdecor_plugin_new(struct libdecor *context)
 	plugin_gtk->shm_size = 50000;
 	plugin_gtk->shm_mmap = mmap(NULL, plugin_gtk->shm_size, PROT_READ|PROT_WRITE,
 				    MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-	//pipe(plugin_gtk->pipeio);
-	//write(plugin_gtk->pipeio[1], plugin_gtk->shm_mmap, sizeof(uint32_t));
 	/* setup GTK context */
-	if (child_gtk_init(plugin_gtk->color_scheme_setting)) {
+	*(uint32_t*)plugin_gtk->shm_mmap = plugin_gtk->color_scheme_setting;
+	child_gtk_init((char*)plugin_gtk->shm_mmap);
+	b = *(bool*)plugin_gtk->shm_mmap;
+	if (b) {
 		libdecor_plugin_gtk_destroy(&plugin_gtk->plugin);
 		munmap(plugin_gtk->shm_mmap, plugin_gtk->shm_size);
 		plugin_gtk->shm_size = 0;

@@ -16,8 +16,12 @@
 
 #include "libdecor-gtk.h"
 
+typedef unsigned char uchar;
 
-bool child_gtk_init(uint32_t color_scheme) {
+void child_gtk_init(char *shm_mmap) {
+  uint32_t color_scheme;
+  bool b = false;
+  color_scheme = *(uint32_t*)shm_mmap;
   gdk_set_allowed_backends("wayland");
   gtk_disable_setlocale();
 
@@ -27,17 +31,18 @@ bool child_gtk_init(uint32_t color_scheme) {
 #endif
           )) {
     fprintf(stderr, "libdecor-gtk-WARNING: Failed to initialize GTK\n");
-    return true;
-  }
+    b = true;
+  } else {
 #if GTK_MAJOR_VERSION == 4
-  /* Drawing the titlebar the GTK4 way makes client apps using EGL fail, unless
-     env variable GSK_RENDERER is set to "cairo" or to "vulkan". */
-  setenv("GSK_RENDERER", "cairo", 1);
+            /* Drawing the titlebar the GTK4 way makes client apps using EGL fail, unless
+             env variable GSK_RENDERER is set to "cairo" or to "vulkan". */
+            setenv("GSK_RENDERER", "cairo", 1);
 #endif
-
-  g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
-         color_scheme == LIBDECOR_COLOR_SCHEME_PREFER_DARK, NULL);
-  return false;
+            
+            g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
+                         color_scheme == LIBDECOR_COLOR_SCHEME_PREFER_DARK, NULL);
+  }
+  *(bool*)shm_mmap = b;
 }
 
 
@@ -211,13 +216,15 @@ struct header_element_data get_header_focus(const GtkHeaderBar *header_bar, cons
 }
 
 
-void destroy_window_header(GtkWidget *window, GtkWidget *header) {
+void destroy_window_header(char *shm_mmap) {
+  struct libdecor_frame_gtk frame_gtk;
+  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)shm_mmap, sizeof(struct libdecor_frame_gtk));
 #if GTK_MAJOR_VERSION == 3
-  gtk_widget_destroy(header);
-  gtk_widget_destroy(window);
+  gtk_widget_destroy(frame_gtk.header);
+  gtk_widget_destroy(frame_gtk.window);
 #else
-  if (window) {
-    gtk_window_destroy((GtkWindow*)window);
+  if (frame_gtk.window) {
+    gtk_window_destroy((GtkWindow*)frame_gtk.window);
   }
 #endif
 }
@@ -602,33 +609,38 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
 }
 #endif
 
-void draw_header(struct libdecor_frame_gtk *frame_gtk, int W, int H, int scale)
+
+void draw_header(char *shm_mmap)
 {
-  struct libdecor_plugin_gtk *plugin_gtk = frame_gtk->plugin_gtk;
-  cairo_surface_t *surface = cairo_image_surface_create_for_data(
-        plugin_gtk->shm_mmap, CAIRO_FORMAT_ARGB32,
+  int W, H, scale;
+  struct libdecor_frame_gtk frame_gtk;
+  W = *(int*)shm_mmap;
+  H = *(int*)(shm_mmap + sizeof(int));
+  scale = *(int*)(shm_mmap + 2 * sizeof(int));
+  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)(shm_mmap + 3 * sizeof(int)), sizeof(struct libdecor_frame_gtk));
+  cairo_surface_t *surface = cairo_image_surface_create_for_data((unsigned char*)shm_mmap, CAIRO_FORMAT_ARGB32,
         W, H, cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W));
   cairo_surface_set_device_scale(surface, scale, scale);
   cairo_t *cr = cairo_create(surface);
 
 #if GTK_MAJOR_VERSION == 3
-  draw_header_background(frame_gtk, cr);
-  draw_header_title(frame_gtk, surface);
-  draw_header_buttons(frame_gtk, cr, surface);
+  draw_header_background(&frame_gtk, cr);
+  draw_header_title(&frame_gtk, surface);
+  draw_header_buttons(&frame_gtk, cr, surface);
 #else
   GtkAllocation allocation = {0, 0, 0, 0};
   graphene_rect_t out_bounds;
   GtkSnapshot *snapshot;
   GskRenderNode *rendernode;
   snapshot = gtk_snapshot_new();
-  gtk_widget_set_visible(frame_gtk->window, true);
-  if (gtk_widget_compute_bounds(frame_gtk->header, frame_gtk->header, &out_bounds)) {
+  gtk_widget_set_visible(frame_gtk.window, true);
+  if (gtk_widget_compute_bounds(frame_gtk.header, frame_gtk.header, &out_bounds)) {
     allocation.width = (int)out_bounds.size.width;
     allocation.height = (int)out_bounds.size.height;
   }
-  gtk_widget_size_allocate(frame_gtk->header, &allocation, -1);
-  gtk_widget_snapshot_child(frame_gtk->window, frame_gtk->header, snapshot);
-  gtk_widget_set_visible(frame_gtk->window, false);
+  gtk_widget_size_allocate(frame_gtk.header, &allocation, -1);
+  gtk_widget_snapshot_child(frame_gtk.window, frame_gtk.header, snapshot);
+  gtk_widget_set_visible(frame_gtk.window, false);
   rendernode = gtk_snapshot_free_to_node(snapshot);
   gsk_render_node_draw(rendernode, cr);
   gsk_render_node_unref(rendernode);
