@@ -4,6 +4,7 @@
 #include "desktop-settings.h"
 
 #include <gtk/gtk.h>
+#include <sys/mman.h>
 
 #if GTK_MAJOR_VERSION != 3 && GTK_MAJOR_VERSION != 4
 # error GTK3 or GTK4 is required
@@ -18,10 +19,12 @@
 
 typedef unsigned char uchar;
 
-static void child_gtk_init(char *shm_mmap) {
+char *global_shm_mmap;
+
+static void child_gtk_init() {
   uint32_t color_scheme;
   bool b = false;
-  color_scheme = *(uint32_t*)shm_mmap;
+  color_scheme = *(uint32_t*)global_shm_mmap;
   gdk_set_allowed_backends("wayland");
   gtk_disable_setlocale();
 
@@ -42,13 +45,13 @@ static void child_gtk_init(char *shm_mmap) {
             g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
                          color_scheme == LIBDECOR_COLOR_SCHEME_PREFER_DARK, NULL);
   }
-  *(bool*)shm_mmap = b;
+  *(bool*)global_shm_mmap = b;
 }
 
 
-static void child_get_allocated_WH(char *shm_mmap) {
+static void child_get_allocated_WH() {
   int W = 0, H = 0;
-  GtkWidget *header = *(GtkWidget**)shm_mmap;
+  GtkWidget *header = *(GtkWidget**)global_shm_mmap;
   if (GTK_IS_WIDGET(header)) {
 #if GTK_MAJOR_VERSION == 3
     W = gtk_widget_get_allocated_width(header);
@@ -61,8 +64,8 @@ static void child_get_allocated_WH(char *shm_mmap) {
     }
 #endif
   }
-  *(int*)shm_mmap = W;
-  *(int*)(shm_mmap + sizeof(int)) = H;
+  *(int*)global_shm_mmap = W;
+  *(int*)(global_shm_mmap + sizeof(int)) = H;
 }
 
 
@@ -183,9 +186,9 @@ in_region(const cairo_rectangle_int_t *rect, const int *x, const int *y)
 }
 
 
-static void get_header_focus(char *shm_mmap)
+static void get_header_focus()
 {
-  char *p = shm_mmap;
+  char *p = global_shm_mmap;
   GtkHeaderBar *header_bar;
   int x, y;
   /* we have to check child widgets (buttons, title) before the 'HDR_HDR' root widget */
@@ -214,20 +217,20 @@ static void get_header_focus(char *shm_mmap)
 #endif
       if (in_region(&allocation, &x, &y)) {
         elem.name = NULL; // for security because that's a pointer in child's address space
-        memcpy(shm_mmap, &elem, sizeof(struct header_element_data));
+        memcpy(global_shm_mmap, &elem, sizeof(struct header_element_data));
         return;
       }
     }
   }
 
   struct header_element_data elem_none = { .widget=NULL};
-  memcpy(shm_mmap, &elem_none, sizeof(struct header_element_data));
+  memcpy(global_shm_mmap, &elem_none, sizeof(struct header_element_data));
 }
 
 
-static void destroy_window_header(char *shm_mmap) {
+static void destroy_window_header() {
   struct libdecor_frame_gtk frame_gtk;
-  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)shm_mmap, sizeof(struct libdecor_frame_gtk));
+  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)global_shm_mmap, sizeof(struct libdecor_frame_gtk));
 #if GTK_MAJOR_VERSION == 3
   gtk_widget_destroy(frame_gtk.header);
   gtk_widget_destroy(frame_gtk.window);
@@ -240,7 +243,7 @@ static void destroy_window_header(char *shm_mmap) {
 
 
 static void
-ensure_title_bar_surfaces(char *shm_mmap)
+ensure_title_bar_surfaces()
 {
   struct libdecor_frame_gtk frame_gtk;
   const char *title;
@@ -250,7 +253,7 @@ ensure_title_bar_surfaces(char *shm_mmap)
   GtkStyleContext *context_hdr;
 #endif
 
-  p = shm_mmap;
+  p = global_shm_mmap;
   memcpy(&frame_gtk, p, sizeof(struct libdecor_frame_gtk));
   p += sizeof(struct libdecor_frame_gtk);
   resizable = *(int*)p; p += sizeof(int);
@@ -311,7 +314,7 @@ ensure_title_bar_surfaces(char *shm_mmap)
 #endif
 
   gtk_window_set_resizable(GTK_WINDOW(frame_gtk.window), resizable);
-  p = shm_mmap;
+  p = global_shm_mmap;
   memcpy(p, &frame_gtk, sizeof(struct libdecor_frame_gtk));
     p += sizeof(struct libdecor_frame_gtk);
   *(int*)p = double_click_time_ms; p += sizeof(int);
@@ -319,7 +322,7 @@ ensure_title_bar_surfaces(char *shm_mmap)
 }
 
 
-static void draw_title_bar_child(char *shm_mmap)
+static void draw_title_bar_child()
 {
   char *p, *title;
   int state, floating, need_commit = false;
@@ -330,7 +333,7 @@ static void draw_title_bar_child(char *shm_mmap)
   int pref_width;
   int current_min_w, current_min_h, current_max_w, current_max_h, W, H;
   struct libdecor_frame_gtk frame_gtk;
-  p = shm_mmap;
+  p = global_shm_mmap;
   memcpy(&frame_gtk, p, sizeof(struct libdecor_frame_gtk));
     p += sizeof(struct libdecor_frame_gtk);
   state = *(int*)p; p += sizeof(int);
@@ -413,7 +416,7 @@ static void draw_title_bar_child(char *shm_mmap)
 #endif
                              );
   }
-  p = shm_mmap;
+  p = global_shm_mmap;
   memcpy(p, &need_commit, sizeof(int)); p += sizeof(int);
   memcpy(p, &current_min_w, sizeof(int)); p += sizeof(int);
   memcpy(p, &current_min_h, sizeof(int)); p += sizeof(int);
@@ -640,17 +643,17 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
 #endif
 
 
-static void draw_header(char *shm_mmap)
+static void draw_header()
 {
   int W, H, scale, window_state, capabilities;
   struct libdecor_frame_gtk frame_gtk;
-  W = *(int*)shm_mmap;
-  H = *(int*)(shm_mmap + sizeof(int));
-  scale = *(int*)(shm_mmap + 2 * sizeof(int));
-  window_state = *(int*)(shm_mmap + 3 * sizeof(int));
-  capabilities = *(int*)(shm_mmap + 4 * sizeof(int));
-  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)(shm_mmap + 5 * sizeof(int)), sizeof(struct libdecor_frame_gtk));
-  cairo_surface_t *surface = cairo_image_surface_create_for_data((unsigned char*)shm_mmap, CAIRO_FORMAT_ARGB32,
+  W = *(int*)global_shm_mmap;
+  H = *(int*)(global_shm_mmap + sizeof(int));
+  scale = *(int*)(global_shm_mmap + 2 * sizeof(int));
+  window_state = *(int*)(global_shm_mmap + 3 * sizeof(int));
+  capabilities = *(int*)(global_shm_mmap + 4 * sizeof(int));
+  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)(global_shm_mmap + 5 * sizeof(int)), sizeof(struct libdecor_frame_gtk));
+  cairo_surface_t *surface = cairo_image_surface_create_for_data((unsigned char*)global_shm_mmap, CAIRO_FORMAT_ARGB32,
         W, H, cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W));
   cairo_surface_set_device_scale(surface, scale, scale);
   cairo_t *cr = cairo_create(surface);
@@ -681,41 +684,60 @@ static void draw_header(char *shm_mmap)
   cairo_destroy(cr);
 }
 
-int shm_pipeio[2];
 
-void execute_child_operation(char *shm_mmap, enum child_commands cmd) {
-  write(shm_pipeio[1], &cmd, sizeof(enum child_commands));
-  read(shm_pipeio[0], &cmd, sizeof(enum child_commands));
-  switch (cmd) {
-    case CHILD_INIT:
-      child_gtk_init(shm_mmap);
-      break;
-      
-    case CHILD_DRAW_HEADER:
-      draw_header(shm_mmap);
-      break;
-      
-    case CHILD_DESTROY_HEADER:
-      destroy_window_header(shm_mmap);
-      break;
-      
-    case CHILD_DRAW_TITLEBAR:
-      draw_title_bar_child(shm_mmap);
-      break;
-      
-    case CHILD_ENSURE_SURFACES:
-      ensure_title_bar_surfaces(shm_mmap);
-      break;
-      
-    case CHILD_GET_FOCUS:
-      get_header_focus(shm_mmap);
-      break;
-      
-    case CHILD_GET_ALLOCATED_WH:
-      child_get_allocated_WH(shm_mmap);
-      break;
-      
-    default:
-      break;
+int shm_pipe_to_child[2];
+int shm_pipe_from_child[2];
+
+
+void child_execute_operation() {
+  enum child_commands cmd;
+  ssize_t r;
+  while (true) {
+    r = read(shm_pipe_to_child[0], &cmd, sizeof(enum child_commands));
+    if (r <= 0) exit(0);
+    //printf("child reads %d\n",cmd);
+    switch (cmd) {
+      case CHILD_INIT:
+        child_gtk_init();
+        break;
+        
+      case CHILD_DRAW_HEADER:
+        draw_header();
+        break;
+        
+      case CHILD_DESTROY_HEADER:
+        destroy_window_header();
+        break;
+        
+      case CHILD_DRAW_TITLEBAR:
+        draw_title_bar_child();
+        break;
+        
+      case CHILD_ENSURE_SURFACES:
+        ensure_title_bar_surfaces();
+        break;
+        
+      case CHILD_GET_FOCUS:
+        get_header_focus();
+        break;
+        
+      case CHILD_GET_ALLOCATED_WH:
+        child_get_allocated_WH();
+        break;
+        
+      default:
+        break;
+    }
+    cmd = CHILD_OP_COMPLETED;
+    //printf("child writes %d\n",cmd);
+    write(shm_pipe_from_child[1], &cmd, sizeof(enum child_commands));
   }
 }
+
+
+void ask_child_for_operation(enum child_commands cmd) {
+  //printf("parent writes %d\n",cmd);
+  write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
+  read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+  //printf("parent has read %d\n",cmd);
+  }
