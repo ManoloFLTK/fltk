@@ -138,7 +138,6 @@ struct cursor_output {
 };
 
 //todo:
-extern void child_get_allocated_WH(struct libdecor_frame_gtk *frame_gtk, int *pW, int *pH);
 //done:
 extern void child_gtk_init(char *shm_mmap);
 extern void draw_header(char *shm_mmap);
@@ -146,6 +145,7 @@ extern void destroy_window_header(char *shm_mmap);
 extern void draw_title_bar_child(char *shm_mmap);
 extern void ensure_title_bar_surfaces(char *shm_mmap);
 extern void get_header_focus(char *shm_mmap);
+extern void child_get_allocated_WH(char *shm_mmap);
 
 
 static const char *libdecor_gtk_proxy_tag = "libdecor-gtk";
@@ -734,7 +734,10 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 
 	/* avoid warning when restoring previously turned off decoration */
 	int title_height;
-	child_get_allocated_WH(frame_gtk, NULL, &title_height);
+	char *shm_mmap = ((struct libdecor_frame_gtk *)frame)->plugin_gtk->shm_mmap;
+	*(GtkWidget**)shm_mmap = frame_gtk->header;
+	child_get_allocated_WH(shm_mmap);
+	title_height = *(int*)(shm_mmap + sizeof(int));
 
 	switch (component) {
 	case NONE:
@@ -753,7 +756,9 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 		*component_x = 0;
 		/* reuse product of function call above */
 		*component_y = - title_height;
-		child_get_allocated_WH(frame_gtk, component_width, NULL);
+		*(GtkWidget**)shm_mmap = frame_gtk->header;
+		child_get_allocated_WH(shm_mmap);
+		*component_width = *(int*)shm_mmap;
 		/* reuse product of function call above */
 		*component_height = title_height;
 		return;
@@ -1343,10 +1348,13 @@ libdecor_plugin_gtk_frame_get_border_size(struct libdecor_plugin *plugin,
 
 		/* avoid warnings after decoration has been turned off */
 		if (header && (type != DECORATION_TYPE_NONE)) {
+			char *shm_mmap = ((struct libdecor_frame_gtk *)frame)->plugin_gtk->shm_mmap;
 			/* Redraw title bar to ensure size will be up-to-date */
 			if (configuration && type == DECORATION_TYPE_TITLE_ONLY)
 				draw_title_bar((struct libdecor_frame_gtk *) frame);
-			child_get_allocated_WH((struct libdecor_frame_gtk *)frame, NULL, top);
+			*(GtkWidget**)shm_mmap = header;
+			child_get_allocated_WH(shm_mmap);
+			*top = *(int*)(shm_mmap + sizeof(int));
 		} else {
 			*top = 0;
 		}
@@ -1836,7 +1844,10 @@ handle_titlebar_gesture(struct libdecor_frame_gtk *frame_gtk,
 	case TITLEBAR_GESTURE_RIGHT_CLICK:
 		{
 		int title_height;
-		child_get_allocated_WH(frame_gtk, NULL, &title_height);
+		char *shm_mmap = frame_gtk->plugin_gtk->shm_mmap;
+		*(GtkWidget**)shm_mmap = frame_gtk->header;
+		child_get_allocated_WH(shm_mmap);
+		title_height = *(int*)(shm_mmap + sizeof(int));
 		libdecor_frame_show_window_menu(&frame_gtk->frame,
 						seat->wl_seat,
 						serial,

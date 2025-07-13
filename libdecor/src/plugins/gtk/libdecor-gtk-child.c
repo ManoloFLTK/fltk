@@ -46,23 +46,23 @@ void child_gtk_init(char *shm_mmap) {
 }
 
 
-void child_get_allocated_WH(struct libdecor_frame_gtk *frame_gtk, int *pW, int *pH) {
-  if (!GTK_IS_WIDGET(frame_gtk->header)) {
-    if (pW) *pW = 0;
-    if (pH) *pH = 0;
-    return;
-  }
+void child_get_allocated_WH(char *shm_mmap) {
+  int W = 0, H = 0;
+  GtkWidget *header = *(GtkWidget**)shm_mmap;
+  if (GTK_IS_WIDGET(header)) {
 #if GTK_MAJOR_VERSION == 3
-  if (pW) *pW = gtk_widget_get_allocated_width(frame_gtk->header);
-  if (pH) *pH = gtk_widget_get_allocated_height(frame_gtk->header);
+    W = gtk_widget_get_allocated_width(header);
+    H = gtk_widget_get_allocated_height(header);
 #else
-  graphene_rect_t out_bounds;
-  if (gtk_widget_compute_bounds(frame_gtk->header,
-                                gtk_widget_get_parent(frame_gtk->header), &out_bounds)) {
-    if (pW) *pW = out_bounds.size.width;
-    if (pH) *pH = out_bounds.size.height;
-  }
+    graphene_rect_t out_bounds;
+    if (gtk_widget_compute_bounds(header, gtk_widget_get_parent(header), &out_bounds)) {
+      W = out_bounds.size.width;
+      H = out_bounds.size.height;
+    }
 #endif
+  }
+  *(int*)shm_mmap = W;
+  *(int*)(shm_mmap + sizeof(int)) = H;
 }
 
 
