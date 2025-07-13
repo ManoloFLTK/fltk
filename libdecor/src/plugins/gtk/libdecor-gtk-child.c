@@ -18,7 +18,7 @@
 
 typedef unsigned char uchar;
 
-void child_gtk_init(char *shm_mmap) {
+static void child_gtk_init(char *shm_mmap) {
   uint32_t color_scheme;
   bool b = false;
   color_scheme = *(uint32_t*)shm_mmap;
@@ -46,7 +46,7 @@ void child_gtk_init(char *shm_mmap) {
 }
 
 
-void child_get_allocated_WH(char *shm_mmap) {
+static void child_get_allocated_WH(char *shm_mmap) {
   int W = 0, H = 0;
   GtkWidget *header = *(GtkWidget**)shm_mmap;
   if (GTK_IS_WIDGET(header)) {
@@ -183,7 +183,7 @@ in_region(const cairo_rectangle_int_t *rect, const int *x, const int *y)
 }
 
 
-void get_header_focus(char *shm_mmap)
+static void get_header_focus(char *shm_mmap)
 {
   char *p = shm_mmap;
   GtkHeaderBar *header_bar;
@@ -225,7 +225,7 @@ void get_header_focus(char *shm_mmap)
 }
 
 
-void destroy_window_header(char *shm_mmap) {
+static void destroy_window_header(char *shm_mmap) {
   struct libdecor_frame_gtk frame_gtk;
   memcpy(&frame_gtk, (struct libdecor_frame_gtk*)shm_mmap, sizeof(struct libdecor_frame_gtk));
 #if GTK_MAJOR_VERSION == 3
@@ -239,7 +239,7 @@ void destroy_window_header(char *shm_mmap) {
 }
 
 
-void
+static void
 ensure_title_bar_surfaces(char *shm_mmap)
 {
   struct libdecor_frame_gtk frame_gtk;
@@ -319,7 +319,7 @@ ensure_title_bar_surfaces(char *shm_mmap)
 }
 
 
-void draw_title_bar_child(char *shm_mmap)
+static void draw_title_bar_child(char *shm_mmap)
 {
   char *p, *title;
   int state, floating, need_commit = false;
@@ -640,7 +640,7 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
 #endif
 
 
-void draw_header(char *shm_mmap)
+static void draw_header(char *shm_mmap)
 {
   int W, H, scale, window_state, capabilities;
   struct libdecor_frame_gtk frame_gtk;
@@ -681,3 +681,41 @@ void draw_header(char *shm_mmap)
   cairo_destroy(cr);
 }
 
+int shm_pipeio[2];
+
+void execute_child_operation(char *shm_mmap, enum child_commands cmd) {
+  write(shm_pipeio[1], &cmd, sizeof(enum child_commands));
+  read(shm_pipeio[0], &cmd, sizeof(enum child_commands));
+  switch (cmd) {
+    case CHILD_INIT:
+      child_gtk_init(shm_mmap);
+      break;
+      
+    case CHILD_DRAW_HEADER:
+      draw_header(shm_mmap);
+      break;
+      
+    case CHILD_DESTROY_HEADER:
+      destroy_window_header(shm_mmap);
+      break;
+      
+    case CHILD_DRAW_TITLEBAR:
+      draw_title_bar_child(shm_mmap);
+      break;
+      
+    case CHILD_ENSURE_SURFACES:
+      ensure_title_bar_surfaces(shm_mmap);
+      break;
+      
+    case CHILD_GET_FOCUS:
+      get_header_focus(shm_mmap);
+      break;
+      
+    case CHILD_GET_ALLOCATED_WH:
+      child_get_allocated_WH(shm_mmap);
+      break;
+      
+    default:
+      break;
+  }
+}

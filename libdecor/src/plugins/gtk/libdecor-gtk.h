@@ -1,3 +1,16 @@
+
+
+enum child_commands {
+  CHILD_INIT = 1,
+  CHILD_DRAW_HEADER,
+  CHILD_DESTROY_HEADER,
+  CHILD_DRAW_TITLEBAR,
+  CHILD_ENSURE_SURFACES,
+  CHILD_GET_FOCUS,
+  CHILD_GET_ALLOCATED_WH,
+};
+
+
 enum header_element {
   HEADER_NONE,
   HEADER_FULL, /* entire header bar */

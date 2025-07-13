@@ -139,13 +139,15 @@ struct cursor_output {
 
 //todo:
 //done:
-extern void child_gtk_init(char *shm_mmap);
-extern void draw_header(char *shm_mmap);
-extern void destroy_window_header(char *shm_mmap);
-extern void draw_title_bar_child(char *shm_mmap);
-extern void ensure_title_bar_surfaces(char *shm_mmap);
-extern void get_header_focus(char *shm_mmap);
-extern void child_get_allocated_WH(char *shm_mmap);
+extern int shm_pipeio[2];
+extern void execute_child_operation(char *shm_mmap, enum child_commands cmd);
+//extern void child_gtk_init(char *shm_mmap);
+//extern void draw_header(char *shm_mmap);
+//extern void destroy_window_header(char *shm_mmap);
+//extern void draw_title_bar_child(char *shm_mmap);
+//extern void ensure_title_bar_surfaces(char *shm_mmap);
+//extern void get_header_focus(char *shm_mmap);
+//extern void child_get_allocated_WH(char *shm_mmap);
 
 
 static const char *libdecor_gtk_proxy_tag = "libdecor-gtk";
@@ -506,7 +508,7 @@ libdecor_plugin_gtk_frame_free(struct libdecor_plugin *plugin, struct libdecor_f
 	struct libdecor_frame_gtk *frame_gtk = (struct libdecor_frame_gtk *)frame;
 	struct libdecor_plugin_gtk *plugin_gtk = (struct libdecor_plugin_gtk *)plugin;
 	memcpy(plugin_gtk->shm_mmap, frame_gtk, sizeof(struct libdecor_frame_gtk));
-	destroy_window_header((char*)plugin_gtk->shm_mmap);
+	execute_child_operation((char*)plugin_gtk->shm_mmap, CHILD_DESTROY_HEADER);
 	frame_gtk->window = NULL;
 	frame_gtk->header = NULL;
 	
@@ -736,7 +738,7 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 	int title_height;
 	char *shm_mmap = ((struct libdecor_frame_gtk *)frame)->plugin_gtk->shm_mmap;
 	*(GtkWidget**)shm_mmap = frame_gtk->header;
-	child_get_allocated_WH(shm_mmap);
+	execute_child_operation(shm_mmap, CHILD_GET_ALLOCATED_WH);
 	title_height = *(int*)(shm_mmap + sizeof(int));
 
 	switch (component) {
@@ -757,7 +759,7 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 		/* reuse product of function call above */
 		*component_y = - title_height;
 		*(GtkWidget**)shm_mmap = frame_gtk->header;
-		child_get_allocated_WH(shm_mmap);
+		execute_child_operation(shm_mmap, CHILD_GET_ALLOCATED_WH);
 		*component_width = *(int*)shm_mmap;
 		/* reuse product of function call above */
 		*component_height = title_height;
@@ -827,7 +829,7 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 		*(int*)((char*)plugin_gtk->shm_mmap + 4 * sizeof(int)) = capabilities;
 		memcpy((char*)plugin_gtk->shm_mmap + 5 * sizeof(int), frame_gtk,
 		       sizeof(struct libdecor_frame_gtk));
-		draw_header((char*)plugin_gtk->shm_mmap);
+		execute_child_operation((char*)plugin_gtk->shm_mmap, CHILD_DRAW_HEADER);
 		memcpy(buffer->data, plugin_gtk->shm_mmap, surface_size);
 		break;
 	}
@@ -971,7 +973,7 @@ static void draw_title_bar(struct libdecor_frame_gtk *frame_gtk) {
 	memcpy(p, &W, sizeof(int)); p += sizeof(int);
 	title = libdecor_frame_get_title((struct libdecor_frame*)frame_gtk);
 	memcpy(p, title, strlen(title) + 1);
-	draw_title_bar_child((char*)frame_gtk->plugin_gtk->shm_mmap);
+	execute_child_operation((char*)frame_gtk->plugin_gtk->shm_mmap, CHILD_DRAW_TITLEBAR);
 	p = frame_gtk->plugin_gtk->shm_mmap;
 	need_commit = *(int*)p; p += sizeof(int);
 	current_min_w = *(int*)p; p += sizeof(int);
@@ -1002,7 +1004,7 @@ static void call_ensure_surfaces(struct libdecor_frame_gtk *frame_gtk)
 	title = libdecor_frame_get_title(&frame_gtk->frame);
 	memcpy(p, title, strlen(title) + 1);
 	
-	ensure_title_bar_surfaces(plugin_gtk->shm_mmap);
+	execute_child_operation(plugin_gtk->shm_mmap, CHILD_ENSURE_SURFACES);
 	
 	p = plugin_gtk->shm_mmap;
 	memcpy(frame_gtk, p, sizeof(struct libdecor_frame_gtk));
@@ -1353,7 +1355,7 @@ libdecor_plugin_gtk_frame_get_border_size(struct libdecor_plugin *plugin,
 			if (configuration && type == DECORATION_TYPE_TITLE_ONLY)
 				draw_title_bar((struct libdecor_frame_gtk *) frame);
 			*(GtkWidget**)shm_mmap = header;
-			child_get_allocated_WH(shm_mmap);
+			execute_child_operation(shm_mmap, CHILD_GET_ALLOCATED_WH);
 			*top = *(int*)(shm_mmap + sizeof(int));
 		} else {
 			*top = 0;
@@ -1767,7 +1769,7 @@ pointer_motion(void *data,
 	*(GtkHeaderBar**)p = (GtkHeaderBar*)frame_gtk->header; p += sizeof(GtkHeaderBar*);
 	*(int*)p = seat->pointer_x; p += sizeof(int);
 	*(int*)p = seat->pointer_y;
-	get_header_focus(frame_gtk->plugin_gtk->shm_mmap);
+	execute_child_operation(frame_gtk->plugin_gtk->shm_mmap, CHILD_GET_FOCUS);
 	memcpy(&new_focus, frame_gtk->plugin_gtk->shm_mmap, sizeof(struct header_element_data));
 
 	/* only update if widget change so that we keep the state */
@@ -1846,7 +1848,7 @@ handle_titlebar_gesture(struct libdecor_frame_gtk *frame_gtk,
 		int title_height;
 		char *shm_mmap = frame_gtk->plugin_gtk->shm_mmap;
 		*(GtkWidget**)shm_mmap = frame_gtk->header;
-		child_get_allocated_WH(shm_mmap);
+		execute_child_operation(shm_mmap, CHILD_GET_ALLOCATED_WH);
 		title_height = *(int*)(shm_mmap + sizeof(int));
 		libdecor_frame_show_window_menu(&frame_gtk->frame,
 						seat->wl_seat,
@@ -2043,7 +2045,7 @@ update_touch_focus(struct seat *seat,
 		*(GtkHeaderBar**)p = (GtkHeaderBar*)frame_gtk->header; p += sizeof(GtkHeaderBar*);
 		*(int*)p = seat->pointer_x; p += sizeof(int);
 		*(int*)p = seat->pointer_y;
-		get_header_focus(frame_gtk->plugin_gtk->shm_mmap);
+		execute_child_operation(frame_gtk->plugin_gtk->shm_mmap, CHILD_GET_FOCUS);
 		memcpy(&new_focus, frame_gtk->plugin_gtk->shm_mmap, sizeof(struct header_element_data));
 
 		/* only update if widget change so that we keep the state */
@@ -2564,9 +2566,11 @@ libdecor_plugin_new(struct libdecor *context)
 	plugin_gtk->shm_size = 50000;
 	plugin_gtk->shm_mmap = mmap(NULL, plugin_gtk->shm_size, PROT_READ|PROT_WRITE,
 				    MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-	/* setup GTK context */
+/* create pipe to communicate with child */
+	pipe(shm_pipeio);
+/* ask child to setup GTK context */
 	*(uint32_t*)plugin_gtk->shm_mmap = plugin_gtk->color_scheme_setting;
-	child_gtk_init((char*)plugin_gtk->shm_mmap);
+	execute_child_operation((char*)plugin_gtk->shm_mmap, CHILD_INIT);
 	b = *(bool*)plugin_gtk->shm_mmap;
 	if (b) {
 		libdecor_plugin_gtk_destroy(&plugin_gtk->plugin);
