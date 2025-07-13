@@ -140,7 +140,6 @@ struct cursor_output {
 extern char *global_shm_mmap;
 extern int shm_pipe_to_child[2];
 extern int shm_pipe_from_child[2];
-extern void ask_child_for_operation(enum child_commands cmd);
 extern void child_execute_operation();
 
 
@@ -496,6 +495,15 @@ free_border_component(struct border_component *border_component)
 	}
 }
 
+
+static void ask_child_for_operation(enum child_commands cmd) {
+  //printf("parent writes %d\n",cmd);
+  write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
+  read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+  //printf("parent has read %d\n",cmd);
+  }
+
+
 static void
 libdecor_plugin_gtk_frame_free(struct libdecor_plugin *plugin, struct libdecor_frame *frame)
 {
@@ -782,7 +790,7 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 	off_t surface_size = buffer->buffer_height *
 	  cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
 	if (component == HEADER && surface_size > plugin_gtk->shm_size) {
-		fprintf(stderr, "Error: shared memory too small - got=%lld need=%lld\n",
+		fprintf(stderr, "Error: libdecor-gtk shared memory too small - got=%lld need=%lld\n",
 			plugin_gtk->shm_size, surface_size);
 		exit(1);
 	}
@@ -2554,7 +2562,7 @@ libdecor_plugin_new(struct libdecor *context)
 		return NULL;
 	}
 /* initialize shared memory trunk */
-	plugin_gtk->shm_size = 5000000;
+	plugin_gtk->shm_size = 2000000; /* enough for headerbar across 3 large HiDPI screens */
 	plugin_gtk->shm_mmap = mmap(NULL, plugin_gtk->shm_size, PROT_READ|PROT_WRITE,
 				    MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 /* create two pipes to communicate with child */
@@ -2571,7 +2579,7 @@ libdecor_plugin_new(struct libdecor *context)
 		close(shm_pipe_to_child[1]);
 		close(shm_pipe_from_child[0]);
 		child_execute_operation();
-		exit(0);
+		exit(0); /* should not occur */
 	}
 /* this is the parent process */
 	close(shm_pipe_to_child[0]);

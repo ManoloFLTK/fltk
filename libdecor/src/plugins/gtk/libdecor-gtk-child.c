@@ -733,11 +733,3 @@ void child_execute_operation() {
     write(shm_pipe_from_child[1], &cmd, sizeof(enum child_commands));
   }
 }
-
-
-void ask_child_for_operation(enum child_commands cmd) {
-  //printf("parent writes %d\n",cmd);
-  write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-  read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
-  //printf("parent has read %d\n",cmd);
-  }
