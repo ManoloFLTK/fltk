@@ -108,8 +108,10 @@ struct libdecor_plugin_gtk {
 
   bool handle_cursor;
   
-  off_t shm_size;
-  void *shm_mmap;
+  void *child_mmap;
+  int child_fd;
+  off_t child_size;
+  char shared_name[32];
 };
 
 

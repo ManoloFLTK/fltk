@@ -19,12 +19,18 @@
 
 typedef unsigned char uchar;
 
-char *global_shm_mmap;
+int shm_pipe_to_child[2];
+int shm_pipe_from_child[2];
+static int child_fd;
+static void *mmap_data;
+static off_t child_size;
+
 
 static void child_gtk_init() {
   uint32_t color_scheme;
   bool b = false;
-  color_scheme = *(uint32_t*)global_shm_mmap;
+  read(shm_pipe_to_child[0], &child_fd, sizeof(int));
+  read(shm_pipe_to_child[0], &color_scheme, sizeof(uint32_t));
   gdk_set_allowed_backends("wayland");
   gtk_disable_setlocale();
 
@@ -45,13 +51,16 @@ static void child_gtk_init() {
             g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
                          color_scheme == LIBDECOR_COLOR_SCHEME_PREFER_DARK, NULL);
   }
-  *(bool*)global_shm_mmap = b;
+  write(shm_pipe_from_child[1], &b, sizeof(bool));
+  mmap_data = NULL;
+  child_size = 0;
 }
 
 
 static void child_get_allocated_WH() {
   int W = 0, H = 0;
-  GtkWidget *header = *(GtkWidget**)global_shm_mmap;
+  GtkWidget *header;
+  read(shm_pipe_to_child[0], &header, sizeof(GtkWidget*));
   if (GTK_IS_WIDGET(header)) {
 #if GTK_MAJOR_VERSION == 3
     W = gtk_widget_get_allocated_width(header);
@@ -64,8 +73,8 @@ static void child_get_allocated_WH() {
     }
 #endif
   }
-  *(int*)global_shm_mmap = W;
-  *(int*)(global_shm_mmap + sizeof(int)) = H;
+  write(shm_pipe_from_child[1], &W, sizeof(int));
+  write(shm_pipe_from_child[1], &H, sizeof(int));
 }
 
 
@@ -188,16 +197,15 @@ in_region(const cairo_rectangle_int_t *rect, const int *x, const int *y)
 
 static void get_header_focus()
 {
-  char *p = global_shm_mmap;
   GtkHeaderBar *header_bar;
   int x, y;
   /* we have to check child widgets (buttons, title) before the 'HDR_HDR' root widget */
   static const enum header_element elems[] =
     {HEADER_TITLE, HEADER_MIN, HEADER_MAX, HEADER_CLOSE};
 
-  header_bar = *(GtkHeaderBar**)p; p += sizeof(GtkHeaderBar*);
-  x = *(int*)p; p += sizeof(int);
-  y = *(int*)p;
+  read(shm_pipe_to_child[0], &header_bar, sizeof(GtkHeaderBar*));
+  read(shm_pipe_to_child[0], &x, sizeof(int));
+  read(shm_pipe_to_child[0], &y, sizeof(int));
   if (GTK_HEADER_BAR(header_bar)) for (size_t i = 0; i < ARRAY_SIZE(elems); i++) {
     struct header_element_data elem =
       find_widget_by_type(GTK_WIDGET(header_bar), elems[i]);
@@ -217,26 +225,27 @@ static void get_header_focus()
 #endif
       if (in_region(&allocation, &x, &y)) {
         elem.name = NULL; // for security because that's a pointer in child's address space
-        memcpy(global_shm_mmap, &elem, sizeof(struct header_element_data));
+        write(shm_pipe_from_child[1], &elem, sizeof(struct header_element_data));
         return;
       }
     }
   }
 
   struct header_element_data elem_none = { .widget=NULL};
-  memcpy(global_shm_mmap, &elem_none, sizeof(struct header_element_data));
+  write(shm_pipe_from_child[1], &elem_none, sizeof(struct header_element_data));
 }
 
 
 static void destroy_window_header() {
-  struct libdecor_frame_gtk frame_gtk;
-  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)global_shm_mmap, sizeof(struct libdecor_frame_gtk));
+  void *header, *window;
+  read(shm_pipe_to_child[0], &header, sizeof(void*));
+  read(shm_pipe_to_child[0], &window, sizeof(void*));
 #if GTK_MAJOR_VERSION == 3
-  gtk_widget_destroy(frame_gtk.header);
-  gtk_widget_destroy(frame_gtk.window);
+  gtk_widget_destroy(header);
+  gtk_widget_destroy(window);
 #else
-  if (frame_gtk.window) {
-    gtk_window_destroy((GtkWindow*)frame_gtk.window);
+  if (window) {
+    gtk_window_destroy((GtkWindow*)window);
   }
 #endif
 }
@@ -246,18 +255,17 @@ static void
 ensure_title_bar_surfaces()
 {
   struct libdecor_frame_gtk frame_gtk;
-  const char *title;
+  char *p, title[1000];
   int double_click_time_ms, drag_threshold, resizable;
-  char *p;
 #if GTK_MAJOR_VERSION == 3
   GtkStyleContext *context_hdr;
 #endif
 
-  p = global_shm_mmap;
-  memcpy(&frame_gtk, p, sizeof(struct libdecor_frame_gtk));
-  p += sizeof(struct libdecor_frame_gtk);
-  resizable = *(int*)p; p += sizeof(int);
-  title = p;
+  read(shm_pipe_to_child[0], &frame_gtk, sizeof(struct libdecor_frame_gtk));
+  read(shm_pipe_to_child[0], &resizable, sizeof(int));
+  p = title;
+  do read(shm_pipe_to_child[0], p, sizeof(char));
+  while (*p++);
   /* create an offscreen window with a header bar */
   /* TODO: This should only be done once at frame construction, but then
    *       the window and headerbar would not change style (e.g. backdrop)
@@ -314,17 +322,15 @@ ensure_title_bar_surfaces()
 #endif
 
   gtk_window_set_resizable(GTK_WINDOW(frame_gtk.window), resizable);
-  p = global_shm_mmap;
-  memcpy(p, &frame_gtk, sizeof(struct libdecor_frame_gtk));
-    p += sizeof(struct libdecor_frame_gtk);
-  *(int*)p = double_click_time_ms; p += sizeof(int);
-  *(int*)p = drag_threshold;
+  write(shm_pipe_from_child[1], &frame_gtk, sizeof(struct libdecor_frame_gtk));
+  write(shm_pipe_from_child[1], &double_click_time_ms, sizeof(int));
+  write(shm_pipe_from_child[1], &drag_threshold, sizeof(int));
 }
 
 
 static void draw_title_bar_child()
 {
-  char *p, *title;
+  char *p, title[1000];
   int state, floating, need_commit = false;
   GtkAllocation allocation = {0, 0, 0, 0};
 #if GTK_MAJOR_VERSION == 3
@@ -333,18 +339,18 @@ static void draw_title_bar_child()
   int pref_width;
   int current_min_w, current_min_h, current_max_w, current_max_h, W, H;
   struct libdecor_frame_gtk frame_gtk;
-  p = global_shm_mmap;
-  memcpy(&frame_gtk, p, sizeof(struct libdecor_frame_gtk));
-    p += sizeof(struct libdecor_frame_gtk);
-  state = *(int*)p; p += sizeof(int);
-  floating = *(int*)p; p += sizeof(int);
-  current_min_w = *(int*)p; p += sizeof(int);
-  current_min_h = *(int*)p; p += sizeof(int);
-  current_max_w = *(int*)p; p += sizeof(int);
-  current_max_h = *(int*)p; p += sizeof(int);
-  W = *(int*)p; p += sizeof(int);
-  H = *(int*)p; p += sizeof(int);
-  title = p;
+  read(shm_pipe_to_child[0], &frame_gtk, sizeof(struct libdecor_frame_gtk));
+  read(shm_pipe_to_child[0], &state, sizeof(int));
+  read(shm_pipe_to_child[0], &floating, sizeof(int));
+  read(shm_pipe_to_child[0], &current_min_w, sizeof(int));
+  read(shm_pipe_to_child[0], &current_min_h, sizeof(int));
+  read(shm_pipe_to_child[0], &current_max_w, sizeof(int));
+  read(shm_pipe_to_child[0], &current_max_h, sizeof(int));
+  read(shm_pipe_to_child[0], &W, sizeof(int));
+  read(shm_pipe_to_child[0], &H, sizeof(int));
+  p = title;
+  do read(shm_pipe_to_child[0], p, sizeof(char));
+  while (*p++);
   allocation.width = frame_gtk.content_width;
 
 #if GTK_MAJOR_VERSION == 4
@@ -416,14 +422,13 @@ static void draw_title_bar_child()
 #endif
                              );
   }
-  p = global_shm_mmap;
-  memcpy(p, &need_commit, sizeof(int)); p += sizeof(int);
-  memcpy(p, &current_min_w, sizeof(int)); p += sizeof(int);
-  memcpy(p, &current_min_h, sizeof(int)); p += sizeof(int);
-  memcpy(p, &current_max_w, sizeof(int)); p += sizeof(int);
-  memcpy(p, &current_max_h, sizeof(int)); p += sizeof(int);
-  memcpy(p, &W, sizeof(int)); p += sizeof(int);
-  memcpy(p, &H, sizeof(int)); p += sizeof(int);
+  write(shm_pipe_from_child[1], &need_commit, sizeof(int));
+  write(shm_pipe_from_child[1], &current_min_w, sizeof(int));
+  write(shm_pipe_from_child[1], &current_min_h, sizeof(int));
+  write(shm_pipe_from_child[1], &current_max_w, sizeof(int));
+  write(shm_pipe_from_child[1], &current_max_h, sizeof(int));
+  write(shm_pipe_from_child[1], &W, sizeof(int));
+  write(shm_pipe_from_child[1], &H, sizeof(int));
 }
 
 
@@ -646,14 +651,22 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
 static void draw_header()
 {
   int W, H, scale, window_state, capabilities;
+  size_t size;
   struct libdecor_frame_gtk frame_gtk;
-  W = *(int*)global_shm_mmap;
-  H = *(int*)(global_shm_mmap + sizeof(int));
-  scale = *(int*)(global_shm_mmap + 2 * sizeof(int));
-  window_state = *(int*)(global_shm_mmap + 3 * sizeof(int));
-  capabilities = *(int*)(global_shm_mmap + 4 * sizeof(int));
-  memcpy(&frame_gtk, (struct libdecor_frame_gtk*)(global_shm_mmap + 5 * sizeof(int)), sizeof(struct libdecor_frame_gtk));
-  cairo_surface_t *surface = cairo_image_surface_create_for_data((unsigned char*)global_shm_mmap, CAIRO_FORMAT_ARGB32,
+  read(shm_pipe_to_child[0], &W, sizeof(int));
+  read(shm_pipe_to_child[0], &H, sizeof(int));
+  read(shm_pipe_to_child[0], &scale, sizeof(int));
+  read(shm_pipe_to_child[0], &window_state, sizeof(int));
+  read(shm_pipe_to_child[0], &capabilities, sizeof(int));
+  read(shm_pipe_to_child[0], &frame_gtk, sizeof(struct libdecor_frame_gtk));
+  size = H * cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W);
+  if (size > child_size || !mmap_data) {
+    if (mmap_data) munmap(mmap_data, child_size);
+    if (size > child_size) child_size = size;
+    mmap_data = mmap(NULL, child_size, PROT_READ | PROT_WRITE, MAP_SHARED, child_fd, 0);
+  }
+
+  cairo_surface_t *surface = cairo_image_surface_create_for_data(mmap_data, CAIRO_FORMAT_ARGB32,
         W, H, cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W));
   cairo_surface_set_device_scale(surface, scale, scale);
   cairo_t *cr = cairo_create(surface);
@@ -685,11 +698,7 @@ static void draw_header()
 }
 
 
-int shm_pipe_to_child[2];
-int shm_pipe_from_child[2];
-
-
-void child_execute_operation() {
+void child_execute_operations() {
   enum child_commands cmd;
   ssize_t r;
   while (true) {
