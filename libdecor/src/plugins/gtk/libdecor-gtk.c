@@ -139,7 +139,7 @@ struct cursor_output {
 
 static int pipe_to_gtk_child[2];
 static int pipe_from_gtk_child[2];
-extern void libdecor_gtk_child_operate(int pipe_to, int pipe_from);
+extern void libdecor_gtk_child_operate(int pipe_to, int pipe_from, int shared_mem_fd);
 
 static const char *libdecor_gtk_proxy_tag = "libdecor-gtk";
 
@@ -2588,7 +2588,8 @@ libdecor_plugin_new(struct libdecor *context)
 		close(pipe_to_gtk_child[1]);
 		close(pipe_from_gtk_child[0]);
 		close(libdecor_plugin_gtk_get_fd((struct libdecor_plugin *)plugin_gtk));
-		libdecor_gtk_child_operate(pipe_to_gtk_child[0], pipe_from_gtk_child[1]); /* never returns */
+		libdecor_gtk_child_operate(pipe_to_gtk_child[0], pipe_from_gtk_child[1],
+					   plugin_gtk->child_fd); /* never returns */
 	}
 /* this is the parent process */
 	close(pipe_to_gtk_child[0]);
@@ -2596,7 +2597,6 @@ libdecor_plugin_new(struct libdecor *context)
 /* ask child to setup GTK context */
 	enum child_commands cmd = CHILD_INIT;
 	write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
-	write(pipe_to_gtk_child[1], &plugin_gtk->child_fd, sizeof(int));
 	write(pipe_to_gtk_child[1], &plugin_gtk->color_scheme_setting, sizeof(uint32_t));
 	read(pipe_from_gtk_child[0], &b, sizeof(bool));
 	read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));

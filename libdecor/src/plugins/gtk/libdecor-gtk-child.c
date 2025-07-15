@@ -27,7 +27,6 @@ static off_t child_size;
 static void child_gtk_init() {
   uint32_t color_scheme;
   bool b = false;
-  read(pipe_to_child, &child_fd, sizeof(int));
   read(pipe_to_child, &color_scheme, sizeof(uint32_t));
   gdk_set_allowed_backends("wayland");
   gtk_disable_setlocale();
@@ -697,12 +696,13 @@ static void draw_header()
 
 
 LIBDECOR_EXPORT void
-libdecor_gtk_child_operate(int pipe_to, int pipe_from) {
+libdecor_gtk_child_operate(int pipe_to, int pipe_from, int shared_mem_fd) {
   enum child_commands cmd;
-  ssize_t r;
   pipe_to_child = pipe_to;
   pipe_from_child = pipe_from;
+  child_fd = shared_mem_fd;
   while (true) {
+    ssize_t r;
     r = read(pipe_to_child, &cmd, sizeof(enum child_commands));
     if (r <= 0) exit(0);
     //printf("child reads %d\n",cmd);
