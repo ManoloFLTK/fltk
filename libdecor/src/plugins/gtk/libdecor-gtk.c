@@ -137,10 +137,9 @@ struct cursor_output {
 	struct wl_list link;
 };
 
-extern int shm_pipe_to_child[2];
-extern int shm_pipe_from_child[2];
-extern void child_execute_operations();
-
+static int pipe_to_gtk_child[2];
+static int pipe_from_gtk_child[2];
+extern void libdecor_gtk_child_operate(int pipe_to, int pipe_from);
 
 static const char *libdecor_gtk_proxy_tag = "libdecor-gtk";
 
@@ -504,10 +503,10 @@ libdecor_plugin_gtk_frame_free(struct libdecor_plugin *plugin, struct libdecor_f
 {
 	struct libdecor_frame_gtk *frame_gtk = (struct libdecor_frame_gtk *)frame;
 	enum child_commands cmd = CHILD_DESTROY_HEADER;
-	write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-	write(shm_pipe_to_child[1], &frame_gtk->header, sizeof(void*));
-	write(shm_pipe_to_child[1], &frame_gtk->window, sizeof(void*));
-	read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], &frame_gtk->header, sizeof(void*));
+	write(pipe_to_gtk_child[1], &frame_gtk->window, sizeof(void*));
+	read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 	frame_gtk->window = NULL;
 	frame_gtk->header = NULL;
 	
@@ -737,11 +736,11 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 	/* avoid warning when restoring previously turned off decoration */
 	int title_height, skip;
 	cmd = CHILD_GET_ALLOCATED_WH;
-	write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-	write(shm_pipe_to_child[1], &frame_gtk->header, sizeof(void*));
-	read(shm_pipe_from_child[0], &skip, sizeof(int));
-	read(shm_pipe_from_child[0], &title_height, sizeof(int));
-	read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], &frame_gtk->header, sizeof(void*));
+	read(pipe_from_gtk_child[0], &skip, sizeof(int));
+	read(pipe_from_gtk_child[0], &title_height, sizeof(int));
+	read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 
 	switch (component) {
 	case NONE:
@@ -761,11 +760,11 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 		/* reuse product of function call above */
 		*component_y = - title_height;
 		cmd = CHILD_GET_ALLOCATED_WH;
-		write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-		write(shm_pipe_to_child[1], &frame_gtk->header, sizeof(void*));
-		read(shm_pipe_from_child[0], component_width, sizeof(int));
-		read(shm_pipe_from_child[0], &skip, sizeof(int));
-		read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+		write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+		write(pipe_to_gtk_child[1], &frame_gtk->header, sizeof(void*));
+		read(pipe_from_gtk_child[0], component_width, sizeof(int));
+		read(pipe_from_gtk_child[0], &skip, sizeof(int));
+		read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 		/* reuse product of function call above */
 		*component_height = title_height;
 		return;
@@ -826,14 +825,14 @@ printf("ftruncate(%lld)\n",surface_size);
 						      MAP_SHARED, plugin_gtk->child_fd, 0);
 		}
 		enum child_commands cmd = CHILD_DRAW_HEADER;
-		write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-		write(shm_pipe_to_child[1], &buffer->buffer_width, sizeof(int));
-		write(shm_pipe_to_child[1], &buffer->buffer_height, sizeof(int));
-		write(shm_pipe_to_child[1], &buffer->scale, sizeof(int));
-		write(shm_pipe_to_child[1], &window_state, sizeof(int));
-		write(shm_pipe_to_child[1], &capabilities, sizeof(int));
-		write(shm_pipe_to_child[1], frame_gtk, sizeof(struct libdecor_frame_gtk));
-		read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+		write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+		write(pipe_to_gtk_child[1], &buffer->buffer_width, sizeof(int));
+		write(pipe_to_gtk_child[1], &buffer->buffer_height, sizeof(int));
+		write(pipe_to_gtk_child[1], &buffer->scale, sizeof(int));
+		write(pipe_to_gtk_child[1], &window_state, sizeof(int));
+		write(pipe_to_gtk_child[1], &capabilities, sizeof(int));
+		write(pipe_to_gtk_child[1], frame_gtk, sizeof(struct libdecor_frame_gtk));
+		read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 		memcpy(buffer->data, plugin_gtk->child_mmap, surface_size);
 		break;
 	}
@@ -960,32 +959,32 @@ static void draw_title_bar(struct libdecor_frame_gtk *frame_gtk) {
 	const char *title;
 	int state, floating;
 	enum child_commands cmd = CHILD_DRAW_TITLEBAR;
-	write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-	write(shm_pipe_to_child[1], frame_gtk, sizeof(struct libdecor_frame_gtk));
+	write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], frame_gtk, sizeof(struct libdecor_frame_gtk));
 	state = libdecor_frame_get_window_state((struct libdecor_frame*)frame_gtk);
-	write(shm_pipe_to_child[1], &state, sizeof(int));
+	write(pipe_to_gtk_child[1], &state, sizeof(int));
 	floating = libdecor_frame_is_floating((struct libdecor_frame*)frame_gtk);
-	write(shm_pipe_to_child[1], &floating, sizeof(int));
+	write(pipe_to_gtk_child[1], &floating, sizeof(int));
 	libdecor_frame_get_min_content_size((struct libdecor_frame*)frame_gtk, &W, &H);
-	write(shm_pipe_to_child[1], &W, sizeof(int));
-	write(shm_pipe_to_child[1], &H, sizeof(int));
+	write(pipe_to_gtk_child[1], &W, sizeof(int));
+	write(pipe_to_gtk_child[1], &H, sizeof(int));
 	libdecor_frame_get_max_content_size((struct libdecor_frame*)frame_gtk, &W, &H);
-	write(shm_pipe_to_child[1], &W, sizeof(int));
-	write(shm_pipe_to_child[1], &H, sizeof(int));
+	write(pipe_to_gtk_child[1], &W, sizeof(int));
+	write(pipe_to_gtk_child[1], &H, sizeof(int));
 	W = libdecor_frame_get_content_width((struct libdecor_frame*)frame_gtk);
-	write(shm_pipe_to_child[1], &W, sizeof(int));
+	write(pipe_to_gtk_child[1], &W, sizeof(int));
 	H = libdecor_frame_get_content_height((struct libdecor_frame*)frame_gtk);
-	write(shm_pipe_to_child[1], &H, sizeof(int));
+	write(pipe_to_gtk_child[1], &H, sizeof(int));
 	title = libdecor_frame_get_title((struct libdecor_frame*)frame_gtk);
-	write(shm_pipe_to_child[1], title, strlen(title) + 1);
-	read(shm_pipe_from_child[0], &need_commit, sizeof(int));
-	read(shm_pipe_from_child[0], &current_min_w, sizeof(int));
-	read(shm_pipe_from_child[0], &current_min_h, sizeof(int));
-	read(shm_pipe_from_child[0], &current_max_w, sizeof(int));
-	read(shm_pipe_from_child[0], &current_max_h, sizeof(int));
-	read(shm_pipe_from_child[0], &W, sizeof(int));
-	read(shm_pipe_from_child[0], &H, sizeof(int));
-	read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], title, strlen(title) + 1);
+	read(pipe_from_gtk_child[0], &need_commit, sizeof(int));
+	read(pipe_from_gtk_child[0], &current_min_w, sizeof(int));
+	read(pipe_from_gtk_child[0], &current_min_h, sizeof(int));
+	read(pipe_from_gtk_child[0], &current_max_w, sizeof(int));
+	read(pipe_from_gtk_child[0], &current_max_h, sizeof(int));
+	read(pipe_from_gtk_child[0], &W, sizeof(int));
+	read(pipe_from_gtk_child[0], &H, sizeof(int));
+	read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 	if (need_commit) {
 		struct libdecor_state *libdecor_state = libdecor_state_new(W, H);
 		libdecor_frame_commit(&frame_gtk->frame, libdecor_state, NULL);
@@ -1002,16 +1001,16 @@ static void call_ensure_surfaces(struct libdecor_frame_gtk *frame_gtk)
 	int resizable;
 	enum child_commands cmd = CHILD_ENSURE_SURFACES;
 
-	write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-	write(shm_pipe_to_child[1], frame_gtk, sizeof(struct libdecor_frame_gtk));
+	write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], frame_gtk, sizeof(struct libdecor_frame_gtk));
 	resizable = libdecor_frame_has_capability(&frame_gtk->frame, LIBDECOR_ACTION_RESIZE);
-	write(shm_pipe_to_child[1], &resizable, sizeof(int));
+	write(pipe_to_gtk_child[1], &resizable, sizeof(int));
 	title = libdecor_frame_get_title(&frame_gtk->frame);
-	write(shm_pipe_to_child[1], title, strlen(title) + 1);
-	read(shm_pipe_from_child[0], frame_gtk, sizeof(struct libdecor_frame_gtk));
-	read(shm_pipe_from_child[0], &frame_gtk->plugin_gtk->double_click_time_ms, sizeof(int));
-	read(shm_pipe_from_child[0], &frame_gtk->plugin_gtk->drag_threshold, sizeof(int));
-	read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], title, strlen(title) + 1);
+	read(pipe_from_gtk_child[0], frame_gtk, sizeof(struct libdecor_frame_gtk));
+	read(pipe_from_gtk_child[0], &frame_gtk->plugin_gtk->double_click_time_ms, sizeof(int));
+	read(pipe_from_gtk_child[0], &frame_gtk->plugin_gtk->drag_threshold, sizeof(int));
+	read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 }
 
 static void
@@ -1357,11 +1356,11 @@ libdecor_plugin_gtk_frame_get_border_size(struct libdecor_plugin *plugin,
 			if (configuration && type == DECORATION_TYPE_TITLE_ONLY)
 				draw_title_bar((struct libdecor_frame_gtk *) frame);
 			cmd = CHILD_GET_ALLOCATED_WH;
-			write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-			write(shm_pipe_to_child[1], &header, sizeof(void*));
-			read(shm_pipe_from_child[0], &skip, sizeof(int));
-			read(shm_pipe_from_child[0], top, sizeof(int));
-			read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+			write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+			write(pipe_to_gtk_child[1], &header, sizeof(void*));
+			read(pipe_from_gtk_child[0], &skip, sizeof(int));
+			read(pipe_from_gtk_child[0], top, sizeof(int));
+			read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 		} else {
 			*top = 0;
 		}
@@ -1771,12 +1770,12 @@ pointer_motion(void *data,
 	if (!frame_gtk->header || frame_gtk->active->type != HEADER) {
 		frame_gtk->hdr_focus.type = HEADER_NONE;
 	}
-	write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-	write(shm_pipe_to_child[1], &frame_gtk->header, sizeof(void*));
-	write(shm_pipe_to_child[1], &seat->pointer_x, sizeof(int));
-	write(shm_pipe_to_child[1], &seat->pointer_y, sizeof(int));
-	read(shm_pipe_from_child[0], &new_focus, sizeof(struct header_element_data));
-	read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], &frame_gtk->header, sizeof(void*));
+	write(pipe_to_gtk_child[1], &seat->pointer_x, sizeof(int));
+	write(pipe_to_gtk_child[1], &seat->pointer_y, sizeof(int));
+	read(pipe_from_gtk_child[0], &new_focus, sizeof(struct header_element_data));
+	read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 	/* only update if widget change so that we keep the state */
 	if (frame_gtk->hdr_focus.widget != new_focus.widget) {
 		frame_gtk->hdr_focus = new_focus;
@@ -1853,11 +1852,11 @@ handle_titlebar_gesture(struct libdecor_frame_gtk *frame_gtk,
 		int title_height, skip;
 		enum child_commands cmd;
 		cmd = CHILD_GET_ALLOCATED_WH;
-		write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-		write(shm_pipe_to_child[1], &frame_gtk->header, sizeof(void*));
-		read(shm_pipe_from_child[0], &skip, sizeof(int));
-		read(shm_pipe_from_child[0], &title_height, sizeof(int));
-		read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+		write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+		write(pipe_to_gtk_child[1], &frame_gtk->header, sizeof(void*));
+		read(pipe_from_gtk_child[0], &skip, sizeof(int));
+		read(pipe_from_gtk_child[0], &title_height, sizeof(int));
+		read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 		libdecor_frame_show_window_menu(&frame_gtk->frame,
 						seat->wl_seat,
 						serial,
@@ -2050,12 +2049,12 @@ update_touch_focus(struct seat *seat,
 	if (frame_gtk->header && frame_gtk->touch_active->type == HEADER) {
 		struct header_element_data new_focus;
 		enum child_commands cmd = CHILD_GET_FOCUS;
-		write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-		write(shm_pipe_to_child[1], &frame_gtk->header, sizeof(void*));
-		write(shm_pipe_to_child[1], &seat->pointer_x, sizeof(int));
-		write(shm_pipe_to_child[1], &seat->pointer_y, sizeof(int));
-		read(shm_pipe_from_child[0], &new_focus, sizeof(struct header_element_data));
-		read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+		write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+		write(pipe_to_gtk_child[1], &frame_gtk->header, sizeof(void*));
+		write(pipe_to_gtk_child[1], &seat->pointer_x, sizeof(int));
+		write(pipe_to_gtk_child[1], &seat->pointer_y, sizeof(int));
+		read(pipe_from_gtk_child[0], &new_focus, sizeof(struct header_element_data));
+		read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 
 		/* only update if widget change so that we keep the state */
 		if (frame_gtk->hdr_focus.widget != new_focus.widget) {
@@ -2572,8 +2571,8 @@ libdecor_plugin_new(struct libdecor *context)
 		return NULL;
 	}
 /* create two pipes to communicate with child */
-	pipe(shm_pipe_to_child);
-	pipe(shm_pipe_from_child);
+	pipe(pipe_to_gtk_child);
+	pipe(pipe_from_gtk_child);
 /* create memory section to share with future child*/
 	snprintf(plugin_gtk->shared_name, sizeof(plugin_gtk->shared_name),
 		 "/libdecor-gtk%X", getpid());
@@ -2586,21 +2585,21 @@ libdecor_plugin_new(struct libdecor *context)
 		libdecor_plugin_gtk_destroy(&plugin_gtk->plugin);
 		return NULL;
 	} else if (pid == 0) { /* the child process */
-		close(shm_pipe_to_child[1]);
-		close(shm_pipe_from_child[0]);
+		close(pipe_to_gtk_child[1]);
+		close(pipe_from_gtk_child[0]);
 		close(libdecor_plugin_gtk_get_fd((struct libdecor_plugin *)plugin_gtk));
-		child_execute_operations(); /* never returns */
+		libdecor_gtk_child_operate(pipe_to_gtk_child[0], pipe_from_gtk_child[1]); /* never returns */
 	}
 /* this is the parent process */
-	close(shm_pipe_to_child[0]);
-	close(shm_pipe_from_child[1]);
+	close(pipe_to_gtk_child[0]);
+	close(pipe_from_gtk_child[1]);
 /* ask child to setup GTK context */
 	enum child_commands cmd = CHILD_INIT;
-	write(shm_pipe_to_child[1], &cmd, sizeof(enum child_commands));
-	write(shm_pipe_to_child[1], &plugin_gtk->child_fd, sizeof(int));
-	write(shm_pipe_to_child[1], &plugin_gtk->color_scheme_setting, sizeof(uint32_t));
-	read(shm_pipe_from_child[0], &b, sizeof(bool));
-	read(shm_pipe_from_child[0], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], &plugin_gtk->child_fd, sizeof(int));
+	write(pipe_to_gtk_child[1], &plugin_gtk->color_scheme_setting, sizeof(uint32_t));
+	read(pipe_from_gtk_child[0], &b, sizeof(bool));
+	read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 	if (b) {
 		libdecor_plugin_gtk_destroy(&plugin_gtk->plugin);
 		return NULL;
