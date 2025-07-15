@@ -1,4 +1,3 @@
-#include "../../../build/fl_libdecor.h"
 #include "libdecor-plugin.h"
 #include "utils.h"
 #include "desktop-settings.h"
@@ -12,7 +11,6 @@
 
 #if GTK_MAJOR_VERSION == 4
 #  include <stdlib.h> /* setenv() */
-#  include <dlfcn.h>
 #endif
 
 #include "libdecor-gtk.h"
