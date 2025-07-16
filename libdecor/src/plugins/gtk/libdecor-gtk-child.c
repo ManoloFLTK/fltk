@@ -649,14 +649,13 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
 
 static void draw_header()
 {
-  int W, H, scale, window_state, capabilities;
+  int W, H, scale, window_state;
   size_t size;
   struct libdecor_frame_gtk frame_gtk;
   read(pipe_to_child, &W, sizeof(int));
   read(pipe_to_child, &H, sizeof(int));
   read(pipe_to_child, &scale, sizeof(int));
   read(pipe_to_child, &window_state, sizeof(int));
-  read(pipe_to_child, &capabilities, sizeof(int));
   read(pipe_to_child, &frame_gtk, sizeof(struct libdecor_frame_gtk));
   size = H * cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W);
   if (size > child_size || !mmap_data) {
@@ -673,7 +672,7 @@ static void draw_header()
 #if GTK_MAJOR_VERSION == 3
   draw_header_background(&frame_gtk, cr);
   draw_header_title(&frame_gtk, surface);
-  draw_header_buttons(&frame_gtk, cr, surface, window_state, capabilities);
+  draw_header_buttons(&frame_gtk, cr, surface, window_state, frame_gtk.capabilities);
 #else
   GtkAllocation allocation = {0, 0, 0, 0};
   graphene_rect_t out_bounds;

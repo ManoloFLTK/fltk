@@ -780,6 +780,11 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 
 
 static void
+libdecor_plugin_gtk_frame_property_changed(struct libdecor_plugin *plugin,
+					   struct libdecor_frame *frame);
+
+
+static void
 draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 		       struct buffer *buffer,
 		       int component_width,
@@ -829,13 +834,13 @@ printf("ftruncate(%lld)\n",(long long)surface_size);
 			plugin_gtk->child_mmap = mmap(NULL, surface_size, PROT_READ | PROT_WRITE,
 						      MAP_SHARED, plugin_gtk->child_fd, 0);
 		}
+		libdecor_plugin_gtk_frame_property_changed(NULL, (struct libdecor_frame*)frame_gtk);
 		enum child_commands cmd = CHILD_DRAW_HEADER;
 		write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
 		write(pipe_to_gtk_child[1], &buffer->buffer_width, sizeof(int));
 		write(pipe_to_gtk_child[1], &buffer->buffer_height, sizeof(int));
 		write(pipe_to_gtk_child[1], &buffer->scale, sizeof(int));
 		write(pipe_to_gtk_child[1], &window_state, sizeof(int));
-		write(pipe_to_gtk_child[1], &capabilities, sizeof(int));
 		write(pipe_to_gtk_child[1], frame_gtk, sizeof(struct libdecor_frame_gtk));
 		read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 		memcpy(buffer->data, plugin_gtk->child_mmap, surface_size);
@@ -1142,7 +1147,7 @@ libdecor_plugin_gtk_frame_property_changed(struct libdecor_plugin *plugin,
 	 * when in SSD mode, the window title is not to be managed by GTK;
 	 * this is detected by frame_gtk->header not being a proper GTK widget
 	 */
-	if (!frame_gtk->header) return;
+//	if (!frame_gtk->header) return;//PB HERE!!
 
 	new_title = libdecor_frame_get_title(frame);
 	if (!streq(frame_gtk->title, new_title))
