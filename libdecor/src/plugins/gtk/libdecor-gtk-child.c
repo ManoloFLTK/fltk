@@ -621,10 +621,7 @@ draw_header_button(struct libdecor_frame_gtk *frame_gtk,
 
 
 static void
-draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
-        cairo_t *cr,
-        cairo_surface_t *surface, enum libdecor_window_state window_state,
-                    enum libdecor_capabilities capabilities)
+draw_header_buttons(struct libdecor_frame_gtk *frame_gtk, cairo_t *cr, cairo_surface_t *surface)
 {
   /* buttons */
   //enum libdecor_window_state window_state;
@@ -632,15 +629,15 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
   size_t nbuttons = 0;
 
   /* set buttons by capability */
-  if (capabilities & LIBDECOR_ACTION_MINIMIZE)
+  if (frame_gtk->capabilities & LIBDECOR_ACTION_MINIMIZE)
     array_append(&buttons, &nbuttons, HEADER_MIN);
-  if (capabilities & LIBDECOR_ACTION_RESIZE)
+  if (frame_gtk->capabilities & LIBDECOR_ACTION_RESIZE)
     array_append(&buttons, &nbuttons, HEADER_MAX);
-  if (capabilities & LIBDECOR_ACTION_CLOSE)
+  if (frame_gtk->capabilities & LIBDECOR_ACTION_CLOSE)
     array_append(&buttons, &nbuttons, HEADER_CLOSE);
 
   for (size_t i = 0; i < nbuttons; i++) {
-    draw_header_button(frame_gtk, cr, surface, buttons[i], window_state);
+    draw_header_button(frame_gtk, cr, surface, buttons[i], frame_gtk->window_state);
   } /* loop buttons */
   free(buttons);
 }
@@ -649,13 +646,12 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk,
 
 static void draw_header()
 {
-  int W, H, scale, window_state;
+  int W, H, scale;
   size_t size;
   struct libdecor_frame_gtk frame_gtk;
   read(pipe_to_child, &W, sizeof(int));
   read(pipe_to_child, &H, sizeof(int));
   read(pipe_to_child, &scale, sizeof(int));
-  read(pipe_to_child, &window_state, sizeof(int));
   read(pipe_to_child, &frame_gtk, sizeof(struct libdecor_frame_gtk));
   size = H * cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W);
   if (size > child_size || !mmap_data) {
@@ -672,7 +668,7 @@ static void draw_header()
 #if GTK_MAJOR_VERSION == 3
   draw_header_background(&frame_gtk, cr);
   draw_header_title(&frame_gtk, surface);
-  draw_header_buttons(&frame_gtk, cr, surface, window_state, frame_gtk.capabilities);
+  draw_header_buttons(&frame_gtk, cr, surface);
 #else
   GtkAllocation allocation = {0, 0, 0, 0};
   graphene_rect_t out_bounds;

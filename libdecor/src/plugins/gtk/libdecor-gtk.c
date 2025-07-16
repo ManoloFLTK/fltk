@@ -778,12 +778,6 @@ calculate_component_size(struct libdecor_frame_gtk *frame_gtk,
 	abort();
 }
 
-
-static void
-libdecor_plugin_gtk_frame_property_changed(struct libdecor_plugin *plugin,
-					   struct libdecor_frame *frame);
-
-
 static void
 draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 		       struct buffer *buffer,
@@ -793,7 +787,6 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 {
 	cairo_surface_t *surface = NULL;
 	cairo_t *cr = NULL;
-	int window_state, capabilities;
 
 	/* clear buffer */
 	memset(buffer->data, 0, buffer->data_size);
@@ -834,13 +827,11 @@ printf("ftruncate(%lld)\n",(long long)surface_size);
 			plugin_gtk->child_mmap = mmap(NULL, surface_size, PROT_READ | PROT_WRITE,
 						      MAP_SHARED, plugin_gtk->child_fd, 0);
 		}
-		libdecor_plugin_gtk_frame_property_changed(NULL, (struct libdecor_frame*)frame_gtk);
 		enum child_commands cmd = CHILD_DRAW_HEADER;
 		write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
 		write(pipe_to_gtk_child[1], &buffer->buffer_width, sizeof(int));
 		write(pipe_to_gtk_child[1], &buffer->buffer_height, sizeof(int));
 		write(pipe_to_gtk_child[1], &buffer->scale, sizeof(int));
-		write(pipe_to_gtk_child[1], &window_state, sizeof(int));
 		write(pipe_to_gtk_child[1], frame_gtk, sizeof(struct libdecor_frame_gtk));
 		read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
 		memcpy(buffer->data, plugin_gtk->child_mmap, surface_size);
