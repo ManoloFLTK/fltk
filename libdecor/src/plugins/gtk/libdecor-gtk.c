@@ -42,6 +42,7 @@
 #include "desktop-settings.h"
 #include "os-compatibility.h"
 
+#include <math.h> /* for fabs() */
 #include <cairo/cairo.h>
 
 #include "common/libdecor-cairo-blur.h"
@@ -324,8 +325,6 @@ libdecor_plugin_gtk_dispatch(struct libdecor_plugin *plugin,
 	int ret;
 	int dispatch_count = 0;
 
-	while (g_main_context_iteration(NULL, FALSE));
-
 	while (wl_display_prepare_read(wl_display) != 0)
 		dispatch_count += wl_display_dispatch_pending(wl_display);
 
@@ -514,9 +513,15 @@ libdecor_plugin_gtk_frame_free(struct libdecor_plugin *plugin, struct libdecor_f
 	free_border_component(&frame_gtk->shadow);
 	frame_gtk->shadow_showing = false;
 
-	g_clear_pointer (&frame_gtk->shadow_blur, cairo_surface_destroy);
+	if (frame_gtk->shadow_blur) {
+		cairo_surface_destroy(frame_gtk->shadow_blur);
+		frame_gtk->shadow_blur = NULL;
+	}
 
-	g_clear_pointer (&frame_gtk->title, free);
+	if (frame_gtk->title) {
+		free(frame_gtk->title);
+		frame_gtk->title = NULL;
+	}
 
 	frame_gtk->decoration_type = DECORATION_TYPE_NONE;
 
@@ -820,7 +825,7 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 			if (plugin_gtk->child_size) munmap(plugin_gtk->child_mmap, plugin_gtk->child_size);
 			plugin_gtk->child_size = surface_size;
 			ftruncate(plugin_gtk->child_fd, surface_size);
-printf("ftruncate(%lld)\n",surface_size);
+printf("ftruncate(%lld)\n",(long long)surface_size);
 			plugin_gtk->child_mmap = mmap(NULL, surface_size, PROT_READ | PROT_WRITE,
 						      MAP_SHARED, plugin_gtk->child_fd, 0);
 		}
@@ -995,9 +1000,7 @@ static void draw_title_bar(struct libdecor_frame_gtk *frame_gtk) {
 
 static void call_ensure_surfaces(struct libdecor_frame_gtk *frame_gtk)
 {
-	char *p;
 	const char *title;
-	struct libdecor_plugin_gtk *plugin_gtk = frame_gtk->plugin_gtk;
 	int resizable;
 	enum child_commands cmd = CHILD_ENSURE_SURFACES;
 
@@ -1754,7 +1757,6 @@ pointer_motion(void *data,
 	struct seat *seat = data;
 	struct libdecor_frame_gtk *frame_gtk;
 	struct header_element_data new_focus;
-	char *p;
 	enum child_commands cmd = CHILD_GET_FOCUS;
 
 	if (!seat->pointer_focus || !own_surface(seat->pointer_focus))
@@ -1788,10 +1790,10 @@ pointer_motion(void *data,
 	switch (frame_gtk->titlebar_gesture.state) {
 	case TITLEBAR_GESTURE_STATE_BUTTON_PRESSED:
 		if (frame_gtk->titlebar_gesture.first_pressed_button == BTN_LEFT) {
-			if (ABS ((double) seat->pointer_x -
+			if (fabs ((double) seat->pointer_x -
 				 (double) frame_gtk->titlebar_gesture.pressed_x) >
 			    frame_gtk->plugin_gtk->drag_threshold ||
-			    ABS ((double) seat->pointer_y -
+			    fabs ((double) seat->pointer_y -
 				 (double) frame_gtk->titlebar_gesture.pressed_y) >
 			    frame_gtk->plugin_gtk->drag_threshold) {
 				libdecor_frame_move(&frame_gtk->frame,
