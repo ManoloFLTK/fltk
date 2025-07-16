@@ -32,6 +32,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <wayland-client-core.h>
 #include <wayland-cursor.h>
@@ -139,7 +140,6 @@ struct cursor_output {
 
 static int pipe_to_gtk_child[2];
 static int pipe_from_gtk_child[2];
-extern void libdecor_gtk_child_operate(int pipe_to, int pipe_from, int shared_mem_fd);
 
 static const char *libdecor_gtk_proxy_tag = "libdecor-gtk";
 
@@ -2577,6 +2577,7 @@ libdecor_plugin_new(struct libdecor *context)
 	snprintf(plugin_gtk->shared_name, sizeof(plugin_gtk->shared_name),
 		 "/libdecor-gtk%X", getpid());
 	plugin_gtk->child_fd = shm_open(plugin_gtk->shared_name, O_RDWR | O_CREAT, S_IRUSR|S_IWUSR);
+	fcntl(plugin_gtk->child_fd, F_SETFD, 0); /* remove FD_CLOEXEC */
 	plugin_gtk->child_size = 0;
 /* fork child process */
 	pid_t pid = fork();
@@ -2585,11 +2586,20 @@ libdecor_plugin_new(struct libdecor *context)
 		libdecor_plugin_gtk_destroy(&plugin_gtk->plugin);
 		return NULL;
 	} else if (pid == 0) { /* the child process */
+		const char *exe_name = "libdecor-gtk-child";
+		char *plugin_dir, arg1[50];
 		close(pipe_to_gtk_child[1]);
 		close(pipe_from_gtk_child[0]);
 		close(libdecor_plugin_gtk_get_fd((struct libdecor_plugin *)plugin_gtk));
-		libdecor_gtk_child_operate(pipe_to_gtk_child[0], pipe_from_gtk_child[1],
-					   plugin_gtk->child_fd); /* never returns */
+		snprintf(arg1, sizeof(arg1), "%d,%d,%d",
+			 pipe_to_gtk_child[0], pipe_from_gtk_child[1], plugin_gtk->child_fd);
+		plugin_dir = getenv("LIBDECOR_PLUGIN_DIR");
+		if (!plugin_dir) plugin_dir = LIBDECOR_PLUGIN_DIR;
+		setenv("PATH", plugin_dir, 1);
+		if (execlp(exe_name, exe_name, arg1, (char*)NULL) < 0) {
+			fprintf(stderr,"libdecor-gtk plugin fails to run libdecor-gtk-child\n");
+			exit(0);
+		}
 	}
 /* this is the parent process */
 	close(pipe_to_gtk_child[0]);

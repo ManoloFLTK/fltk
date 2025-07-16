@@ -4,6 +4,8 @@
 
 #include <gtk/gtk.h>
 #include <sys/mman.h>
+#include <sys/stat.h>        /* For mode constants */
+#include <fcntl.h>           /* For O_* constants */
 
 #if GTK_MAJOR_VERSION != 3 && GTK_MAJOR_VERSION != 4
 # error GTK3 or GTK4 is required
@@ -695,16 +697,19 @@ static void draw_header()
 }
 
 
-LIBDECOR_EXPORT void
-libdecor_gtk_child_operate(int pipe_to, int pipe_from, int shared_mem_fd) {
+int main(int argc, char **argv) {
   enum child_commands cmd;
-  pipe_to_child = pipe_to;
-  pipe_from_child = pipe_from;
-  child_fd = shared_mem_fd;
+  int n = 0;
+  
+  if (argc == 2) n = sscanf(argv[1], "%d,%d,%d", &pipe_to_child, &pipe_from_child, &child_fd);
+  if (argc != 2 || n != 3) {
+    fprintf(stderr, "This program is only meant to run as a child of the libdecor-gtk plugin.\n");
+    exit(0);
+  }
   while (true) {
-    ssize_t r;
-    r = read(pipe_to_child, &cmd, sizeof(enum child_commands));
-    if (r <= 0) exit(0);
+    if (read(pipe_to_child, &cmd, sizeof(enum child_commands)) <= 0) {
+      exit(0);
+    }
     //printf("child reads %d\n",cmd);
     switch (cmd) {
       case CHILD_INIT:
@@ -742,4 +747,5 @@ libdecor_gtk_child_operate(int pipe_to, int pipe_from, int shared_mem_fd) {
     //printf("child writes %d\n",cmd);
     write(pipe_from_child, &cmd, sizeof(enum child_commands));
   }
+  return 0;
 }
