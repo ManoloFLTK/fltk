@@ -59,7 +59,21 @@ struct buffer { // identical in libdecor-cairo.c and libdecor-gtk.c
 const struct libdecor_plugin_description *fl_libdecor_plugin_description = NULL;
 
 #  if HAVE_GTK
+#    define main(a,b) do_child_operations(a,b)
+#    include "../src/plugins/gtk/libdecor-gtk-child.c"
+#    undef main
+
+int call_child_operations(const char *n, const char *bis, const char *arg1, const char *last) {
+  char *argv[2];
+  argv[0] = (char*)n;
+  argv[1] = (char*)arg1;
+  do_child_operations(2, argv);
+  exit(0);
+}
+
+#    define execlp(a,b,c,d) call_child_operations(a,b,c,d)
 #    include "../src/plugins/gtk/libdecor-gtk.c"
+#    undef execlp
 #  else
 #    include "../src/plugins/cairo/libdecor-cairo.c"
 #  endif // HAVE_GTK

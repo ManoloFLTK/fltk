@@ -48,14 +48,6 @@
 #include "common/libdecor-cairo-blur.h"
 #include <poll.h>
 
-typedef enum
-{
-  GTK_STATE_FLAG_ACTIVE        = 1 << 0,
-  GTK_STATE_FLAG_PRELIGHT      = 1 << 1,
-} GtkStateFlags;
-typedef struct GtkWidget GtkWidget;
-typedef struct GtkHeaderBar GtkHeaderBar;
-
 #include "libdecor-gtk.h"
 
 static const size_t SHADOW_MARGIN = 24;	/* grabbable part of the border */

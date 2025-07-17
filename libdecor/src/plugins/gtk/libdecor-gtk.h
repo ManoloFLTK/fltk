@@ -1,4 +1,16 @@
 
+#ifndef LIBDECOR_GTK_H
+#define LIBDECOR_GTK_H 1
+
+#ifndef GTK_MAJOR_VERSION
+typedef enum
+{
+  GTK_STATE_FLAG_ACTIVE        = 1 << 0,
+  GTK_STATE_FLAG_PRELIGHT      = 1 << 1,
+} GtkStateFlags;
+typedef struct GtkWidget GtkWidget;
+typedef struct GtkHeaderBar GtkHeaderBar;
+#endif /* ndef GTK_MAJOR_VERSION */
 
 enum child_commands {
   CHILD_OP_COMPLETED = 1,
@@ -161,3 +173,5 @@ struct libdecor_frame_gtk {
     uint32_t pressed_serial;
   } titlebar_gesture;
 };
+
+#endif /* ndef LIBDECOR_GTK_H */

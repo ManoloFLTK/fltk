@@ -911,8 +911,7 @@ if(FLTK_USE_WAYLAND)
 
   # Note: Disable FLTK_USE_LIBDECOR_GTK to get cairo titlebars rather than GTK
   if(FLTK_USE_LIBDECOR_GTK AND NOT USE_SYSTEM_LIBDECOR)
-    #pkg_check_modules(GTK IMPORTED_TARGET gtk+-3.0)
-    pkg_check_modules(GTK IMPORTED_TARGET gtk4)
+    pkg_check_modules(GTK IMPORTED_TARGET gtk+-3.0)
     if(GTK_FOUND)
       list(APPEND FLTK_BUILD_INCLUDE_DIRECTORIES ${GTK_INCLUDE_DIRS})
       list(APPEND FLTK_LDLIBS ${GTK_LDFLAGS})
