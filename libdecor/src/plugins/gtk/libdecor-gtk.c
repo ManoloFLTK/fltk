@@ -994,6 +994,10 @@ static void draw_title_bar(struct libdecor_frame_gtk *frame_gtk) {
 	draw_border_component(frame_gtk, &frame_gtk->headerbar, HEADER);
 }
 
+static void
+libdecor_plugin_gtk_frame_property_changed(struct libdecor_plugin *plugin,
+					   struct libdecor_frame *frame);
+
 static void call_ensure_surfaces(struct libdecor_frame_gtk *frame_gtk)
 {
 	const char *title;
@@ -1010,6 +1014,8 @@ static void call_ensure_surfaces(struct libdecor_frame_gtk *frame_gtk)
 	read(pipe_from_gtk_child[0], &frame_gtk->plugin_gtk->double_click_time_ms, sizeof(int));
 	read(pipe_from_gtk_child[0], &frame_gtk->plugin_gtk->drag_threshold, sizeof(int));
 	read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
+	// next statement because frame_gtk->header has changed
+	libdecor_plugin_gtk_frame_property_changed(NULL, (struct libdecor_frame*)frame_gtk);
 }
 
 static void
@@ -1131,14 +1137,20 @@ libdecor_plugin_gtk_frame_property_changed(struct libdecor_plugin *plugin,
 {
 	struct libdecor_frame_gtk *frame_gtk =
 		(struct libdecor_frame_gtk *) frame;
-	bool redraw_needed = false;
+	bool redraw_needed = false, is_gtk_widget;
 	const char *new_title;
+	enum child_commands cmd;
 
 	/*
 	 * when in SSD mode, the window title is not to be managed by GTK;
 	 * this is detected by frame_gtk->header not being a proper GTK widget
 	 */
-//	if (!frame_gtk->header) return;//PB HERE!!
+	cmd = CHILD_CHECK_WIDGET;
+	write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+	write(pipe_to_gtk_child[1], &frame_gtk->header, sizeof(GtkWidget*));
+	read(pipe_from_gtk_child[0], &is_gtk_widget, sizeof(bool));
+	read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
+	if (!is_gtk_widget) return;
 
 	new_title = libdecor_frame_get_title(frame);
 	if (!streq(frame_gtk->title, new_title))

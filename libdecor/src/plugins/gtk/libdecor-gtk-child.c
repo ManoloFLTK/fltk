@@ -692,6 +692,16 @@ static void draw_header()
 }
 
 
+static void child_check_widget()
+{
+  GtkWidget *widget;
+  bool result;
+  read(pipe_to_child, &widget, sizeof(GtkWidget*));
+  result = GTK_IS_WIDGET(widget);
+  write(pipe_from_child, &result, sizeof(bool));
+}
+
+
 int main(int argc, char **argv) {
   enum child_commands cmd;
   int n = 0;
@@ -733,6 +743,10 @@ int main(int argc, char **argv) {
         
       case CHILD_GET_ALLOCATED_WH:
         child_get_allocated_WH();
+        break;
+        
+      case CHILD_CHECK_WIDGET:
+        child_check_widget();
         break;
         
       default:

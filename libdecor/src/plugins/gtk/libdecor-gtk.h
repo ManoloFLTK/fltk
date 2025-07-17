@@ -9,6 +9,7 @@ enum child_commands {
   CHILD_ENSURE_SURFACES,
   CHILD_GET_FOCUS,
   CHILD_GET_ALLOCATED_WH,
+  CHILD_CHECK_WIDGET,
 };
 
 
