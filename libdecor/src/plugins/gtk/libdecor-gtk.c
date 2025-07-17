@@ -501,13 +501,15 @@ static void
 libdecor_plugin_gtk_frame_free(struct libdecor_plugin *plugin, struct libdecor_frame *frame)
 {
 	struct libdecor_frame_gtk *frame_gtk = (struct libdecor_frame_gtk *)frame;
-	enum child_commands cmd = CHILD_DESTROY_HEADER;
-	write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
-	write(pipe_to_gtk_child[1], &frame_gtk->header, sizeof(void*));
-	write(pipe_to_gtk_child[1], &frame_gtk->window, sizeof(void*));
-	read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
-	frame_gtk->window = NULL;
-	frame_gtk->header = NULL;
+	if (frame_gtk->window || frame_gtk->header) {
+		enum child_commands cmd = CHILD_DESTROY_HEADER;
+		write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
+		write(pipe_to_gtk_child[1], &frame_gtk->header, sizeof(void*));
+		write(pipe_to_gtk_child[1], &frame_gtk->window, sizeof(void*));
+		read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
+		frame_gtk->window = NULL;
+		frame_gtk->header = NULL;
+	}
 	
 	free_border_component(&frame_gtk->headerbar);
 	free_border_component(&frame_gtk->shadow);

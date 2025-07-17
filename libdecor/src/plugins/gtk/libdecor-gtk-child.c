@@ -240,12 +240,10 @@ static void destroy_window_header() {
   read(pipe_to_child, &header, sizeof(void*));
   read(pipe_to_child, &window, sizeof(void*));
 #if GTK_MAJOR_VERSION == 3
-  gtk_widget_destroy(header);
-  gtk_widget_destroy(window);
+  if (header) gtk_widget_destroy(header);
+  if (window) gtk_widget_destroy(window);
 #else
-  if (window) {
-    gtk_window_destroy((GtkWindow*)window);
-  }
+  if (window) gtk_window_destroy((GtkWindow*)window);
 #endif
 }
 
