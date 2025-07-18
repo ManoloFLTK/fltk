@@ -1,3 +1,29 @@
+/*
+ * Copyright © 2018 Jonas Ådahl
+ * Copyright © 2021 Christian Rauch
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the
+ * next paragraph) shall be included in all copies or substantial
+ * portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 #include "libdecor-plugin.h"
 #include "utils.h"
 #include "desktop-settings.h"
@@ -12,51 +38,48 @@
 #endif
 
 #if GTK_MAJOR_VERSION == 4
-#  include <stdlib.h> /* setenv() */
+# include <stdlib.h> /* setenv() */
 #endif
 
 #include "libdecor-gtk.h"
 
-typedef unsigned char uchar;
-
 static int pipe_to_child;
 static int pipe_from_child;
-static int child_fd;
+static int shm_fd;
 static void *mmap_data;
-static off_t child_size;
+static off_t shm_size;
 
-
-static void child_gtk_init() {
+static void
+child_gtk_init()
+{
   uint32_t color_scheme;
-  bool b = false;
+  bool error_found = false;
   read(pipe_to_child, &color_scheme, sizeof(uint32_t));
   gdk_set_allowed_backends("wayland");
   gtk_disable_setlocale();
 
   if (!gtk_init_check(
 #if GTK_MAJOR_VERSION == 3
-          NULL, NULL
+    NULL, NULL
 #endif
-          )) {
+  )) {
     fprintf(stderr, "libdecor-gtk-WARNING: Failed to initialize GTK\n");
-    b = true;
+    error_found = true;
   } else {
 #if GTK_MAJOR_VERSION == 4
-            /* Drawing the titlebar the GTK4 way makes client apps using EGL fail, unless
-             env variable GSK_RENDERER is set to "cairo" or to "vulkan". */
-            setenv("GSK_RENDERER", "cairo", 1);
+    setenv("GSK_RENDERER", "cairo", 1);
 #endif
-            
-            g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
-                         color_scheme == LIBDECOR_COLOR_SCHEME_PREFER_DARK, NULL);
+    g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
+      color_scheme == LIBDECOR_COLOR_SCHEME_PREFER_DARK, NULL);
   }
-  write(pipe_from_child, &b, sizeof(bool));
+  write(pipe_from_child, &error_found, sizeof(bool));
   mmap_data = NULL;
-  child_size = 0;
+  shm_size = 0;
 }
 
-
-static void child_get_allocated_WH() {
+static void
+child_get_allocated_WH()
+{
   int W = 0, H = 0;
   GtkWidget *header;
   read(pipe_to_child, &header, sizeof(GtkWidget*));
@@ -78,7 +101,9 @@ static void child_get_allocated_WH() {
 
 
 #if GTK_MAJOR_VERSION == 4
-static GtkWindowControls *find_window_controls(GtkWidget *header) {
+static GtkWindowControls *
+find_window_controls(GtkWidget *header)
+{
   /* The found GtkWindowControls has 1 to 3 GtkButton children
      depending on "Tweaks" settings and win resizability. */
   GtkWidget *w = gtk_widget_get_first_child(header);
@@ -92,7 +117,9 @@ static GtkWindowControls *find_window_controls(GtkWidget *header) {
   return NULL;
 }
 
-static GtkWidget *find_child_with_css(GtkWindowControls *ctrls, const char *css) {
+static GtkWidget *
+find_child_with_css(GtkWindowControls *ctrls, const char *css)
+{
   GtkWidget *w = gtk_widget_get_first_child(GTK_WIDGET(ctrls));
   while (w) {
     if (gtk_widget_has_css_class(w, css)) return w;
@@ -108,8 +135,8 @@ find_widget_by_name(GtkWidget *widget, void *data)
 {
   if (GTK_IS_WIDGET(widget)) {
     char *style_ctx = gtk_style_context_to_string(
-            gtk_widget_get_style_context(widget),
-            GTK_STYLE_CONTEXT_PRINT_SHOW_STYLE);
+      gtk_widget_get_style_context(widget),
+      GTK_STYLE_CONTEXT_PRINT_SHOW_STYLE);
     if (strstr(style_ctx, ((struct header_element_data *)data)->name)) {
       ((struct header_element_data *)data)->widget = widget;
       free(style_ctx);
@@ -148,12 +175,12 @@ find_widget_by_type(GtkWidget *widget, enum header_element type)
     default:
       break;
     }
-    struct header_element_data data = {
-      .name = name,
-      .type = type,
-      .widget = (name ? find_child_with_css(ctrls, name + 1) : NULL)
-    };
-    return data;
+  struct header_element_data data = {
+    .name = name,
+    .type = type,
+    .widget = (name ? find_child_with_css(ctrls, name + 1) : NULL)
+  };
+  return data;
   }
 #endif
   switch (type) {
@@ -185,7 +212,6 @@ find_widget_by_type(GtkWidget *widget, enum header_element type)
   return data;
 }
 
-
 static bool
 in_region(const cairo_rectangle_int_t *rect, const int *x, const int *y)
 {
@@ -193,8 +219,8 @@ in_region(const cairo_rectangle_int_t *rect, const int *x, const int *y)
     (*x<(rect->x+rect->width)) & (*y<(rect->y+rect->height));
 }
 
-
-static void get_header_focus()
+static void
+get_header_focus()
 {
   GtkHeaderBar *header_bar;
   int x, y;
@@ -215,7 +241,7 @@ static void get_header_focus()
 #else
       graphene_rect_t out_bounds;
       if (gtk_widget_compute_bounds(GTK_WIDGET(elem.widget),
-            GTK_WIDGET(header_bar), &out_bounds)) {
+          GTK_WIDGET(header_bar), &out_bounds)) {
         allocation.x = (int)out_bounds.origin.x;
         allocation.y = (int)out_bounds.origin.y;
         allocation.width = (int)out_bounds.size.width;
@@ -223,7 +249,8 @@ static void get_header_focus()
       }
 #endif
       if (in_region(&allocation, &x, &y)) {
-        elem.name = NULL; // for security because that's a pointer in child's address space
+        /* for security because that's a pointer to child's address space */
+        elem.name = NULL;
         write(pipe_from_child, &elem, sizeof(struct header_element_data));
         return;
       }
@@ -235,7 +262,9 @@ static void get_header_focus()
 }
 
 
-static void destroy_window_header() {
+static void
+destroy_window_header()
+{
   void *header, *window;
   read(pipe_to_child, &header, sizeof(void*));
   read(pipe_to_child, &window, sizeof(void*));
@@ -246,7 +275,6 @@ static void destroy_window_header() {
   if (window) gtk_window_destroy((GtkWindow*)window);
 #endif
 }
-
 
 static void
 ensure_title_bar_surfaces()
@@ -295,18 +323,18 @@ ensure_title_bar_surfaces()
   frame_gtk.header = gtk_header_bar_new();
 
   g_object_get(gtk_widget_get_settings(frame_gtk.window),
-         "gtk-double-click-time",
-         &double_click_time_ms,
-         "gtk-dnd-drag-threshold",
-         &drag_threshold,
-         NULL);
+    "gtk-double-click-time",
+    &double_click_time_ms,
+    "gtk-dnd-drag-threshold",
+    &drag_threshold,
+    NULL);
 #if GTK_MAJOR_VERSION == 3
   /* set as "default" decoration */
   g_object_set(frame_gtk.header,
-         "title", title,
-         "has-subtitle", FALSE,
-         "show-close-button", TRUE,
-         NULL);
+    "title", title,
+    "has-subtitle", FALSE,
+    "show-close-button", TRUE,
+    NULL);
 
   context_hdr = gtk_widget_get_style_context(frame_gtk.header);
   gtk_style_context_add_class(context_hdr, GTK_STYLE_CLASS_TITLEBAR);
@@ -324,8 +352,8 @@ ensure_title_bar_surfaces()
   write(pipe_from_child, &drag_threshold, sizeof(int));
 }
 
-
-static void draw_title_bar_child()
+static void
+draw_title_bar_child()
 {
   char *p, title[1000];
   int state, floating, need_commit = false;
@@ -353,7 +381,7 @@ static void draw_title_bar_child()
 #if GTK_MAJOR_VERSION == 4
   if (GTK_IS_WIDGET(frame_gtk.hdr_focus.widget)) {
     gtk_widget_set_state_flags(frame_gtk.hdr_focus.widget,
-             GTK_STATE_FLAG_PRELIGHT|GTK_STATE_FLAG_ACTIVE, 1);
+      GTK_STATE_FLAG_PRELIGHT|GTK_STATE_FLAG_ACTIVE, 1);
   }
 #endif
 
@@ -368,7 +396,7 @@ static void draw_title_bar_child()
       gtk_widget_unset_state_flags(frame_gtk.window, GTK_STATE_FLAG_BACKDROP);
     }
   }
-  
+
 #if GTK_MAJOR_VERSION == 3
   if (floating) {
     gtk_style_context_remove_class(style, "maximized");
@@ -412,12 +440,12 @@ static void draw_title_bar_child()
       gtk_requisition_free(rq);
     }
 #endif
-    
+
     gtk_widget_size_allocate(frame_gtk.header, &allocation
 #if GTK_MAJOR_VERSION == 4
-                             , -1
+          , -1
 #endif
-                             );
+          );
   }
   write(pipe_from_child, &need_commit, sizeof(int));
   write(pipe_from_child, &current_min_w, sizeof(int));
@@ -427,7 +455,6 @@ static void draw_title_bar_child()
   write(pipe_from_child, &W, sizeof(int));
   write(pipe_from_child, &H, sizeof(int));
 }
-
 
 #if GTK_MAJOR_VERSION == 3
 static void
@@ -440,7 +467,7 @@ array_append(enum header_element **array, size_t *n, enum header_element item)
 
 static void
 draw_header_background(struct libdecor_frame_gtk *frame_gtk,
-           cairo_t *cr)
+        cairo_t *cr)
 {
   /* background */
   GtkAllocation allocation;
@@ -453,7 +480,7 @@ draw_header_background(struct libdecor_frame_gtk *frame_gtk,
 
 static void
 draw_header_title(struct libdecor_frame_gtk *frame_gtk,
-      cairo_surface_t *surface)
+        cairo_surface_t *surface)
 {
   /* title */
   GtkWidget *label;
@@ -466,9 +493,9 @@ draw_header_title(struct libdecor_frame_gtk *frame_gtk,
 
   /* create subsection in which to draw label */
   label_surface = cairo_surface_create_for_rectangle(
-        surface,
-        allocation.x, allocation.y,
-        allocation.width, allocation.height);
+    surface,
+    allocation.x, allocation.y,
+    allocation.width, allocation.height);
   cr = cairo_create(label_surface);
   gtk_widget_size_allocate(label, &allocation);
   gtk_widget_draw(label, cr);
@@ -478,10 +505,10 @@ draw_header_title(struct libdecor_frame_gtk *frame_gtk,
 
 static void
 draw_header_button(struct libdecor_frame_gtk *frame_gtk,
-       cairo_t *cr,
-       cairo_surface_t *surface,
-       enum header_element button_type,
-       enum libdecor_window_state window_state)
+         cairo_t *cr,
+        cairo_surface_t *surface,
+        enum header_element button_type,
+        enum libdecor_window_state window_state)
 {
   struct header_element_data elem;
   GtkWidget *button;
@@ -534,11 +561,11 @@ draw_header_button(struct libdecor_frame_gtk *frame_gtk,
   gtk_style_context_save(button_style);
   gtk_style_context_set_state(button_style, style_state);
   gtk_render_background(button_style, cr,
-            allocation.x, allocation.y,
-            allocation.width, allocation.height);
+    allocation.x, allocation.y,
+    allocation.width, allocation.height);
   gtk_render_frame(button_style, cr,
-       allocation.x, allocation.y,
-       allocation.width, allocation.height);
+    allocation.x, allocation.y,
+    allocation.width, allocation.height);
   gtk_style_context_restore(button_style);
 
   /* symbol */
@@ -548,15 +575,15 @@ draw_header_button(struct libdecor_frame_gtk *frame_gtk,
     break;
   case HEADER_MAX:
     icon_name = (window_state & LIBDECOR_WINDOW_STATE_MAXIMIZED) ?
-            "window-restore-symbolic" :
-            "window-maximize-symbolic";
+      "window-restore-symbolic" :
+      "window-maximize-symbolic";
     break;
   case HEADER_CLOSE:
     icon_name = "window-close-symbolic";
     break;
   default:
     icon_name = NULL;
-    break;
+  break;
   }
 
   /* get scale */
@@ -586,7 +613,7 @@ draw_header_button(struct libdecor_frame_gtk *frame_gtk,
 
   /* dimensions and position */
   gtk_style_context_get(button_style, gtk_style_context_get_state(button_style),
-            "min-width", &width, "min-height", &height, NULL);
+      "min-width", &width, "min-height", &height, NULL);
 
   if (width < icon_width)
     width = icon_width;
@@ -609,20 +636,18 @@ draw_header_button(struct libdecor_frame_gtk *frame_gtk,
   height += top + bottom;
 
   gtk_render_icon_surface(gtk_widget_get_style_context(icon_widget),
-        cr, icon_surface,
-        allocation.x + ((width - icon_width) / 2),
-        allocation.y + ((height - icon_height) / 2));
+    cr, icon_surface,
+    allocation.x + ((width - icon_width) / 2),
+    allocation.y + ((height - icon_height) / 2));
   cairo_paint(cr);
   cairo_surface_destroy(icon_surface);
   g_object_unref(icon_pixbuf);
 }
 
-
 static void
 draw_header_buttons(struct libdecor_frame_gtk *frame_gtk, cairo_t *cr, cairo_surface_t *surface)
 {
   /* buttons */
-  //enum libdecor_window_state window_state;
   enum header_element *buttons = NULL;
   size_t nbuttons = 0;
 
@@ -639,8 +664,7 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk, cairo_t *cr, cairo_sur
   } /* loop buttons */
   free(buttons);
 }
-#endif
-
+#endif /* GTK_MAJOR_VERSION == 3 */
 
 static void draw_header()
 {
@@ -652,14 +676,17 @@ static void draw_header()
   read(pipe_to_child, &scale, sizeof(int));
   read(pipe_to_child, &frame_gtk, sizeof(struct libdecor_frame_gtk));
   size = H * cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W);
-  if (size > child_size || !mmap_data) {
-    if (mmap_data) munmap(mmap_data, child_size);
-    if (size > child_size) child_size = size;
-    mmap_data = mmap(NULL, child_size, PROT_READ | PROT_WRITE, MAP_SHARED, child_fd, 0);
+  if (size > shm_size || !mmap_data) {
+    if (mmap_data)
+      munmap(mmap_data, shm_size);
+    if (size > shm_size)
+      shm_size = size;
+    mmap_data = mmap(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   }
 
-  cairo_surface_t *surface = cairo_image_surface_create_for_data(mmap_data, CAIRO_FORMAT_ARGB32,
-        W, H, cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W));
+  cairo_surface_t *surface = cairo_image_surface_create_for_data(mmap_data,
+    CAIRO_FORMAT_ARGB32,
+    W, H, cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, W));
   cairo_surface_set_device_scale(surface, scale, scale);
   cairo_t *cr = cairo_create(surface);
 
@@ -689,8 +716,8 @@ static void draw_header()
   cairo_destroy(cr);
 }
 
-
-static void child_check_widget()
+static void
+child_check_widget()
 {
   GtkWidget *widget;
   bool result;
@@ -699,60 +726,77 @@ static void child_check_widget()
   write(pipe_from_child, &result, sizeof(bool));
 }
 
-
-int main(int argc, char **argv) {
+int
+main(int argc, char **argv)
+{
+/* Expectation: argc == 2, argv[1] contains 3 file descriptors separated by ',' for
+   pipe from parent to child, pipe from child to parent, memory object created by shm_open
+   and shared by parent and child. This shared memory object is destined to contain
+   the graphical content of the window titlebar in CAIRO_FORMAT_ARGB32. The child process
+   writes, using GTK calls, the content of this memory object. Next, the parent process
+   copies this content to the libdecor buffer corresponding to the titlebar wl_surface
+   and commits that surface to Wayland. The two pipes are used to exchange small-sized
+   information between parent and child and to synchronize child vs parent.
+ */
   enum child_commands cmd;
   int n = 0;
-  
-  if (argc == 2) n = sscanf(argv[1], "%d,%d,%d", &pipe_to_child, &pipe_from_child, &child_fd);
+
+  if (argc == 2)
+    n = sscanf(argv[1], "%d,%d,%d", &pipe_to_child, &pipe_from_child, &shm_fd);
   if (argc != 2 || n != 3) {
     fprintf(stderr, "This program is only meant to run as a child of the libdecor-gtk plugin.\n");
     exit(0);
   }
   while (true) {
+    /* receive from parent sign of what operation is the child asked to perform */
     if (read(pipe_to_child, &cmd, sizeof(enum child_commands)) <= 0) {
+      exit(0); /* successful end of the child process */
+    }
+    switch (cmd) { /* across all possible child operations */
+    /* Each child operation involves GTK. It begins by receiving parameter values
+     from the parent. Then, GTK operations are performed. It optionally ends
+     sending operation results to the parent.
+     */
+    case CHILD_INIT:
+      child_gtk_init();
+      break;
+
+    case CHILD_DRAW_HEADER:
+      draw_header();
+      break;
+
+    case CHILD_DESTROY_HEADER:
+      destroy_window_header();
+      break;
+
+    case CHILD_DRAW_TITLEBAR:
+      draw_title_bar_child();
+      break;
+
+    case CHILD_ENSURE_SURFACES:
+      ensure_title_bar_surfaces();
+      break;
+
+    case CHILD_GET_FOCUS:
+      get_header_focus();
+      break;
+
+    case CHILD_GET_ALLOCATED_WH:
+      child_get_allocated_WH();
+      break;
+
+    case CHILD_CHECK_WIDGET:
+      child_check_widget();
+      break;
+
+    default:
+      fprintf(stderr,
+        "libdecor-gtk: error in communication between parent and child.\n");
       exit(0);
-    }
-    //printf("child reads %d\n",cmd);
-    switch (cmd) {
-      case CHILD_INIT:
-        child_gtk_init();
-        break;
-        
-      case CHILD_DRAW_HEADER:
-        draw_header();
-        break;
-        
-      case CHILD_DESTROY_HEADER:
-        destroy_window_header();
-        break;
-        
-      case CHILD_DRAW_TITLEBAR:
-        draw_title_bar_child();
-        break;
-        
-      case CHILD_ENSURE_SURFACES:
-        ensure_title_bar_surfaces();
-        break;
-        
-      case CHILD_GET_FOCUS:
-        get_header_focus();
-        break;
-        
-      case CHILD_GET_ALLOCATED_WH:
-        child_get_allocated_WH();
-        break;
-        
-      case CHILD_CHECK_WIDGET:
-        child_check_widget();
-        break;
-        
-      default:
-        break;
-    }
+    } /* switch */
+    /* send parent sign of completion of the requested operation by child */
     cmd = CHILD_OP_COMPLETED;
-    //printf("child writes %d\n",cmd);
     write(pipe_from_child, &cmd, sizeof(enum child_commands));
-  }
+  } /* while(true) */
   return 0;
 }
