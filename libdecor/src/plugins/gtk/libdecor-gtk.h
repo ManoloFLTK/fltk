@@ -28,9 +28,9 @@
 #define LIBDECOR_GTK_H 1
 
 #ifndef GTK_MAJOR_VERSION
-/* types used both by GTK-aware libdecor-gtk-child.c and GTK-unaware libdecor-gtk.c */
+/* residual GTK types used by GTK-unaware libdecor-gtk.c */
 typedef enum
-{
+{ /* only enum values used by libdecor-gtk.c are defined here */
   GTK_STATE_FLAG_ACTIVE   = 1 << 0,
   GTK_STATE_FLAG_PRELIGHT = 1 << 1,
 } GtkStateFlags;
@@ -48,6 +48,68 @@ enum child_commands {
   CHILD_GET_ALLOCATED_WH,
   CHILD_CHECK_WIDGET,
 };
+
+/*     How parent and child exchange information and synchronize
+One pipe sends data from child to parent.
+Another pipe sends data from parent to child.
+
+Parent writes to the to-child pipe the value of the desired child operation
+and the values of that operation's parameters.
+Parent next reads from the from-child pipe and therefore blocks until
+something appears there that will be the result of the requested operation.
+Child reads from the to-child pipe the operation value and its parameters. It performs that
+operation and writes to the from-child pipe operation results and CHILD_OP_COMPLETED.
+Child next reads from the to-child pipe and therefore blocks until something appears
+there that will be the next operation request sent by parent.
+Child ends with exit(0) when that read operation returns -1.
+Parent's ongoing read from the from-child pipe unblocks and delivers the operation results
+and an operation value that is necessarily CHILD_OP_COMPLETED. Parent continues its work.
+
+    Details of operation input parameters and output results
+OPERATION-NAME
+parameters                type        results        type
+CHILD_INIT
+plugin_gtk->color_scheme_setting    uint_32t      did_error_occur?  bool
+
+CHILD_DRAW_HEADER
+buffer->buffer_width          int
+buffer->buffer_height          int
+buffer->buffer_scale          int
+*frame_gtk            struct libdecor_frame_gtk
+
+CHILD_DESTROY_HEADER
+frame_gtk->header            void*
+frame_gtk->window            void*
+
+CHILD_DRAW_TITLEBAR
+*frame_gtk            struct libdecor_frame_gtk  need_commit    int
+libdecor_frame_get_window_state()    int          current_min_w  int
+libdecor_frame_is_floating()      int          current_min_h  int
+W-libdecor_frame_get_min_content_size()  int          current_max_w  int
+H-libdecor_frame_get_min_content_size()  int          current_max_h  int
+W-libdecor_frame_get_max_content_size()  int          W        int
+H-libdecor_frame_get_max_content_size()  int          H        int
+libdecor_frame_get_content_width()    int
+libdecor_frame_get_content_height()    int
+libdecor_frame_get_title()        strlen()+1 bytes
+
+CHILD_ENSURE_SURFACES
+*frame_gtk             struct libdecor_frame_gtk  *frame_gtk  struct libdecor_frame_gtk
+libdecor_frame_has_capability()      int          frame_gtk->plugin_gtk->double_click_time_ms  int
+libdecor_frame_get_title()        strlen()+1 bytes  frame_gtk->plugin_gtk->drag_threshold  int
+
+CHILD_GET_FOCUS
+frame_gtk->header            void*        new_focus     struct header_element_data
+seat->pointer_x              int
+seat->pointer_y              int
+
+CHILD_GET_ALLOCATED_WH
+frame_gtk->header            void*        skip      int
+                              title_height  int
+CHILD_CHECK_WIDGET
+frame_gtk->header            void*        is_gtk_widget  int
+
+*/
 
 enum header_element {
   HEADER_NONE,

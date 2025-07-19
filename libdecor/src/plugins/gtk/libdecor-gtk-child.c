@@ -669,7 +669,7 @@ draw_header_buttons(struct libdecor_frame_gtk *frame_gtk, cairo_t *cr, cairo_sur
 static void draw_header()
 {
   int W, H, scale;
-  size_t size;
+  off_t size;
   struct libdecor_frame_gtk frame_gtk;
   read(pipe_to_child, &W, sizeof(int));
   read(pipe_to_child, &H, sizeof(int));
