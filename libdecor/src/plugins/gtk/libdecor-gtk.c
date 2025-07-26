@@ -48,6 +48,22 @@
 #include "common/libdecor-cairo-blur.h"
 #include <poll.h>
 
+struct buffer {
+	struct wl_buffer *wl_buffer;
+	bool in_use;
+	bool is_detached;
+
+	void *data;
+	size_t data_size;
+	int width;
+	int height;
+	int scale;
+	int buffer_width;
+	int buffer_height;
+
+	int fd;
+};
+
 #include "libdecor-gtk.h"
 
 static const size_t SHADOW_MARGIN = 24;	/* grabbable part of the border */
@@ -260,10 +276,6 @@ libdecor_plugin_gtk_destroy(struct libdecor_plugin *plugin)
 		wl_subcompositor_destroy(plugin_gtk->wl_subcompositor);
 
 	libdecor_plugin_release(&plugin_gtk->plugin);
-	if (plugin_gtk->shm_mmap) {
-		munmap(plugin_gtk->shm_mmap, plugin_gtk->shm_size);
-	}
-	shm_unlink(plugin_gtk->shared_name);
 	free(plugin_gtk);
 }
 
@@ -384,7 +396,7 @@ toggle_maximized(struct libdecor_frame *const frame)
 
 static void
 buffer_release(void *user_data,
-	       struct wl_buffer *wl_buffer)
+		  struct wl_buffer *wl_buffer)
 {
 	struct buffer *buffer = user_data;
 
@@ -403,7 +415,8 @@ create_shm_buffer(struct libdecor_plugin_gtk *plugin_gtk,
 		  int width,
 		  int height,
 		  bool opaque,
-		  int scale)
+		  int scale,
+		  enum component component)
 {
 	struct wl_shm_pool *pool;
 	int fd, size, buffer_width, buffer_height, stride;
@@ -440,7 +453,7 @@ create_shm_buffer(struct libdecor_plugin_gtk *plugin_gtk,
 						      buf_fmt);
 	wl_buffer_add_listener(buffer->wl_buffer, &buffer_listener, buffer);
 	wl_shm_pool_destroy(pool);
-	close(fd);
+	if (component != HEADER) close(fd);
 
 	buffer->data = data;
 	buffer->data_size = size;
@@ -449,6 +462,7 @@ create_shm_buffer(struct libdecor_plugin_gtk *plugin_gtk,
 	buffer->scale = scale;
 	buffer->buffer_width = buffer_width;
 	buffer->buffer_height = buffer_height;
+	buffer->fd = (component == HEADER ? fd : -1);
 
 	return buffer;
 }
@@ -461,6 +475,7 @@ buffer_free(struct buffer *buffer)
 		munmap(buffer->data, buffer->data_size);
 		buffer->wl_buffer = NULL;
 		buffer->in_use = false;
+		if (buffer->fd > 0) close(buffer->fd);
 	}
 	free(buffer);
 }
@@ -781,14 +796,11 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 {
 	cairo_surface_t *surface = NULL;
 	cairo_t *cr = NULL;
+	enum child_commands cmd;
 
 	/* clear buffer */
 	memset(buffer->data, 0, buffer->data_size);
 	
-	struct libdecor_plugin_gtk *plugin_gtk = frame_gtk->plugin_gtk;
-	off_t surface_size = buffer->buffer_height *
-	  cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->buffer_width);
-
 	/* background */
 	switch (component) {
 	case NONE:
@@ -813,22 +825,14 @@ draw_component_content(struct libdecor_frame_gtk *frame_gtk,
 			      64);
 		break;
 	case HEADER:
-		if (surface_size > plugin_gtk->shm_size) {
-			if (plugin_gtk->shm_size) munmap(plugin_gtk->shm_mmap, plugin_gtk->shm_size);
-			plugin_gtk->shm_size = surface_size;
-			ftruncate(plugin_gtk->shm_fd, surface_size);
-printf("ftruncate(%lld)\n",(long long)surface_size);
-			plugin_gtk->shm_mmap = mmap(NULL, surface_size, PROT_READ | PROT_WRITE,
-							MAP_SHARED, plugin_gtk->shm_fd, 0);
-		}
-		enum child_commands cmd = CHILD_DRAW_HEADER;
+		cmd = CHILD_DRAW_HEADER;
 		write(pipe_to_gtk_child[1], &cmd, sizeof(enum child_commands));
 		write(pipe_to_gtk_child[1], &buffer->buffer_width, sizeof(int));
 		write(pipe_to_gtk_child[1], &buffer->buffer_height, sizeof(int));
 		write(pipe_to_gtk_child[1], &buffer->scale, sizeof(int));
+		write(pipe_to_gtk_child[1], &buffer->fd, sizeof(int));
 		write(pipe_to_gtk_child[1], frame_gtk, sizeof(struct libdecor_frame_gtk));
 		read(pipe_from_gtk_child[0], &cmd, sizeof(enum child_commands));
-		memcpy(buffer->data, plugin_gtk->shm_mmap, surface_size);
 		break;
 	}
 
@@ -922,7 +926,8 @@ draw_border_component(struct libdecor_frame_gtk *frame_gtk,
 					   component_width,
 					   component_height,
 					   border_component->opaque,
-					   border_component->scale);
+					   border_component->scale,
+					   component);
 
 	draw_component_content(frame_gtk, buffer,
 			       component_width, component_height,
@@ -2577,12 +2582,6 @@ libdecor_plugin_new(struct libdecor *context)
 /* create two pipes to communicate with future child */
 	pipe(pipe_to_gtk_child);
 	pipe(pipe_from_gtk_child);
-/* create memory section to share with future child*/
-	snprintf(plugin_gtk->shared_name, sizeof(plugin_gtk->shared_name),
-		 "/libdecor-gtk%X", getpid());
-	plugin_gtk->shm_fd = shm_open(plugin_gtk->shared_name, O_RDWR | O_CREAT, S_IRUSR|S_IWUSR);
-	fcntl(plugin_gtk->shm_fd, F_SETFD, 0); /* remove FD_CLOEXEC */
-	plugin_gtk->shm_size = 0;
 /* fork child process */
 	pid_t pid = fork();
 	if (pid == -1) {
@@ -2595,8 +2594,7 @@ libdecor_plugin_new(struct libdecor *context)
 		close(pipe_to_gtk_child[1]);
 		close(pipe_from_gtk_child[0]);
 		close(libdecor_plugin_gtk_get_fd((struct libdecor_plugin *)plugin_gtk));
-		snprintf(arg1, sizeof(arg1), "%d,%d,%d",
-			 pipe_to_gtk_child[0], pipe_from_gtk_child[1], plugin_gtk->shm_fd);
+		snprintf(arg1, sizeof(arg1), "%d,%d", pipe_to_gtk_child[0], pipe_from_gtk_child[1]);
 		plugin_dir = getenv("LIBDECOR_PLUGIN_DIR");
 		if (!plugin_dir)
 			plugin_dir = LIBDECOR_PLUGIN_DIR;
