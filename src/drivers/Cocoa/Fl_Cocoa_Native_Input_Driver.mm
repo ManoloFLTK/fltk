@@ -23,6 +23,7 @@
 #include "../Darwin/Fl_Darwin_System_Driver.H"  // for calc_mac_os_version()
 #include "Fl_Cocoa_Window_Driver.H"
 #include "../../Fl_Screen_Driver.H"
+#include "../Quartz/Fl_Font.H"
 
 #import <Cocoa/Cocoa.h>
 
@@ -391,7 +392,6 @@ void Fl_Cocoa_Native_Input_Driver::hide_widget() {
 
 void Fl_Cocoa_Native_Input_Driver::textfontandsize() {
   if (!text_view) return;
-  extern Fl_Fontdesc* fl_fonts;
   if (!fl_fonts) fl_fonts = Fl_Graphics_Driver::default_driver().calc_fl_fonts();
   NSString *name = [NSString stringWithUTF8String:(fl_fonts + widget->textfont())->name];
   int ns = widget->top_window()->screen_num();
