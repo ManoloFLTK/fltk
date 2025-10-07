@@ -18,12 +18,15 @@
 #include <FL/Fl_Image_Surface.H>
 #include <FL/Fl_Scrollbar.H>
 #include <FL/fl_callback_macros.H>
-#include "../Cairo/Fl_Cairo_Graphics_Driver.H"
+#include "Fl_Cairo_Graphics_Driver.H"
 #include <FL/fl_ask.H>          // fl_beep()
 #include "../../Fl_Screen_Driver.H"
 
 #include <gtk/gtk.h>
 
+#if GTK_MAJOR_VERSION != 3 && GTK_MAJOR_VERSION != 4
+# error GTK3 or GTK4 required
+#endif
 
 class Fl_GTK3_Text_Undo_Action;
 class Fl_GTK3_Text_Undo_Action_List;
@@ -44,6 +47,7 @@ private:
   Fl_GTK3_Text_Undo_Action_List* undo_list_;
   Fl_GTK3_Text_Undo_Action_List* redo_list_;
   char *text_before_show_;
+  char class_name_part_[60];
   double upper_;
   int lineheight_; // approx line height which exact value varies somewhat along text
   int insert_offset_; // offset in drawing units from left margin to insertion point
@@ -53,6 +57,9 @@ private:
   static void adjustment_value_changed_(GtkAdjustment *adj, Fl_Cairo_Native_Input_Driver*);
   static void draw_child(Fl_Widget& widget);
   static void update_child(Fl_Widget& widget);
+#if GTK_MAJOR_VERSION == 4
+  static void delayed_set_style_(Fl_Cairo_Native_Input_Driver *dr);
+#endif
   void text_view_scroll_mark_onscreen_(bool relative_to_mark = false);
   void text_view_scroll_mark_h_(GtkTextIter *before);
   void scan_all_paragraphs_();
@@ -162,12 +169,27 @@ Fl_Cairo_Native_Input_Driver::Fl_Cairo_Native_Input_Driver() : Fl_Native_Input_D
   lineheight_ = 0;
   upper_ = 0;
   insert_offset_ = -1; // means undefined
+  strcpy(class_name_part_, "textview");
+#if GTK_MAJOR_VERSION == 4
+  strcat(class_name_part_,  ".Fl_Native_Input");
+  snprintf(class_name_part_ + strlen(class_name_part_),
+           sizeof(class_name_part_) - strlen(class_name_part_), "%p", this);
+#endif
 }
 
 Fl_Cairo_Native_Input_Driver::~Fl_Cairo_Native_Input_Driver() {
   delete[] text_before_show_;
   if (text_view_) {
+#if GTK_MAJOR_VERSION == 3
+    if (css_provider_) {
+      GtkStyleContext *style_context = gtk_widget_get_style_context(text_view_);
+      gtk_style_context_remove_provider(style_context, GTK_STYLE_PROVIDER(css_provider_));
+      g_object_unref(css_provider_);
+    }
     gtk_widget_destroy(window_);
+#else
+    gtk_window_destroy((GtkWindow*)window_);
+#endif
   }
   if (v_fl_scrollbar_) delete v_fl_scrollbar_;
   if (h_fl_slider_) delete h_fl_slider_;
@@ -219,7 +241,11 @@ static void scroll_cb(Fl_Slider *sb, GtkAdjustment *adjust, Fl_Native_Input *nat
 void Fl_Cairo_Native_Input_Driver::textfontandsize()  {
   if (text_view_) {
     const char *content = value();
+#if GTK_MAJOR_VERSION == 3
     gtk_widget_destroy(window_);
+#else
+    gtk_window_destroy((GtkWindow*)window_);
+#endif
     text_view_ = NULL;
     delete v_fl_scrollbar_;
     v_fl_scrollbar_ = NULL;
@@ -243,50 +269,81 @@ void Fl_Cairo_Native_Input_Driver::textcolor()  {
 
 void Fl_Cairo_Native_Input_Driver::set_style_()  {
   // use css to set all colors
+#if GTK_MAJOR_VERSION == 3
   GtkStyleContext *style_context = gtk_widget_get_style_context(text_view_);
-  gtk_style_context_add_class(style_context, GTK_STYLE_CLASS_VIEW);
+  //gtk_style_context_add_class(style_context, GTK_STYLE_CLASS_VIEW);
+#endif
   uchar r,g,b;
   char bg_color_str[8];
   Fl::get_color(widget->color(),r,g,b);
   snprintf(bg_color_str, sizeof(bg_color_str), "#%2.2x%2.2x%2.2x", r, g, b);
-  char color_str[8];
-  Fl::get_color(widget->active() ? widget->textcolor() : fl_inactive(widget->textcolor()), r, g, b);
-  snprintf(color_str, sizeof(color_str), "#%2.2x%2.2x%2.2x", r, g, b);
-  char caret_color_str[8];
+  char caret_color_str[10];
   Fl::get_color(widget->cursor_color(), r, g, b);
+#if GTK_MAJOR_VERSION == 3
   snprintf(caret_color_str, sizeof(caret_color_str), "#%2.2x%2.2x%2.2x", r, g, b);
+#else
+  uchar a = (widget == Fl::focus() ? 0xFF : 0);
+  snprintf(caret_color_str, sizeof(caret_color_str), "#%2.2x%2.2x%2.2x%2.2x", r, g, b, a);
+#endif
   char sel_color_str[8];
   Fl::get_color(widget->selection_color(), r, g, b);
   snprintf(sel_color_str, sizeof(sel_color_str), "#%2.2x%2.2x%2.2x", r, g, b);
   char text_sel_color_str[8];
   Fl::get_color(fl_contrast(widget->textcolor(), widget->selection_color()), r, g, b);
   snprintf(text_sel_color_str, sizeof(text_sel_color_str), "#%2.2x%2.2x%2.2x", r, g, b);
-  char line[200];
+  char line[400];
   snprintf(line, sizeof(line),
-           //"textview text { background-color: %s; color: %s; }"
-           ".view { caret-color: %s; }"
-           ".view text { background-color: %s; color: %s; }"
-           ".view text selection { background-color: %s;  color: %s; }",
-           caret_color_str, bg_color_str, color_str, sel_color_str, text_sel_color_str);
+           "%s { caret-color: %s; } "
+           "%s text { background-color: %s; } "
+           "%s text selection { background-color: %s;  color: %s; }",
+           class_name_part_, caret_color_str,
+           class_name_part_, bg_color_str,
+           class_name_part_, sel_color_str, text_sel_color_str);
+#if GTK_MAJOR_VERSION == 3
   if (css_provider_) {
     gtk_style_context_remove_provider(style_context, GTK_STYLE_PROVIDER(css_provider_));
     g_object_unref(css_provider_);
   }
+#endif
   css_provider_ = gtk_css_provider_new();
-  gtk_css_provider_load_from_data(css_provider_, line, -1, NULL);
+#if GTK_MAJOR_VERSION == 3 || (GTK_MAJOR_VERSION == 4 && GTK_MINOR_VERSION < 12)
+  gtk_css_provider_load_from_data(css_provider_, line, -1 , NULL);
+#else
+  gtk_css_provider_load_from_string(css_provider_, line);
+#endif
+#if GTK_MAJOR_VERSION == 3
   gtk_style_context_add_provider(style_context, GTK_STYLE_PROVIDER(css_provider_),
                                   GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+#else
+  gtk_style_context_add_provider_for_display(gdk_display_get_default(),
+          GTK_STYLE_PROVIDER(css_provider_), GTK_STYLE_PROVIDER_PRIORITY_USER);
+  //TODO shd we use gtk_style_context_remove_provider_for_display() ?
+  g_object_unref(css_provider_);
+  css_provider_ = NULL;
+#endif
+  // Set the text color
+  Fl::get_color(widget->active() ? widget->textcolor() : fl_inactive(widget->textcolor()), r, g, b);
+  GdkRGBA text_rgba = {r/255.f, g/255.f, b/255.f, 1.f};
+  g_object_set(font_size_tag_, "foreground-rgba", &text_rgba, NULL);
 }
 
 
 void Fl_Cairo_Native_Input_Driver::show_widget()  {
   static bool first = true;
   if (first) {
+#if GTK_MAJOR_VERSION == 3
     gtk_init(NULL, NULL);
+#else
+    gtk_init();
+#endif
     first = false;
   }
   if (widget->window()->shown() && !text_view_) {
+#if GTK_MAJOR_VERSION == 3
     window_ = gtk_offscreen_window_new();
+#else
+    window_ = gtk_window_new();
+#endif
     Fl_Group *g = Fl_Group::current();
     Fl_Group::current(NULL);
     if (kind == Fl_Native_Input_Driver::MULTIPLE_LINES) {
@@ -309,8 +366,21 @@ void Fl_Cairo_Native_Input_Driver::show_widget()  {
       g_signal_connect(h_adjust_, "changed", G_CALLBACK(adjustment_changed_), this);
       g_signal_connect(h_adjust_, "value-changed", G_CALLBACK(adjustment_value_changed_), this);
     }
+#if GTK_MAJOR_VERSION == 3
     scrolled_ = gtk_scrolled_window_new(h_adjust_, v_adjust_);
+#else
+    scrolled_ = gtk_scrolled_window_new();
+    if (h_adjust_) gtk_scrolled_window_set_hadjustment(GTK_SCROLLED_WINDOW(scrolled_), h_adjust_);
+    if (v_adjust_) gtk_scrolled_window_set_vadjustment(GTK_SCROLLED_WINDOW(scrolled_), v_adjust_);
+    GtkWidget *scroll = gtk_scrolled_window_get_hscrollbar(GTK_SCROLLED_WINDOW(scrolled_));
+    gtk_widget_set_visible(scroll, false);
+    scroll = gtk_scrolled_window_get_vscrollbar(GTK_SCROLLED_WINDOW(scrolled_));
+    gtk_widget_set_visible(scroll, false);
+#endif
     text_view_ = gtk_text_view_new();
+#if GTK_MAJOR_VERSION == 4
+    gtk_widget_add_css_class(text_view_, class_name_part_ + 9);
+#endif
     gtk_text_view_set_left_margin(GTK_TEXT_VIEW(text_view_), 3);
     gtk_text_view_set_right_margin(GTK_TEXT_VIEW(text_view_), 3);
     gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view_), !widget->readonly() );
@@ -319,13 +389,23 @@ void Fl_Cairo_Native_Input_Driver::show_widget()  {
       (kind == Fl_Native_Input_Driver::SINGLE_LINE || !widget->wrap() ? GTK_WRAP_NONE: GTK_WRAP_WORD));
     gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(text_view_), false);
     gtk_widget_set_can_focus(text_view_, !widget->readonly());
+#if GTK_MAJOR_VERSION == 3
     gtk_container_add(GTK_CONTAINER(scrolled_), text_view_);
     gtk_container_add(GTK_CONTAINER(window_), scrolled_);
+#else
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_), text_view_);
+    gtk_window_set_child((GtkWindow*)window_, scrolled_);
+#endif
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_), // important
         (kind == Fl_Native_Input_Driver::MULTIPLE_LINES && widget->wrap() ? GTK_POLICY_NEVER: GTK_POLICY_ALWAYS), //H
         (kind == Fl_Native_Input_Driver::SINGLE_LINE ? GTK_POLICY_NEVER : GTK_POLICY_ALWAYS) //V
                                    );
+#if GTK_MAJOR_VERSION == 3
     gtk_widget_show_all(window_);
+#else
+    gtk_widget_realize(window_);
+#endif
+
     
     buffer_ = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view_));
     g_signal_connect(buffer_, "changed", G_CALLBACK(textbuffer_changed_), this);
@@ -336,7 +416,8 @@ void Fl_Cairo_Native_Input_Driver::show_widget()  {
     if (!fl_fonts) fl_fonts = Fl_Graphics_Driver::default_driver().calc_fl_fonts();
     const char *fname = (fl_fonts + widget->textfont())->name;
     snprintf(font_str, sizeof(font_str), "%s %dpx", fname, widget->textsize());
-    font_size_tag_ = gtk_text_buffer_create_tag(buffer_, NULL, "font", font_str, NULL);
+    font_size_tag_ = gtk_text_buffer_create_tag(buffer_, NULL, "font", font_str,
+                                                NULL);
     set_style_();
     
     if (text_before_show_) {
@@ -378,7 +459,11 @@ void Fl_Cairo_Native_Input_Driver::resize()  {
 
 void Fl_Cairo_Native_Input_Driver::draw()  {
   if (!widget->visible()) return;
-  gtk_widget_size_allocate(scrolled_, &allocation_);
+  gtk_widget_size_allocate(scrolled_, &allocation_
+#if GTK_MAJOR_VERSION == 4
+                           , -1
+#endif
+                           );
   bool to_display = true;
   Fl_Image_Surface *offscreen = NULL;
   Fl_Cairo_Graphics_Driver *dr;
@@ -402,23 +487,37 @@ void Fl_Cairo_Native_Input_Driver::draw()  {
   if (Fl::focus() != widget) { // temporarily hide selection when widget not focused
     gtk_text_buffer_select_range(buffer_, &insert, &insert);
   }
+#if GTK_MAJOR_VERSION == 3
   gtk_widget_draw(scrolled_, dr->cr());
+#endif
+  GdkRectangle strong;
   if (Fl::focus() != widget) {
     gtk_text_buffer_select_range(buffer_, &insert, &sel_end);
   } else if (!selection_active) { // draw insertion cursor
-    GdkRectangle strong;
     gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view_), NULL, &strong, NULL);
     gtk_text_view_buffer_to_window_coords(GTK_TEXT_VIEW(text_view_),
                                           GTK_TEXT_WINDOW_TEXT, strong.x, strong.y, &strong.x, &strong.y);
+#if GTK_MAJOR_VERSION == 3
     // the native insertion cursor
     PangoLayout *layout = gtk_widget_create_pango_layout(text_view_, NULL);
     gtk_render_insertion_cursor(gtk_widget_get_style_context(text_view_),
-      dr->cr(), strong.x, strong.y + widget->textsize()/4, layout, 0, PANGO_DIRECTION_NEUTRAL);
+                                dr->cr(), strong.x, strong.y + widget->textsize()/4, layout, 0, PANGO_DIRECTION_NEUTRAL);
     g_object_unref(layout);
-    if (to_display) {
-      fl_set_spot(widget->textfont(), widget->textsize(),
-                  (strong.x + widget->x()), (strong.y + widget->textsize() * 1.3 + widget->y()), 1, 0);
-    }
+#endif
+  }
+#if GTK_MAJOR_VERSION == 4
+  GtkSnapshot *snapshot = gtk_snapshot_new();
+  gtk_widget_set_visible(window_, true);
+  gtk_widget_snapshot_child(scrolled_, text_view_, snapshot);
+  gtk_widget_set_visible(window_, false);
+  GskRenderNode *rendernode = gtk_snapshot_free_to_node(snapshot);
+  gsk_render_node_draw(rendernode, dr->cr());
+  gsk_render_node_unref(rendernode);
+  g_main_context_iteration(NULL, false); /* force window hiding to be processed */
+#endif
+  if (to_display && Fl::focus() == widget && !selection_active) {
+    fl_set_spot(widget->textfont(), widget->textsize(),
+                (strong.x + widget->x()), (strong.y + widget->textsize() * 1.3 + widget->y()), 1, 0);
   }
   if (to_display) {
     cairo_new_path(dr->cr()); // sometimes necessary to restore cairo context OK
@@ -612,7 +711,7 @@ void Fl_Cairo_Native_Input_Driver::replace_selection(const char *text, int len) 
     }
     undo_->undoat_chars = char_pos;
     undo_->undoyankcut_chars = undo_->undocut_chars;
-    delete[] selection;
+    free(selection);
     widget->set_changed();
     gtk_text_buffer_delete_selection(buffer_, true, true);
   }
@@ -664,7 +763,17 @@ void Fl_Cairo_Native_Input_Driver::replace(int from, int to, const char *text, i
 }
 
 
+#if GTK_MAJOR_VERSION == 4
+void Fl_Cairo_Native_Input_Driver::delayed_set_style_(Fl_Cairo_Native_Input_Driver *dr) {
+  dr->set_style_();
+}
+#endif
+
+
 int Fl_Cairo_Native_Input_Driver::handle_focus(int event) {
+#if GTK_MAJOR_VERSION == 4
+  Fl::add_timeout(0, (Fl_Timeout_Handler)delayed_set_style_, this);
+#endif
   widget->damage(FL_DAMAGE_CHILD);
   return 1;
 }
@@ -685,7 +794,7 @@ int Fl_Cairo_Native_Input_Driver::copy() {
     char *buf = gtk_text_buffer_get_text(buffer_, &start, &end, false);
     if (kind == SINGLE_LINE) put_back_newlines_(buf);
     Fl::copy(buf, (int)strlen(buf), 1);
-    delete[] buf;
+    free(buf);
     return 1;
   }
   return 0;
@@ -732,7 +841,7 @@ int Fl_Cairo_Native_Input_Driver::handle_keyboard() {
       char *buf = gtk_text_buffer_get_text(buffer_, &start, &end, false);
       if (kind == SINGLE_LINE) put_back_newlines_(buf);
       Fl::copy(buf, (int)strlen(buf), 1);
-      delete[] buf;
+      free(buf);
       replace_selection(NULL, 0);
       return 1;
     } else if (mods == 0 && ((shift && !selected) || !shift)) {
@@ -823,7 +932,7 @@ int Fl_Cairo_Native_Input_Driver::handle_keyboard() {
     else
       gtk_text_view_backward_display_line(GTK_TEXT_VIEW(text_view_), &new_where);
     gtk_text_view_get_cursor_locations(GTK_TEXT_VIEW(text_view_), &new_where, &strong, NULL);
-    gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view_), &new_where, insert_offset_, strong.y);
+    gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(text_view_), &new_where, insert_offset_, strong.y+1);
     bool relative_to_mark = false;
     if (Fl::event_state() & FL_SHIFT) {
       if (Fl::event_key() == FL_Down) {
@@ -1004,9 +1113,9 @@ int Fl_Cairo_Native_Input_Driver::handle_mouse(int event) {
       gtk_text_buffer_get_selection_bounds(buffer_, &dnd_iter_position, &dnd_iter_mark);
       dnd_save_focus = widget;
       // drag the data:
-      const char *buf = gtk_text_buffer_get_text(buffer_, &dnd_iter_position, &dnd_iter_mark, false);
+      char *buf = gtk_text_buffer_get_text(buffer_, &dnd_iter_position, &dnd_iter_mark, false);
       Fl::copy(buf, (int)strlen(buf), 0);
-      delete[] buf;
+      free(buf);
       Fl::screen_driver()->dnd(1);
       return 1;
     }
@@ -1095,7 +1204,7 @@ int Fl_Cairo_Native_Input_Driver::char_pos_to_byte_pos_(int char_count) {
     gtk_text_buffer_get_iter_at_offset(buffer_, &last, char_count);
     text = gtk_text_buffer_get_text(buffer_, &first, &last, true);
     int l = (int)strlen(text);
-    delete[] text;
+    free((char*)text);
     return l;
   }
 }
@@ -1349,7 +1458,7 @@ int Fl_Cairo_Native_Input_Driver::apply_undo_() {
     gtk_text_iter_set_offset(&last, b_chars + xlen_chars);
     char *rest = gtk_text_buffer_get_text(buffer_, &where, &last, true);
     memcpy(undo_->undobuffer, rest, xlen);
-    delete[] rest;
+    free(rest);
     gtk_text_buffer_delete(buffer_, &where, &last);
     widget->redraw();
   }
