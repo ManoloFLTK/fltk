@@ -396,7 +396,7 @@ if(UNIX)
       endif(NOT LINUX_INPUT_H)
     endif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "FreeBSD")
 
-  endif(FLTK_USE_WAYLAND)
+  endif(FLTK_BACKEND_WAYLAND)
 endif(UNIX)
 
 if(WIN32)
