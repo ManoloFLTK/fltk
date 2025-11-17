@@ -313,8 +313,8 @@ static void data_offer_handle_offer(void *data, struct wl_data_offer *offer,
     fl_selection_type[1] = Fl::clipboard_plain_text;
     fl_selection_offer_type = "text/plain";
   } else if (strcmp(mime_type, Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime) == 0) {
-    fl_selection_type[1] = mime_type;
-    fl_selection_offer_type = mime_type;
+    fl_selection_type[1] = Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime;
+    fl_selection_offer_type = Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime;
     //printf("set fl_selection_offer_type=%s\n",mime_type);
   }
 }
@@ -520,7 +520,7 @@ static void data_device_handle_drop(void *data, struct wl_data_device *data_devi
   int ret = Fl::handle(FL_DND_RELEASE, fl_dnd_target_window);
 //printf("data_device_handle_drop ret=%d doing_dnd=%d\n", ret, doing_dnd);
 
-  if (!ret) {
+  if (!ret || fl_selection_offer_type == Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime) {
     wl_data_offer_destroy(current_drag_offer);
     current_drag_offer = NULL;
     return;

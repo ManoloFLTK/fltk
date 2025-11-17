@@ -75,6 +75,8 @@
     - for Fl_Flex:
       - Fl_Flex::VERTICAL = 0
       - Fl_Flex::HORIZONTAL = 1
+    - for Fl_Dockable_Group:
+      - Fl_Dockable_Group::DOCKABLE = 0x10 (used as a bit, several other Fl_Group-derived classes use low values)
     - for Fl_Valuator:
       - FL_VERTICAL = 0
       - FL_HORIZONTAL = 1

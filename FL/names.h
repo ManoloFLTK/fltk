@@ -25,7 +25,6 @@
 #define FL_NAMES_H
 
 #include <FL/Fl.H>  // for event constants
-#include <string>
 #include <map>
 
 /** \defgroup fl_events Events handling functions
@@ -47,7 +46,7 @@
   }
   \endcode
  */
-static std::map<int, const char*> fl_eventnames = {
+std::map<int, const char*> fl_eventnames = {
   { FL_NO_EVENT, "FL_NO_EVENT" },
   { FL_PUSH, "FL_PUSH" },
   { FL_RELEASE, "FL_RELEASE" },
@@ -78,9 +77,11 @@ static std::map<int, const char*> fl_eventnames = {
   { FL_ZOOM_EVENT, "FL_ZOOM_EVENT" },
   { FL_BEFORE_TOOLTIP, "FL_BEFORE_TOOLTIP" },
   { FL_BEFORE_MENU, "FL_BEFORE_MENU" },
-  { /*FL_EVENT_*/ 30, "FL_EVENT_30" }, // not yet defined, just in case it /will/ be defined ...
-  { /*FL_EVENT_*/ 31, "FL_EVENT_31" }, // not yet defined, just in case it /will/ be defined ...
-  { /*FL_EVENT_*/ 32, "FL_EVENT_32" },  // not yet defined, just in case it /will/ be defined ...
+  { FL_DOCK_ENTER, "FL_DOCK_ENTER" },
+  { FL_DOCK_DRAG, "FL_DOCK_DRAG" },
+  { FL_DOCK_RELEASE, "FL_DOCK_RELEASE" },
+  { FL_DOCK_LEAVE, "FL_DOCK_LEAVE" },
+  { FL_UNDOCK, "FL_UNDOCK" },
   { Fl::Pen::DETECTED, "Fl::Pen::DETECTED" },
   { Fl::Pen::CHANGED, "Fl::Pen::CHANGED" },
   { Fl::Pen::ENTER, "Fl::Pen::ENTER" },
@@ -92,20 +93,6 @@ static std::map<int, const char*> fl_eventnames = {
   { Fl::Pen::BUTTON_PUSH, "Fl::Pen::BUTTON_PUSH" },
   { Fl::Pen::BUTTON_RELEASE, "Fl::Pen::BUTTON_RELEASE" }
 };
-
-/**
- Return the C++ symbol of an Fl_Event as a string.
- \param[in] event index as an integer
- \return C++ symbol of event index as a string
- */
-inline std::string fl_eventname_str(int event) {
-  auto it = fl_eventnames.find(event);
-  if (it == fl_eventnames.end()) {
-    return "FL_EVENT_" + std::to_string(event);
-  } else {
-    return it->second;
-  }
-}
 
 
 /**
@@ -146,20 +133,6 @@ const char * const fl_fontnames[] =
 };
 
 /**
-  Return the C++ symbol of an Fl_Font as a string.
-  \param[in] font index as an integer
-  \return C++ symbol of font index as a string
-*/
-inline std::string fl_fontname_str(int font) {
-  if ((font < 0) || (font >= FL_ZAPF_DINGBATS)) {
-    return "FL_FONT_" + std::to_string(font);
-  } else {
-    return fl_fontnames[font];
-  }
-}
-
-
-/**
  This is an array of callback reason names you can use to convert callback reasons into names.
 
  The array gets defined inline wherever your '\#include <FL/names.h>' appears.
@@ -184,19 +157,6 @@ const char * const fl_callback_reason_names[] =
   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   "FL_REASON_USER", "FL_REASON_USER+1", "FL_REASON_USER+2", "FL_REASON_USER+3",
 };
-
-/**
-  Return the C++ symbol of an Fl_Callback_Reason as a string.
-  \param[in] reason as an integer
-  \return C++ symbol of reason as a string
-*/
-inline std::string fl_callback_reason_str(int reason) {
-  if ((reason < 0) || (reason >= FL_REASON_USER+3) || (fl_callback_reason_names[reason] == nullptr)) {
-    return "FL_REASON_" + std::to_string(reason);
-  } else {
-    return fl_callback_reason_names[reason];
-  }
-}
 
 /** @} */
 
