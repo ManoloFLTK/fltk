@@ -375,4 +375,4 @@
  * Do we want to use the "XDG TOPLEVEL DRAG" Wayland protocol?
  */
  
-#cmakedefine HAVE_XDG_TOPLEVEL_DRAG 1
+#cmakedefine01 HAVE_XDG_TOPLEVEL_DRAG
