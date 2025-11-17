@@ -337,6 +337,12 @@ enum Fl_Event { // events
    receive this event right before the menu appears, providing an opportunity
    to update menu item states and activation. */
   FL_BEFORE_MENU        = 29
+  ,
+  FL_UNDOCK = 30,
+  FL_DOCK_ENTER = 31,
+  FL_DOCK_DRAG = 32,
+  FL_DOCK_RELEASE = 33,
+  FL_DOCK_LEAVE = 34
   // DEV NOTE: Keep this list in sync with FL/names.h
 };
 

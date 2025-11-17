@@ -75,9 +75,11 @@ const char * const fl_eventnames[] =
   "FL_ZOOM_EVENT",
   "FL_BEFORE_TOOLTIP",
   "FL_BEFORE_MENU",
-  "FL_EVENT_30", // not yet defined, just in case it /will/ be defined ...
-  "FL_EVENT_31", // not yet defined, just in case it /will/ be defined ...
-  "FL_EVENT_32"  // not yet defined, just in case it /will/ be defined ...
+  "FL_UNDOCK",
+  "FL_DOCK_ENTER",
+  "FL_DOCK_DRAG",
+  "FL_DOCK_RELEASE",
+  "FL_DOCK_LEAVE"
 };
 
 /**
