@@ -338,6 +338,20 @@ enum Fl_Event { // events
    receive this event right before the menu appears, providing an opportunity
    to update menu item states and activation. */
   FL_BEFORE_MENU        = 29
+  ,
+  /** Sent to a docking target widget when an Fl_Dockable_Group object is being dragged and
+   enters the target's docking area. Also sent to the Fl_Dockable_Group object.  */
+  FL_DOCK_ENTER = 30,
+  /** Sent to a docking target widget when an Fl_Dockable_Group object is being dragged and  moves inside the target's docking area. */
+  FL_DOCK_DRAG = 31,
+  /** Sent to a docking target widget when an Fl_Dockable_Group object has been dragged above the docking target and
+   the mouse is released. Also sent to the Fl_Dockable_Group object. */
+  FL_DOCK_RELEASE = 32,
+  /** Sent to a docking target widget when an Fl_Dockable_Group object is being dragged and leaves the target's docking area.
+   Also sent to the Fl_Dockable_Group object. */
+  FL_DOCK_LEAVE = 33,
+  /** Sent to an Fl_Dockable_Group object when it undocks from a docking target widget. */
+  FL_UNDOCK = 34,
   // DEV NOTE: Keep this list in sync with FL/names.h
 };
 

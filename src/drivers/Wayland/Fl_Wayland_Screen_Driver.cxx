@@ -14,6 +14,7 @@
 //     https://www.fltk.org/bugs.php
 //
 
+#include <config.h> // for HAVE_XDG_DIALOG and HAVE_XDG_TOPLEVEL_DRAG
 #include "Fl_Wayland_Screen_Driver.H"
 #include "Fl_Wayland_Window_Driver.H"
 #include "Fl_Wayland_Graphics_Driver.H"
@@ -39,7 +40,7 @@
 #if HAVE_XDG_DIALOG
 #  include "xdg-dialog-client-protocol.h"
 #endif
-#ifdef HAVE_XDG_TOPLEVEL_DRAG
+#if HAVE_XDG_TOPLEVEL_DRAG
 #  include "xdg-toplevel-drag-client-protocol.h"
 #endif
 #include <assert.h>
@@ -1333,20 +1334,16 @@ static void registry_handle_global(void *user_data, struct wl_registry *wl_regis
     scr_driver->text_input_base = (struct zwp_text_input_manager_v3 *)
       wl_registry_bind(wl_registry, id, &zwp_text_input_manager_v3_interface, 1);
 //printf("scr_driver->text_input_base=%p version=%d\n",scr_driver->text_input_base,version);
-<<<<<<< HEAD
 #if HAVE_XDG_DIALOG
   } else if (strcmp(interface, xdg_wm_dialog_v1_interface.name) == 0) {
     scr_driver->xdg_wm_dialog = (struct xdg_wm_dialog_v1 *)
       wl_registry_bind(wl_registry, id, &xdg_wm_dialog_v1_interface, 1);
 #endif // HAVE_XDG_DIALOG
-=======
-#ifdef HAVE_XDG_TOPLEVEL_DRAG
+#if HAVE_XDG_TOPLEVEL_DRAG
   } else if (strcmp(interface, xdg_toplevel_drag_manager_v1_interface.name) == 0) {
     scr_driver->xdg_toplevel_drag = (struct xdg_toplevel_drag_manager_v1 *)
       wl_registry_bind(wl_registry, id, &xdg_toplevel_drag_manager_v1_interface, 1);
-//printf("scr_driver->xdg_toplevel_drag=%p version=%d\n",scr_driver->xdg_toplevel_drag,version);
 #endif // HAVE_XDG_TOPLEVEL_DRAG
->>>>>>> 32636beb2 (Implementation and documentation of class Fl_Dockable_Group)
   }
 }
 
