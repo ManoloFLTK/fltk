@@ -37,7 +37,6 @@ public:
   static Fl_Dockable_Group_Driver *newDockableGroupDriver(Fl_Dockable_Group*);
   static Fl_Box *newTargetBoxClass(int x, int y, int w, int h);
   Fl_Dockable_Group_Driver(Fl_Dockable_Group *from) { dockable_ = from; }
-  static Fl_Box *new_target_box(int x, int y, int w, int h);
   virtual int handle(drag_box_class *, int event);
   static Fl_Dockable_Group_Driver *driver(Fl_Dockable_Group *dock) { return dock->driver_; }
   void state(enum Fl_Dockable_Group::states);

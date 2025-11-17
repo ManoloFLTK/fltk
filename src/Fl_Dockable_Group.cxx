@@ -159,6 +159,12 @@ void Fl_Dockable_Group::color_targets_following_dock_() {
 }
 
 
+/** Creates a Fl_Dockable_Group::Dockable_Box object and returns it as an Fl_Box */
+Fl_Box *Fl_Dockable_Group::newDockableBox(int x, int y, int w, int h) {
+  return Fl_Dockable_Group_Driver::newTargetBoxClass(x, y, w, h);
+}
+
+
 void Fl_Dockable_Group::after_release() {
   driver_->after_release();
 }
@@ -211,12 +217,6 @@ int Fl_Dockable_Group::Dockable_Box::handle(int event) {
 }
 
 
-Fl_Box *Fl_Dockable_Group_Driver::new_target_box(int x, int y, int w, int h) {
-  Fl_Box *box = newTargetBoxClass(x, y, w, h);
-  return box;
-}
-
-
 int Fl_Dockable_Group_Driver::drag_box_class::handle(int event) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)parent();
   return Fl_Dockable_Group_Driver::driver(dock)->handle(this, event);
@@ -243,7 +243,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
       Fl_Group *top = dock->parent();
       // transform the dockable group into a draggable, borderless toplevel window
       // and replace it by a "Dockable_Box"
-      Fl_Widget *replacement = Fl_Dockable_Group_Driver::new_target_box(
+      Fl_Widget *replacement = Fl_Dockable_Group::newDockableBox(
                           dock->x(), dock->y(), dock->w(), dock->h());
       top->add(replacement);
       top->remove(dock);

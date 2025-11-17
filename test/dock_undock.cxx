@@ -1,5 +1,4 @@
 #include <FL/Fl_Dockable_Group.H>
-#include <../src/Fl_Dockable_Group_Driver.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Round_Clock.H>
 #include <FL/Fl_Input.H>
@@ -142,7 +141,7 @@ int main(int argc, char **argv) {
   destination = new Fl_Window(destination->x() + destination->w() + 50, source->y() + source->h() + 50,
                               340, 190, "destination (Dockable_Box)");
   destination->callback((Fl_Callback0*)delete_win);
-  Fl_Dockable_Group_Driver::new_target_box(10, 30, 320, 150);
+  Fl_Dockable_Group::newDockableBox(10, 30, 320, 150);
   
   destination->end();
   destination->show();

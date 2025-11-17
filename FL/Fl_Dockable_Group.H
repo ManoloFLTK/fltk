@@ -82,11 +82,15 @@ public:
    its position and size.
    An Fl_Dockable_Group docked above this widget can be dragged away showing the
    basic box widget again.
+   Use member function Fl_Dockable_Group::newDockableBox to create an object
+   of this class seen as an Fl_Box widget.
    The box label is "Dock here" by default and can be changed.
    */
   class Dockable_Box : public Fl_Box {
-  public:
+    friend class Fl_Dockable_Group_Driver;
+  protected:
     Dockable_Box(int x, int y, int w, int h);
+  public:
     static const char *dockable_label;
 #ifndef FL_DOXYGEN
     int handle(int event) override;
@@ -96,6 +100,7 @@ public:
   Fl_Box *drag_box(int x, int y, int w, int h);
   /** Returns the Fl_Dockable_Group's 'drag box' */
   Fl_Box *drag_box() { return drag_box_; }
+  static Fl_Box *newDockableBox(int x, int y, int w, int h);
   void after_release();
   void color_for_states(Fl_Color undock = FL_BACKGROUND_COLOR, Fl_Color drag = FL_BACKGROUND2_COLOR,
                         Fl_Color dock = FL_SELECTION_COLOR, Fl_Color dragged = FL_SELECTION_COLOR);
