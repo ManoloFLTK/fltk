@@ -107,6 +107,7 @@ Fl_Dockable_Group::Dockable_Box::Dockable_Box(int x, int y, int w, int h) :
     Fl_Box(FL_DOWN_BOX, x, y, w, h, dockable_label) { }
 
 
+/** Returns whether the mouse currently dragging an Fl_Dockable_Group is above  \p widget  */
 bool Fl_Dockable_Group::is_dockable_inside(Fl_Widget *widget) {
   int X = Fl::event_x_root();
   int Y = Fl::event_y_root();
@@ -204,8 +205,23 @@ int Fl_Dockable_Group::Dockable_Box::handle(int event) {
     active_dockable->state(DRAG);
     state(false);
     return 1;
-  } else if (event == FL_DOCK_RELEASE ) {
+  } else if (event == FL_DOCK_RELEASE && active_dockable) {
     state(false);
+    Fl_Dockable_Group *dock = active_dockable;
+    Fl_Dockable_Group::active_dockable = NULL;
+    // move dock to target's parent
+    Fl_Window *top = dock->window(); // extract dock from its window and delete the containing window
+    top->hide();
+    top->remove(dock);
+    delete top;
+    parent()->add(dock);
+    this->set_visible(); // useful if target is an Fl_Tabs child
+    dock->resize(x(), y(), w(), h());
+    parent()->redraw();
+    Fl::delete_widget(this);
+    Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::UNDOCK);
+    dock->clear_visible();
+    dock->show();
     return 1;
   }
   return Fl_Box::handle(event);
@@ -270,27 +286,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
     return 1;
   } else if (event == FL_RELEASE && dock->state_ == Fl_Dockable_Group::DOCK) { // Dock dockable in place
     Fl_Widget *target = Fl::belowmouse();
-    if (!target->handle(FL_DOCK_RELEASE)) {
-      Fl::belowmouse(NULL);
-      dock->state(Fl_Dockable_Group::UNDOCK);
-      return 1;
-    }
-    Fl_Dockable_Group::active_dockable = NULL;
-    // move dock to target if target is a group, otherwise to target's parent
-    Fl_Group *parent = target->as_group() ? target->as_group():  target->parent(); // can be an Fl_Tabs
-    Fl_Window *top = dock->window(); // extract dock from its window and delete the containing window
-    top->hide();
-    top->remove(dock);
-    delete top;
-    parent->add(dock);
-    target->set_visible(); // useful if target is an Fl_Tabs child
-    dock->resize(target->x(), target->y(), target->w(), target->h());
-    target->parent()->redraw();
-    if (!target->as_group()) delete target;
-    Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::UNDOCK);
-    dock->clear_visible();
-    dock->show();
-    return 1;
+    return target->handle(FL_DOCK_RELEASE);
   }
   return box->Fl_Box::handle(event);
 }

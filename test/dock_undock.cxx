@@ -77,7 +77,9 @@ public:
       add(Fl_Dockable_Group::active_dockable);
       value(Fl_Dockable_Group::active_dockable);
       Fl_Dockable_Group::active_dockable->after_release();
-      return 0; // Important. Means the dockable group has been inserted where it's expected.
+      Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::UNDOCK);
+      Fl_Dockable_Group::active_dockable = NULL;
+      return 1;
     } else if (event == FL_UNDOCK) {
       Fl_Widget *c = child(children() - 1);
       remove(c);
