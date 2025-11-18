@@ -127,8 +127,6 @@ public:
    and can be docked there.
    */
   static Fl_Dockable_Group *active_dockable;
-  static Fl_Widget *below_dockable_;
-  static void below_dockable(Fl_Widget *wid);
   static bool is_dockable_inside(Fl_Widget *);
 };
 

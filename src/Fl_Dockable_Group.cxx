@@ -23,7 +23,6 @@
 #include "Fl_Dockable_Group_Driver.H"
 
 Fl_Dockable_Group *Fl_Dockable_Group::active_dockable = NULL;
-Fl_Widget *Fl_Dockable_Group::below_dockable_ = NULL;
 
 
 #if !defined(FLTK_USE_WAYLAND) && !defined(FL_DOXYGEN)
@@ -99,10 +98,6 @@ void Fl_Dockable_Group::label_for_states(const char *undock, const char * drag,
 }
 
 
-void Fl_Dockable_Group::below_dockable(Fl_Widget *wid) {
-  below_dockable_ = wid;
-}
-
 /** Label of Dockable_Box objects */
 const char *Fl_Dockable_Group::Dockable_Box::dockable_label = "Dock here";
 
@@ -154,7 +149,7 @@ void Fl_Dockable_Group::color_targets_following_dock_() {
   }
   if (!found && active_dockable) {
     state(Fl_Dockable_Group::DRAG);
-    if (below_dockable_) below_dockable_->handle(FL_DOCK_LEAVE);
+    if (Fl::belowmouse()) Fl::belowmouse()->handle(FL_DOCK_LEAVE);
   }
 }
 
@@ -196,7 +191,7 @@ int Fl_Dockable_Group::Dockable_Box::handle(int event) {
     if (event == FL_DOCK_ENTER && inside) {
       state(true);
       retval = 1;
-      Fl_Dockable_Group::below_dockable(this);
+      Fl::belowmouse(this);
     } else if (event == FL_DOCK_DRAG) {
       if (!inside) {
         handle(FL_DOCK_LEAVE);
@@ -205,7 +200,7 @@ int Fl_Dockable_Group::Dockable_Box::handle(int event) {
     }
     return retval;
   } else if (event == FL_DOCK_LEAVE) {
-    Fl_Dockable_Group::below_dockable(NULL);
+    Fl::belowmouse(NULL);
     active_dockable->state(DRAG);
     state(false);
     return 1;
@@ -220,6 +215,11 @@ int Fl_Dockable_Group::Dockable_Box::handle(int event) {
 int Fl_Dockable_Group_Driver::drag_box_class::handle(int event) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)parent();
   return Fl_Dockable_Group_Driver::driver(dock)->handle(this, event);
+}
+
+
+static void delete_win(Fl_Widget *win) {
+  Fl::delete_widget(win);
 }
 
 
@@ -255,6 +255,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
       dock->show(); // necessary for tabs
       Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DRAG);
       win->border(0);
+      win->callback((Fl_Callback0*)delete_win);
       win->show();
       Fl::pushed(dock->drag_box()); // necessary for tabs
       top->handle(FL_UNDOCK);
@@ -268,9 +269,9 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
     dock->color_targets_following_dock_();
     return 1;
   } else if (event == FL_RELEASE && dock->state_ == Fl_Dockable_Group::DOCK) { // Dock dockable in place
-    Fl_Widget *target = Fl_Dockable_Group::below_dockable_;
+    Fl_Widget *target = Fl::belowmouse();
     if (!target->handle(FL_DOCK_RELEASE)) {
-      Fl_Dockable_Group::below_dockable(NULL);
+      Fl::belowmouse(NULL);
       dock->state(Fl_Dockable_Group::UNDOCK);
       return 1;
     }

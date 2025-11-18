@@ -39,34 +39,33 @@ public:
   
   int handle(int event) {
     if (event == FL_DND_ENTER) event = FL_DOCK_ENTER;
-    if (event == FL_DND_DRAG) event = FL_DOCK_DRAG;
-    if (event == FL_DND_LEAVE) event = FL_DOCK_LEAVE;
-    if (event == FL_DND_RELEASE) event = FL_DOCK_RELEASE;
+    else if (event == FL_DND_DRAG) event = FL_DOCK_DRAG;
+    else if (event == FL_DND_LEAVE) event = FL_DOCK_LEAVE;
+    else if (event == FL_DND_RELEASE) event = FL_DOCK_RELEASE;
     
+  /*if (event == FL_DOCK_ENTER)   puts("FL_DOCK_ENTER:");
+    if (event == FL_DOCK_DRAG)   puts("FL_DOCK_DRAG:");
+    if (event == FL_DOCK_RELEASE) puts("FL_DOCK_RELEASE:");
+    if (event == FL_DOCK_LEAVE) puts("FL_DOCK_LEAVE:"); */
+
+    bool inside = in_tabs_area(); // true if mouse is inside the Fl_Tabs' tabs area
     if (event == FL_DOCK_ENTER || event == FL_DOCK_DRAG) {
       int retval = 1;
-      bool inside = in_tabs_area(); // true if mouse is inside the Fl_Tabs' tabs area
-      if (event == FL_DOCK_ENTER) { // puts("FL_DOCK_ENTER:");
-        if (inside) {
-          Fl_Dockable_Group::below_dockable(this);
-          if (Fl_Dockable_Group::active_dockable) {
-            Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DOCK);
-          }
-        } else {
-          retval = 0;
+      if (inside) {
+        Fl::belowmouse(this);
+        if (Fl_Dockable_Group::active_dockable) {
+          Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DOCK);
         }
-      } else if (event == FL_DOCK_DRAG) { // puts("FL_DOCK_DRAG");
-        if (!inside) {
-          handle(FL_DOCK_LEAVE);
-          retval = 0; // important
-        }
+      } else  {
+        handle(FL_DOCK_LEAVE);
+        retval = 0; // important
       }
       return retval;
-    } else if (event == FL_DOCK_LEAVE) { // puts("FL_DOCK_LEAVE");
+    } else if (event == FL_DOCK_LEAVE) {
       if (Fl_Dockable_Group::active_dockable) {
         Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DRAG);
       }
-      Fl_Dockable_Group::below_dockable(NULL);
+      Fl::belowmouse(NULL);
       return 1;
     } else if (event == FL_DOCK_RELEASE && Fl_Dockable_Group::active_dockable) {
       int X, Y, W, H;

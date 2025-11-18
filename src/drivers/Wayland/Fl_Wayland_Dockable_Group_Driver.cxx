@@ -37,7 +37,7 @@ private:
   struct xdg_toplevel_drag_v1 *drag_;
   int old_keyboard_screen_scaling_;
   static void delete_win_cb_(Fl_Window *);
-  Fl_Window *copy_(drag_box_class *box, const char *t);
+  Fl_Window *copy_();
 #endif
 public:
   class Wld_Dockable_Box : public Fl_Dockable_Group::Dockable_Box {
@@ -92,7 +92,7 @@ Fl_Box *Fl_Dockable_Group_Driver::newTargetBoxClass(int x, int y, int w, int h) 
 
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
 
-Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(drag_box_class *box, const char *t) {
+Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_() {
   // transform the dockable group into a draggable, borderless toplevel window
   Fl_Group *top = dockable_->parent();
   top->remove(dockable_);
@@ -101,7 +101,7 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_(drag_box_class *box, const ch
   tmp->align(FL_ALIGN_CLIP);
   top->add(tmp);
   top->redraw();
-  Fl_Window *win = new Fl_Window(dockable_->w(), dockable_->h(), t);
+  Fl_Window *win = new Fl_Window(dockable_->w(), dockable_->h(), "Fl_Dockable_Group");
   dockable_->position(0,0);
   win->add(dockable_);
   win->end();
@@ -116,7 +116,7 @@ void Fl_Wayland_Dockable_Group_Driver::delete_win_cb_(Fl_Window *win) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)win->child(0);
   Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
   if (dr->old_keyboard_screen_scaling_) Fl::keyboard_screen_scaling(1);
-  //Fl_Dockable_Group_Driver::delete_win_cb(win);
+  Fl::delete_widget(win);
 }
 
 #endif // HAVE_XDG_TOPLEVEL_DRAG
@@ -235,7 +235,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
                               xid->wl_surface, NULL, scr_driver->seat->serial);
     int dock_x = dock->x(), dock_y = dock->y();
     Fl_Group *dock_parent = dock->parent();
-    Fl_Window *new_win = copy_(box, "dragged");
+    Fl_Window *new_win = copy_();
     box->parent()->show(); // necessary for tabs
     new_win->show();
     Fl::pushed(dock->drag_box()); // necessary for tabs
