@@ -134,14 +134,6 @@ void Fl_Dockable_Group::color_targets_following_dock_() {
         if (this->state_ == DRAG) event = FL_DOCK_ENTER;
         else if (this->state_ == DOCK) event = FL_DOCK_DRAG;
         if (event) ret = win->handle(event);
-        if (ret) {
-          if (event == FL_DOCK_ENTER) {
-            active_dockable = this;
-            driver_->state(Fl_Dockable_Group::DOCK);
-          } else if (!active_dockable) {
-            driver_->state(Fl_Dockable_Group::DRAG);
-         }
-        }
         found = true;
         break;
       }
@@ -190,6 +182,7 @@ int Fl_Dockable_Group::Dockable_Box::handle(int event) {
     int retval = 0;
     bool inside = Fl_Dockable_Group::is_dockable_inside(this);
     if (event == FL_DOCK_ENTER && inside) {
+      active_dockable->state(Fl_Dockable_Group::DOCK);
       state(true);
       retval = 1;
       Fl::belowmouse(this);
@@ -215,7 +208,6 @@ int Fl_Dockable_Group::Dockable_Box::handle(int event) {
     top->remove(dock);
     delete top;
     parent()->add(dock);
-    this->set_visible(); // useful if target is an Fl_Tabs child
     dock->resize(x(), y(), w(), h());
     parent()->redraw();
     Fl::delete_widget(this);
@@ -256,6 +248,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
     return 1;
   } else if (event == FL_DRAG && dock->state_ == Fl_Dockable_Group::UNDOCK && (Fl::event_state() & FL_BUTTON1)) {
     if (++drag_count >= 3) {
+      Fl_Dockable_Group::active_dockable = dock;
       Fl_Group *top = dock->parent();
       // transform the dockable group into a draggable, borderless toplevel window
       // and replace it by a "Dockable_Box"
