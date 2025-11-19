@@ -32,7 +32,7 @@ Fl_Dockable_Group_Driver *Fl_Dockable_Group_Driver::newDockableGroupDriver(Fl_Do
 }
 
 
-Fl_Box *Fl_Dockable_Group_Driver::newTargetBoxClass(int x, int y, int w, int h) {
+Fl_Dockable_Group::Dockable_Box *Fl_Dockable_Group_Driver::newTargetBoxClass(int x, int y, int w, int h) {
   return new Fl_Dockable_Group::Dockable_Box(x, y, w, h);
 }
 
@@ -147,8 +147,8 @@ void Fl_Dockable_Group::color_targets_following_dock_() {
 }
 
 
-/** Creates a Fl_Dockable_Group::Dockable_Box object and returns it as an Fl_Box */
-Fl_Box *Fl_Dockable_Group::newDockableBox(int x, int y, int w, int h) {
+/** Creates a Fl_Dockable_Group::Dockable_Box object */
+Fl_Dockable_Group::Dockable_Box *Fl_Dockable_Group::newDockableBox(int x, int y, int w, int h) {
   return Fl_Dockable_Group_Driver::newTargetBoxClass(x, y, w, h);
 }
 

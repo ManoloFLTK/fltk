@@ -31,21 +31,26 @@ class Fl_Dockable_Group_Driver;
  after member function drag_box(int x, int y, int w, int h) is called once. This adds an Fl_Box
  to the Fl_Dockable_Group that can be called its  'drag box'. Clicking this 'drag box' and dragging the mouse
  detaches the Fl_Dockable_Group from its parent and allows to drag it away in the form of a functional Fl_Window.
- When an Fl_Dockable_Group is dragged away from one location and docked at an appropriate destination widget,
- it's usually resized to some adequate dimension.
- 
+ An Fl_Dockable_Group::Dockable_Box object replaces the Fl_Dockable_Group in its parent Fl_Group
+ unless this group's processing of the FL_UNDOCK event produces another layout.
+
  A widget becomes susceptible to receive a dragged Fl_Dockable_Group object by making its \p handle()
  member function respond to events FL_DOCK_ENTER, FL_DOCK_DRAG, FL_DOCK_RELEASE, FL_DOCK_LEAVE
- and FL_UNDOCK. Subclass Fl_Dockable_Group::Dockable_Box is a basic widget able to receive Fl_Dockable_Group
+ and FL_UNDOCK. Subclass Fl_Dockable_Group::Dockable_Box is a basic widget able to dock Fl_Dockable_Group
  objects as follows: an Fl_Box object with label "Dock here" receives any Fl_Dockable_Group
- when it's dragged above it and the mouse is released. Any Fl_Dockable_Group docked at the
- Fl_Dockable_Group::Dockable_Box can be undocked and dragged away. The dockable
- location becomes again an Fl_Box with label "Dock here".
+ that would be dragged and dropped above. Any Fl_Dockable_Group docked at the
+ Fl_Dockable_Group::Dockable_Box can be undocked and dragged away. The docking
+ location appears again as an Fl_Box with label "Dock here".
+ 
+ When a dragged Fl_Dockable_Group object is positioned above a receiving widget and the mouse
+ is released, the Fl_Dockable_Group is docked there, that is, stops appearing as a movable window and,
+ if the receiving widget is an Fl_Group, becomes a child of this group, otherwise a child of the widget's
+ parent group. Usually it also acquires the position and size of the receiving widget.
  
  Example program \p test/dock_undock.cxx shows how to implement the handle member function
  of a class derived from Fl_Tabs and obtain this behavior: any Fl_Dockable_Group object that's a child
  of this class can be removed from the Fl_Tabs and dragged away; If an Fl_Dockable_Group object is dragged
- above the <tt>tabs area</tt> of the Fl_Tabs-derived object and the mouse is released, the
+ above the <u>tabs area</u> of the Fl_Tabs-derived object and the mouse is released, the
  Fl_Dockable_Group becomes a new tab.
  
  Member functions color_for_states() and label_for_states() control the colors of a  Fl_Dockable_Group's
@@ -77,13 +82,13 @@ private:
   void color_targets_following_dock_();
 public:
   Fl_Dockable_Group(int x, int y, int w, int h, const char *t=0);
-  /** Basic box widget able to receive an Fl_Dockable_Group dragged above it.
+  /** Basic box widget able to dock an Fl_Dockable_Group dragged above it.
    An Fl_Dockable_Group dragged and dropped above this widget replaces it acquiring
    its position and size.
    An Fl_Dockable_Group docked above this widget can be dragged away showing the
    basic box widget again.
    Use member function Fl_Dockable_Group::newDockableBox to create an object
-   of this class seen as an Fl_Box widget.
+   of this class.
    The box label is "Dock here" by default and can be changed.
    */
   class Dockable_Box : public Fl_Box {
@@ -100,7 +105,7 @@ public:
   Fl_Box *drag_box(int x, int y, int w, int h);
   /** Returns the Fl_Dockable_Group's 'drag box' */
   Fl_Box *drag_box() { return drag_box_; }
-  static Fl_Box *newDockableBox(int x, int y, int w, int h);
+  static Fl_Dockable_Group::Dockable_Box *newDockableBox(int x, int y, int w, int h);
   void after_release();
   void color_for_states(Fl_Color undock = FL_BACKGROUND_COLOR, Fl_Color drag = FL_BACKGROUND2_COLOR,
                         Fl_Color dock = FL_SELECTION_COLOR, Fl_Color dragged = FL_SELECTION_COLOR);

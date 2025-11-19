@@ -35,7 +35,7 @@ public:
     int handle(int event) override;
   };
   static Fl_Dockable_Group_Driver *newDockableGroupDriver(Fl_Dockable_Group*);
-  static Fl_Box *newTargetBoxClass(int x, int y, int w, int h);
+  static Fl_Dockable_Group::Dockable_Box *newTargetBoxClass(int x, int y, int w, int h);
   Fl_Dockable_Group_Driver(Fl_Dockable_Group *from) { dockable_ = from; }
   virtual int handle(drag_box_class *, int event);
   static Fl_Dockable_Group_Driver *driver(Fl_Dockable_Group *dock) { return dock->driver_; }

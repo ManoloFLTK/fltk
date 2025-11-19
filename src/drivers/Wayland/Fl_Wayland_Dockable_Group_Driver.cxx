@@ -82,7 +82,7 @@ Fl_Dockable_Group_Driver *Fl_Dockable_Group_Driver::newDockableGroupDriver(Fl_Do
 }
 
 
-Fl_Box *Fl_Dockable_Group_Driver::newTargetBoxClass(int x, int y, int w, int h) {
+Fl_Dockable_Group::Dockable_Box *Fl_Dockable_Group_Driver::newTargetBoxClass(int x, int y, int w, int h) {
   fl_open_display();
   if (fl_wl_display()) {
     return new Fl_Wayland_Dockable_Group_Driver::Wld_Dockable_Box(x, y, w, h);
