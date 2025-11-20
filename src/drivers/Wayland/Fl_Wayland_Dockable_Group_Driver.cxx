@@ -39,6 +39,7 @@ private:
   Fl_Window *copy_();
 #endif
   void after_release_() override;
+  void check_event_(int& event) override;
 public:
   Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_Group *from);
   int handle(drag_box_class *, int event) override;
@@ -208,6 +209,16 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
   return 1;
 #endif // HAVE_XDG_TOPLEVEL_DRAG
   return box->Fl_Box::handle(event);
+}
+
+
+void Fl_Wayland_Dockable_Group_Driver::check_event_(int& event) {
+  if (Fl::clipboard_contains(Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime)) {
+    if (event == FL_DND_ENTER) event = FL_DOCK_ENTER;
+    else if (event == FL_DND_DRAG) event = FL_DOCK_DRAG;
+    else if (event == FL_DND_LEAVE) event = FL_DOCK_LEAVE;
+    else if (event == FL_DND_RELEASE) event = FL_DOCK_RELEASE;
+  }
 }
 
 

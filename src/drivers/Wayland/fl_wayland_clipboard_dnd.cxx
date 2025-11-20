@@ -313,7 +313,7 @@ static void data_offer_handle_offer(void *data, struct wl_data_offer *offer,
     fl_selection_type[1] = Fl::clipboard_plain_text;
     fl_selection_offer_type = "text/plain";
   } else if (strcmp(mime_type, Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime) == 0) {
-    fl_selection_type[1] = mime_type;
+    fl_selection_type[1] = Fl_Wayland_Screen_Driver::xdg_toplevel_drag_pseudo_mime;
     fl_selection_offer_type = mime_type;
     //printf("set fl_selection_offer_type=%s\n",mime_type);
   }

@@ -151,12 +151,11 @@ void Fl_Dockable_Group::state(enum states s) { driver_->state(s); }
 
 
 int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int event,
-                                             inside_f_type inside_f, target_state_f_type target_state_f, dock_payload_f_type dock_payload_f, undock_f_type undock_f) {
-  if (event == FL_DND_ENTER) event = FL_DOCK_ENTER;
-  else if (event == FL_DND_DRAG) event = FL_DOCK_DRAG;
-  else if (event == FL_DND_LEAVE) event = FL_DOCK_LEAVE;
-  else if (event == FL_DND_RELEASE) event = FL_DOCK_RELEASE;
-  
+                                    inside_f_type inside_f, target_state_f_type target_state_f,
+                                    dock_payload_f_type dock_payload_f, undock_f_type undock_f) {
+  if (Fl_Dockable_Group::active_dockable) {
+    Fl_Dockable_Group_Driver::driver(active_dockable)->check_event_(event);
+  }
   /*if (event == FL_DOCK_ENTER)   puts("FL_DOCK_ENTER:");
    if (event == FL_DOCK_DRAG)   puts("FL_DOCK_DRAG:");
    if (event == FL_DOCK_RELEASE) puts("FL_DOCK_RELEASE:");

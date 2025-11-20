@@ -91,6 +91,7 @@ int main(int argc, char **argv) {
   dock->box(FL_THIN_UP_BOX);
   new Fl_Clock(160, 65, 60, 60);
   new Fl_Round_Clock(245, 65, 60, 60);
+  new Fl_Input(30, 110, 60, 20);
   r = new Fl_Box(FL_NO_BOX, 0, 126, 155, 10, NULL);
   dock->end();
   dock->resizable(r);
