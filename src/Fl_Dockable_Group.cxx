@@ -163,7 +163,6 @@ int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int eve
   processed = true;
   bool inside = inside_f(target); // true if mouse is inside the target's docking area
   if (event == FL_DOCK_ENTER || event == FL_DOCK_DRAG) {
-    int retval = 1;
     if (inside) {
       if (Fl::belowmouse() && Fl::belowmouse() != target && target_state_f) {
         target_state_f(Fl::belowmouse(), false);
@@ -175,9 +174,8 @@ int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int eve
       }
     } else  {
       target->handle(FL_DOCK_LEAVE);
-      retval = 0; // important
     }
-    return retval;
+    return 1;
   } else if (event == FL_DOCK_LEAVE) {
     if (Fl_Dockable_Group::active_dockable) {
       Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DRAG);
