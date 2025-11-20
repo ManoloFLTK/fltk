@@ -260,7 +260,13 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
     winx = top_win->x_root() + offset_x + dock->x();
     winy = top_win->y_root() + offset_y + dock->y();
     return 1;
-  } else if (event == FL_DRAG && dock->state_ == Fl_Dockable_Group::UNDOCK && (Fl::event_state() & FL_BUTTON1)) {
+  } else if (event == FL_DRAG && (Fl::event_state() & FL_BUTTON1) &&
+             (dock->state_ == Fl_Dockable_Group::UNDOCK ||
+              (dock->state_ == Fl_Dockable_Group::DRAG && Fl_Dockable_Group::active_dockable != dock))) {
+    if (dock->state_ == Fl_Dockable_Group::DRAG) {
+      Fl_Dockable_Group::active_dockable = dock; // re-drag previously abandoned dockable
+      return 1;
+    }
     if (++drag_count >= 3) {
       Fl_Dockable_Group::active_dockable = dock;
       Fl_Group *top = dock->parent();
