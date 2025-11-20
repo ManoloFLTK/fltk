@@ -36,7 +36,6 @@ private:
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
   struct xdg_toplevel_drag_v1 *drag_;
   int old_keyboard_screen_scaling_;
-  static void delete_win_cb_(Fl_Window *);
   Fl_Window *copy_();
 #endif
   void after_release_() override;
@@ -79,6 +78,10 @@ Fl_Dockable_Group_Driver *Fl_Dockable_Group_Driver::newDockableGroupDriver(Fl_Do
 
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
 
+static void do_nothing(Fl_Window *win) {
+}
+
+
 Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_() {
   // transform the dockable group into a draggable, borderless toplevel window
   Fl_Group *top = dockable_->parent();
@@ -92,18 +95,10 @@ Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_() {
   dockable_->position(0,0);
   win->add(dockable_);
   win->end();
-  win->callback((Fl_Callback0*)Fl_Wayland_Dockable_Group_Driver::delete_win_cb_);
+  win->callback((Fl_Callback0*)do_nothing);
   state(Fl_Dockable_Group::DRAG);
   win->border(0);
   return win;
-}
-
-
-void Fl_Wayland_Dockable_Group_Driver::delete_win_cb_(Fl_Window *win) {
-  Fl_Dockable_Group *dock = (Fl_Dockable_Group*)win->child(0);
-  Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)Fl_Dockable_Group_Driver::driver(dock);
-  if (dr->old_keyboard_screen_scaling_) Fl::keyboard_screen_scaling(1);
-  Fl::delete_widget(win);
 }
 
 #endif // HAVE_XDG_TOPLEVEL_DRAG

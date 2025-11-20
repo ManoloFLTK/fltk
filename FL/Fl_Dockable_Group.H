@@ -125,11 +125,7 @@ public:
   void state(enum states s);
   /** Gets the state of the Fl_Dockable_Group */
   enum states state() {return state_; }
-  /** Non-NULL when an Fl_Dockable_Group is currently active.
-   Under Wayland, this means a Drag-and-Drop of a window (or an image of a window) is active.
-   Under other platforms, this means an Fl_Dockable_Group is currently above a target box
-   and can be docked there.
-   */
+  /** Non-NULL when an Fl_Dockable_Group is currently being dragged. */
   static Fl_Dockable_Group *active_dockable;
   static bool is_dockable_inside(Fl_Widget *widget);
 };

@@ -116,19 +116,18 @@ bool Fl_Dockable_Group::is_dockable_inside(Fl_Widget *widget) {
 
 void Fl_Dockable_Group::color_targets_following_dock_() {
   if (Fl::event_button() != FL_LEFT_MOUSE) return;
-  int X = Fl::event_x_root();
+  int X = Fl::event_x_root(); // screen coordinates of the dockable-dragging mouse
   int Y = Fl::event_y_root();
-  Fl_Window *dock = top_window();
+  Fl_Window *dock = top_window(); // the dockable being dragged as a window
   Fl_Window *win = Fl::first_window();
   bool found = false;
-  while (win) {
-    if (win != dock && !win->parent()) {
+  while (win) { // search other window on same screen below the mouse
+    if (win != dock && !win->parent() && win->screen_num() == dock->screen_num()) {
       if (X >= win->x() && X < win->x() + win->w() && Y >= win->y() && Y < win->y() + win->h()) {
-        int ret = 0;
         int event = 0;
         if (this->state_ == DRAG) event = FL_DOCK_ENTER;
         else if (this->state_ == DOCK) event = FL_DOCK_DRAG;
-        if (event) ret = win->handle(event);
+        if (event) win->handle(event);
         found = true;
         break;
       }
@@ -240,8 +239,7 @@ int Fl_Dockable_Group_Driver::drag_box_class::handle(int event) {
 }
 
 
-static void delete_win(Fl_Widget *win) {
-  Fl::delete_widget(win);
+static void do_nothing(Fl_Widget *win) {
 }
 
 
@@ -265,7 +263,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
               (dock->state_ == Fl_Dockable_Group::DRAG && Fl_Dockable_Group::active_dockable != dock))) {
     if (dock->state_ == Fl_Dockable_Group::DRAG) {
       Fl_Dockable_Group::active_dockable = dock; // re-drag previously abandoned dockable
-      return 1;
+      return handle(box, FL_DRAG);
     }
     if (++drag_count >= 3) {
       Fl_Dockable_Group::active_dockable = dock;
@@ -284,7 +282,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
       dock->show(); // necessary for tabs
       Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DRAG);
       win->border(0);
-      win->callback((Fl_Callback0*)delete_win);
+      win->callback((Fl_Callback0*)do_nothing);
       win->show();
       Fl::pushed(dock->drag_box()); // necessary for tabs
       top->handle(FL_UNDOCK);
