@@ -166,6 +166,9 @@ int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int eve
   if (event == FL_DOCK_ENTER || event == FL_DOCK_DRAG) {
     int retval = 1;
     if (inside) {
+      if (Fl::belowmouse() && Fl::belowmouse() != target && target_state_f) {
+        target_state_f(Fl::belowmouse(), false);
+      }
       Fl::belowmouse(target);
       if (Fl_Dockable_Group::active_dockable) {
         Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DOCK);
@@ -180,6 +183,9 @@ int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int eve
     if (Fl_Dockable_Group::active_dockable) {
       Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DRAG);
       if (target_state_f) target_state_f(target, false);
+    }
+    if (Fl::belowmouse() && target_state_f) {
+      target_state_f(Fl::belowmouse(), false);
     }
     Fl::belowmouse(NULL);
     return 1;
