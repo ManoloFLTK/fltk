@@ -80,6 +80,7 @@ private:
   Fl_Dockable_Group_Driver *driver_;
   Fl_Box *drag_box_;
   void color_targets_following_dock_();
+  void after_release_();
 public:
   Fl_Dockable_Group(int x, int y, int w, int h, const char *t=0);
   /** Basic box widget able to dock an Fl_Dockable_Group dragged above it.
@@ -87,26 +88,24 @@ public:
    its position and size.
    An Fl_Dockable_Group docked above this widget can be dragged away showing the
    basic box widget again.
-   Use member function Fl_Dockable_Group::newDockableBox to create an object
-   of this class.
    The box label is "Dock here" by default and can be changed.
    */
   class Dockable_Box : public Fl_Box {
-    friend class Fl_Dockable_Group_Driver;
-  protected:
-    Dockable_Box(int x, int y, int w, int h);
   public:
+    Dockable_Box(int x, int y, int w, int h);
     static const char *dockable_label;
-#ifndef FL_DOXYGEN
     int handle(int event) override;
-    void state(bool can_dock);
-#endif // ndef FL_DOXYGEN
   };
+  typedef bool inside_f_type(Fl_Widget*);
+  typedef void target_state_f_type(Fl_Widget*, bool);
+  typedef void dock_payload_f_type(Fl_Widget*, Fl_Dockable_Group *);
+  typedef void undock_f_type(Fl_Widget*);
+  static int handle_target(bool& processed, Fl_Widget *target, int event, inside_f_type inside_f,
+                      target_state_f_type target_state_f, dock_payload_f_type dock_payload_f,
+                      undock_f_type undock_f);
   Fl_Box *drag_box(int x, int y, int w, int h);
   /** Returns the Fl_Dockable_Group's 'drag box' */
   Fl_Box *drag_box() { return drag_box_; }
-  static Fl_Dockable_Group::Dockable_Box *newDockableBox(int x, int y, int w, int h);
-  void after_release();
   void color_for_states(Fl_Color undock = FL_BACKGROUND_COLOR, Fl_Color drag = FL_BACKGROUND2_COLOR,
                         Fl_Color dock = FL_SELECTION_COLOR, Fl_Color dragged = FL_SELECTION_COLOR);
   void label_for_states(const char *undock = "Undock", const char *drag = "Drag",
@@ -132,7 +131,7 @@ public:
    and can be docked there.
    */
   static Fl_Dockable_Group *active_dockable;
-  static bool is_dockable_inside(Fl_Widget *);
+  static bool is_dockable_inside(Fl_Widget *widget);
 };
 
 #endif // Fl_Dockable_Group_H

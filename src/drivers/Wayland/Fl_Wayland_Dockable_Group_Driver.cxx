@@ -39,15 +39,10 @@ private:
   static void delete_win_cb_(Fl_Window *);
   Fl_Window *copy_();
 #endif
+  void after_release_() override;
 public:
-  class Wld_Dockable_Box : public Fl_Dockable_Group::Dockable_Box {
-  public:
-    Wld_Dockable_Box(int x, int y, int w, int h) : Dockable_Box(x,y,w,h) {}
-    int handle(int event) override;
-  };
   Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_Group *from);
   int handle(drag_box_class *, int event) override;
-  void after_release() override;
 };
 
 
@@ -82,21 +77,13 @@ Fl_Dockable_Group_Driver *Fl_Dockable_Group_Driver::newDockableGroupDriver(Fl_Do
 }
 
 
-Fl_Dockable_Group::Dockable_Box *Fl_Dockable_Group_Driver::newTargetBoxClass(int x, int y, int w, int h) {
-  fl_open_display();
-  if (fl_wl_display()) {
-    return new Fl_Wayland_Dockable_Group_Driver::Wld_Dockable_Box(x, y, w, h);
-  } else return new Fl_Dockable_Group::Dockable_Box(x, y, w, h);
-}
-
-
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
 
 Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_() {
   // transform the dockable group into a draggable, borderless toplevel window
   Fl_Group *top = dockable_->parent();
   top->remove(dockable_);
-  Fl_Box *tmp = new Wld_Dockable_Box(
+  Fl_Box *tmp = new Fl_Dockable_Group::Dockable_Box(
                               dockable_->x(), dockable_->y(), dockable_->w(), dockable_->h());
   tmp->align(FL_ALIGN_CLIP);
   top->add(tmp);
@@ -122,7 +109,7 @@ void Fl_Wayland_Dockable_Group_Driver::delete_win_cb_(Fl_Window *win) {
 #endif // HAVE_XDG_TOPLEVEL_DRAG
 
 
-void Fl_Wayland_Dockable_Group_Driver::after_release() {
+void Fl_Wayland_Dockable_Group_Driver::after_release_() {
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
   if (scr_driver->xdg_toplevel_drag) {
@@ -132,54 +119,6 @@ void Fl_Wayland_Dockable_Group_Driver::after_release() {
 #endif
   state(Fl_Dockable_Group::UNDOCK);
   wl_data_source_set_user_data(scr_driver->seat->data_source, NULL);
-}
-
-
-int Fl_Wayland_Dockable_Group_Driver::Wld_Dockable_Box::handle(int event) {
-  Fl_Dockable_Group *dock = Fl_Dockable_Group::active_dockable;
-  if (!dock) return 0;
-  Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
-  if (event == FL_DND_ENTER) { // puts("FL_DND_ENTER");
-    if (scr_driver->xdg_toplevel_drag) dock->state(Fl_Dockable_Group::DOCK);
-    state(true);
-    return 1;
-  } else if (event == FL_DND_DRAG) { // puts("FL_DND_DRAG");
-    return 1;
-  } else if (event == FL_DND_LEAVE) { // puts("FL_DND_LEAVE");
-    if (scr_driver->xdg_toplevel_drag) dock->state(Fl_Dockable_Group::DRAG);
-    state(false);
-    return 1;
-  } else if (event == FL_DND_RELEASE) { // puts("FL_DND_RELEASE");
-    Fl_Dockable_Group::active_dockable = NULL;
-    Fl_Group *target_group = (this->as_group() ? this->as_group() : this->parent());
-#ifdef HAVE_XDG_TOPLEVEL_DRAG
-    if (scr_driver->xdg_toplevel_drag) {
-      Fl_Wayland_Dockable_Group_Driver *dr = (Fl_Wayland_Dockable_Group_Driver*)driver(dock);
-      xdg_toplevel_drag_v1_destroy(dr->drag_);
-      dr->drag_ = NULL;
-      Fl_Window *top = dock->window();
-      top->hide();
-      top->remove(dock);
-      delete top;
-      if (dr->old_keyboard_screen_scaling_) Fl::keyboard_screen_scaling(1);
-    } else
-#endif
-    {
-      dock->parent()->redraw();
-    }
-    // Replace 'this' by 'dock' in target_group keeping its position in the child array.
-    // This is advantageous if target_group is an Fl_Tab by keeping the current active tab.
-    dock->resize(x(), y(), w(), h());
-    target_group->insert(*dock, this);
-    target_group->remove(this);
-    target_group->redraw();
-    dock->clear_visible();
-    dock->state(Fl_Dockable_Group::UNDOCK);
-    wl_data_source_set_user_data(scr_driver->seat->data_source, NULL);
-    dock->show();
-    return 0; // not to generate FL_PASTE event
-  }
-  return Fl_Box::handle(event);
 }
 
 

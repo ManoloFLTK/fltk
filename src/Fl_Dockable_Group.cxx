@@ -31,11 +31,6 @@ Fl_Dockable_Group_Driver *Fl_Dockable_Group_Driver::newDockableGroupDriver(Fl_Do
   return new Fl_Dockable_Group_Driver(dock);
 }
 
-
-Fl_Dockable_Group::Dockable_Box *Fl_Dockable_Group_Driver::newTargetBoxClass(int x, int y, int w, int h) {
-  return new Fl_Dockable_Group::Dockable_Box(x, y, w, h);
-}
-
 #endif
 
 
@@ -102,7 +97,7 @@ void Fl_Dockable_Group::label_for_states(const char *undock, const char * drag,
 const char *Fl_Dockable_Group::Dockable_Box::dockable_label = "Dock here";
 
 
-/** Protected constructor */
+/** Constructor */
 Fl_Dockable_Group::Dockable_Box::Dockable_Box(int x, int y, int w, int h) :
     Fl_Box(FL_DOWN_BOX, x, y, w, h, dockable_label) { }
 
@@ -147,14 +142,8 @@ void Fl_Dockable_Group::color_targets_following_dock_() {
 }
 
 
-/** Creates a Fl_Dockable_Group::Dockable_Box object */
-Fl_Dockable_Group::Dockable_Box *Fl_Dockable_Group::newDockableBox(int x, int y, int w, int h) {
-  return Fl_Dockable_Group_Driver::newTargetBoxClass(x, y, w, h);
-}
-
-
-void Fl_Dockable_Group::after_release() {
-  driver_->after_release();
+void Fl_Dockable_Group::after_release_() {
+  driver_->after_release_();
 }
 
 
@@ -162,63 +151,88 @@ void Fl_Dockable_Group::after_release() {
 void Fl_Dockable_Group::state(enum states s) { driver_->state(s); }
 
 
-#ifndef FL_DOXYGEN
-
-void Fl_Dockable_Group::Dockable_Box::state(bool can_dock) {
-  if (can_dock) {
-    color(FL_SELECTION_COLOR);
-    labelcolor(fl_contrast(FL_WHITE, FL_SELECTION_COLOR));
-    redraw();
-  } else {
-    color(FL_BACKGROUND_COLOR);
-    labelcolor(FL_BLACK);
-    redraw();
-  }
-}
-
-
-int Fl_Dockable_Group::Dockable_Box::handle(int event) {
+int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int event,
+                                             inside_f_type inside_f, target_state_f_type target_state_f, dock_payload_f_type dock_payload_f, undock_f_type undock_f) {
+  if (event == FL_DND_ENTER) event = FL_DOCK_ENTER;
+  else if (event == FL_DND_DRAG) event = FL_DOCK_DRAG;
+  else if (event == FL_DND_LEAVE) event = FL_DOCK_LEAVE;
+  else if (event == FL_DND_RELEASE) event = FL_DOCK_RELEASE;
+  
+  /*if (event == FL_DOCK_ENTER)   puts("FL_DOCK_ENTER:");
+   if (event == FL_DOCK_DRAG)   puts("FL_DOCK_DRAG:");
+   if (event == FL_DOCK_RELEASE) puts("FL_DOCK_RELEASE:");
+   if (event == FL_DOCK_LEAVE) puts("FL_DOCK_LEAVE:"); */
+  processed = true;
+  bool inside = inside_f(target); // true if mouse is inside the target's docking area
   if (event == FL_DOCK_ENTER || event == FL_DOCK_DRAG) {
-    int retval = 0;
-    bool inside = Fl_Dockable_Group::is_dockable_inside(this);
-    if (event == FL_DOCK_ENTER && inside) {
-      active_dockable->state(Fl_Dockable_Group::DOCK);
-      state(true);
-      retval = 1;
-      Fl::belowmouse(this);
-    } else if (event == FL_DOCK_DRAG) {
-      if (!inside) {
-        handle(FL_DOCK_LEAVE);
+    int retval = 1;
+    if (inside) {
+      Fl::belowmouse(target);
+      if (Fl_Dockable_Group::active_dockable) {
+        Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DOCK);
+        if (target_state_f) target_state_f(target, true);
       }
-      retval = 1;
+    } else  {
+      target->handle(FL_DOCK_LEAVE);
+      retval = 0; // important
     }
     return retval;
   } else if (event == FL_DOCK_LEAVE) {
+    if (Fl_Dockable_Group::active_dockable) {
+      Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DRAG);
+      if (target_state_f) target_state_f(target, false);
+    }
     Fl::belowmouse(NULL);
-    active_dockable->state(DRAG);
-    state(false);
     return 1;
-  } else if (event == FL_DOCK_RELEASE && active_dockable) {
-    state(false);
-    Fl_Dockable_Group *dock = active_dockable;
-    Fl_Dockable_Group::active_dockable = NULL;
-    // move dock to target's parent
-    Fl_Window *top = dock->window(); // extract dock from its window and delete the containing window
-    top->hide();
-    top->remove(dock);
+  } else if (event == FL_DOCK_RELEASE && Fl_Dockable_Group::active_dockable) {
+    Fl_Window *top = Fl_Dockable_Group::active_dockable->window();
+    top->remove(Fl_Dockable_Group::active_dockable);
     delete top;
-    parent()->add(dock);
-    dock->resize(x(), y(), w(), h());
-    parent()->redraw();
-    Fl::delete_widget(this);
-    Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::UNDOCK);
-    dock->clear_visible();
-    dock->show();
+    dock_payload_f(target, Fl_Dockable_Group::active_dockable);
+    Fl_Dockable_Group::active_dockable->after_release_();
+    Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::UNDOCK);
+    Fl_Dockable_Group::active_dockable = NULL;
+    return 1;
+  } else if (event == FL_UNDOCK) {
+    if (undock_f) undock_f(target);
     return 1;
   }
-  return Fl_Box::handle(event);
+  processed = false;
+  return 0;
 }
 
+
+static bool inside_f(Fl_Widget *target) {
+    return Fl_Dockable_Group::is_dockable_inside(target); // true if mouse inside target
+}
+
+static void state_f(Fl_Widget *target, bool can_dock) {
+  Fl_Box *box = (Fl_Box*)target;
+  if (can_dock) {
+    box->color(FL_SELECTION_COLOR);
+    box->labelcolor(fl_contrast(FL_WHITE, FL_SELECTION_COLOR));
+  } else {
+    box->color(FL_BACKGROUND_COLOR);
+    box->labelcolor(FL_BLACK);
+  }
+  box->redraw();
+}
+  
+static void dock_payload_f(Fl_Widget *target, Fl_Dockable_Group *payload) {
+    Fl_Group *group = target->parent();
+    payload->resize(target->x(), target->y(), target->w(), target->h());
+    group->add(payload);
+}
+    
+int Fl_Dockable_Group::Dockable_Box::handle(int event) {
+    bool processed;
+    int retval = Fl_Dockable_Group::handle_target(processed, this, event,
+                                                    inside_f, state_f, dock_payload_f, NULL);
+    return (processed ? retval : Fl_Box::handle(event));
+}
+
+
+#ifndef FL_DOXYGEN
 
 int Fl_Dockable_Group_Driver::drag_box_class::handle(int event) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)parent();
@@ -252,7 +266,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
       Fl_Group *top = dock->parent();
       // transform the dockable group into a draggable, borderless toplevel window
       // and replace it by a "Dockable_Box"
-      Fl_Widget *replacement = Fl_Dockable_Group::newDockableBox(
+      Fl_Widget *replacement = new Fl_Dockable_Group::Dockable_Box(
                           dock->x(), dock->y(), dock->w(), dock->h());
       top->add(replacement);
       top->remove(dock);

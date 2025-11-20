@@ -24,6 +24,7 @@ class Fl_Dockable_Group_Driver {
 private:
   Fl_Color undock_color_, drag_color_, dock_color_, docked_color_, dragged_color_;
   const char *undock_label_, *drag_label_, *dock_label_, *docked_label_, *dragged_label_;
+  virtual void after_release_() {}
 protected:
   Fl_Dockable_Group *dockable_;
 public:
@@ -35,12 +36,10 @@ public:
     int handle(int event) override;
   };
   static Fl_Dockable_Group_Driver *newDockableGroupDriver(Fl_Dockable_Group*);
-  static Fl_Dockable_Group::Dockable_Box *newTargetBoxClass(int x, int y, int w, int h);
   Fl_Dockable_Group_Driver(Fl_Dockable_Group *from) { dockable_ = from; }
   virtual int handle(drag_box_class *, int event);
   static Fl_Dockable_Group_Driver *driver(Fl_Dockable_Group *dock) { return dock->driver_; }
   void state(enum Fl_Dockable_Group::states);
-  virtual void after_release() {}
 };
 
 #endif // ! FL_DOXYGEN
