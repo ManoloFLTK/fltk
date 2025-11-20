@@ -5,6 +5,8 @@
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Tabs.H>
 #include <FL/Fl_Tile.H>
+#include <FL/platform.H>
+
 
 void delete_win(Fl_Window *win) {
   delete win;
@@ -65,10 +67,13 @@ public:
 
 
 int main(int argc, char **argv) {
+  fl_open_display();
   Fl_Window *source = new Fl_Window(150, 150, 340, 180, "source (dockable_tabs)");
   source->callback((Fl_Callback0*)delete_win);
   Fl_Tabs *tabs = new dockable_tabs(20, 40, 310, 115);
-  Fl_Dockable_Group *dock = new Fl_Dockable_Group(25, 60, 305, 95, "Fl_Dockable_Group-1");
+  int X, Y, W, H;
+  tabs->client_area(X, Y, W, H);
+  Fl_Dockable_Group *dock = new Fl_Dockable_Group(X, Y, W, H, "Fl_Dockable_Group-1");
   dock->color(FL_YELLOW);
   dock->box(FL_THIN_UP_BOX);
   new Fl_Round_Clock(160, 90, 60, 60);
@@ -76,7 +81,7 @@ int main(int argc, char **argv) {
   Fl_Box *r = new Fl_Box(FL_NO_BOX, 0, 151, 155, 10, NULL);
   dock->end();
   dock->resizable(r);
-  new Fl_Box(FL_FLAT_BOX, 25, 60, 305, 95, "Tab 2");
+  new Fl_Box(FL_FLAT_BOX, X, Y, W, H, "Tab 2");
   tabs->end();
   source->end();
   source->resizable(dock);
@@ -106,7 +111,8 @@ int main(int argc, char **argv) {
   destination->callback((Fl_Callback0*)delete_win);
   new Fl_Input(5,5,100,30, NULL);
   tabs = new dockable_tabs(5, 40, 310, 140);
-  new Fl_Box(FL_FLAT_BOX, 10, 60, 300, 120, "Tab 1");
+  tabs->client_area(X, Y, W, H);
+  new Fl_Box(FL_FLAT_BOX, X, Y, W, H, "Tab 1");
   tabs->end();
   tabs->value(dock);
   destination->end();
