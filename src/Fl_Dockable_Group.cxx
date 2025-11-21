@@ -43,6 +43,7 @@ Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) 
   driver_ = Fl_Dockable_Group_Driver::newDockableGroupDriver(this);
   color_for_states();
   label_for_states();
+  active_target_ = NULL;
 }
 
 
@@ -136,7 +137,7 @@ void Fl_Dockable_Group::color_targets_following_dock_() {
   }
   if (!found && active_dockable) {
     state(Fl_Dockable_Group::DRAG);
-    if (Fl::belowmouse()) Fl::belowmouse()->handle(FL_DOCK_LEAVE);
+    if (active_target_) active_target_->handle(FL_DOCK_LEAVE);
   }
 }
 
@@ -164,14 +165,15 @@ int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int eve
   bool inside = inside_f(target); // true if mouse is inside the target's docking area
   if (event == FL_DOCK_ENTER || event == FL_DOCK_DRAG) {
     if (inside) {
-      if (Fl::belowmouse() != target) {
-        if (Fl::belowmouse() && target_state_f) {
-          target_state_f(Fl::belowmouse(), false);
+      if (active_dockable->active_target_ != target) {
+        if (active_dockable->active_target_ && target_state_f) {
+          target_state_f(active_dockable->active_target_, false);
         }
-        Fl::belowmouse(target);
-      }
+        active_dockable->active_target_ = target;
+     }
       Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DOCK);
       if (target_state_f) target_state_f(target, true);
+      if (Fl::belowmouse() != target) Fl::belowmouse(target); // important for Wayland
     } else {
       if (active_dockable->state_ == Fl_Dockable_Group::DOCK) target->handle(FL_DOCK_LEAVE);
       return 0;
@@ -182,9 +184,9 @@ int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int eve
       Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DRAG);
       if (target_state_f) target_state_f(target, false);
     }
-    if (Fl::belowmouse()) {
-      if( target_state_f) target_state_f(Fl::belowmouse(), false);
-      Fl::belowmouse(NULL);
+    if (active_dockable->active_target_) {
+      if( target_state_f) target_state_f(active_dockable->active_target_, false);
+      active_dockable->active_target_ = NULL;
     }
     return 1;
   } else if (event == FL_DOCK_RELEASE) {
@@ -286,8 +288,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
     dock->color_targets_following_dock_();
     return 1;
   } else if (event == FL_RELEASE && dock->state_ == Fl_Dockable_Group::DOCK) { // Dock dockable in place
-    Fl_Widget *target = Fl::belowmouse();
-    return target->handle(FL_DOCK_RELEASE);
+    return dockable_->active_target_->handle(FL_DOCK_RELEASE);
   }
   return box->Fl_Box::handle(event);
 }

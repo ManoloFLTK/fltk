@@ -120,7 +120,8 @@ public:
     DRAGGED ///<  Used only when the Fl_Dockable_Group is represented by an icon and is being dragged.
   };
 private:
-    enum states state_; // The current state of the Fl_Dockable_Group
+  enum states state_; // The current state of the Fl_Dockable_Group
+  Fl_Widget *active_target_; // Target widget below the active dockable
 public:
   void state(enum states s);
   /** Gets the state of the Fl_Dockable_Group */

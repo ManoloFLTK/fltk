@@ -98,6 +98,7 @@ int main(int argc, char **argv) {
   new Fl_Round_Clock(245, 65, 60, 60);
   new Fl_Input(30, 110, 60, 20);
   r = new Fl_Box(FL_NO_BOX, 0, 126, 155, 10, NULL);
+  r->clear_visible(); // important for DnD to Fl_Input
   dock->end();
   dock->resizable(r);
   source->end();
