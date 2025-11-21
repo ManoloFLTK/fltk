@@ -36,7 +36,6 @@ private:
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
   struct xdg_toplevel_drag_v1 *drag_;
   int old_keyboard_screen_scaling_;
-  Fl_Window *copy_();
 #endif
   void after_release_() override;
   void check_event_(int& event) override;
@@ -80,26 +79,6 @@ Fl_Dockable_Group_Driver *Fl_Dockable_Group_Driver::newDockableGroupDriver(Fl_Do
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
 
 static void do_nothing(Fl_Window *win) {
-}
-
-
-Fl_Window *Fl_Wayland_Dockable_Group_Driver::copy_() {
-  // transform the dockable group into a draggable, borderless toplevel window
-  Fl_Group *top = dockable_->parent();
-  top->remove(dockable_);
-  Fl_Box *tmp = new Fl_Dockable_Group::Dockable_Box(
-                              dockable_->x(), dockable_->y(), dockable_->w(), dockable_->h());
-  tmp->align(FL_ALIGN_CLIP);
-  top->add(tmp);
-  top->redraw();
-  Fl_Window *win = new Fl_Window(dockable_->w(), dockable_->h(), "Fl_Dockable_Group");
-  dockable_->position(0,0);
-  win->add(dockable_);
-  win->end();
-  win->callback((Fl_Callback0*)do_nothing);
-  state(Fl_Dockable_Group::DRAG);
-  win->border(0);
-  return win;
 }
 
 #endif // HAVE_XDG_TOPLEVEL_DRAG
@@ -170,10 +149,7 @@ int Fl_Wayland_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_
                               xid->wl_surface, NULL, scr_driver->seat->serial);
     int dock_x = dock->x(), dock_y = dock->y();
     Fl_Group *dock_parent = dock->parent();
-    Fl_Window *new_win = copy_();
-    box->parent()->show(); // necessary for tabs
-    new_win->show();
-    Fl::pushed(dock->drag_box()); // necessary for tabs
+    Fl_Window *new_win = undock(0, 0);
     xid = fl_wl_xid(new_win);
     xdg_toplevel_set_parent(xid->xdg_toplevel, Fl_Wayland_Window_Driver::driver(top)->xdg_toplevel());
     float s = Fl::screen_scale(top->screen_num());

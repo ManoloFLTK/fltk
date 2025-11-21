@@ -273,21 +273,7 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
       Fl_Group *top = dock->parent();
       // transform the dockable group into a draggable, borderless toplevel window
       // and replace it by a "Dockable_Box"
-      Fl_Widget *replacement = new Fl_Dockable_Group::Dockable_Box(
-                          dock->x(), dock->y(), dock->w(), dock->h());
-      top->add(replacement);
-      top->remove(dock);
-      top->redraw();
-      Fl_Window *win = new Fl_Window(winx, winy, dock->w(), dock->h(), drag_label_);
-      dock->position(0,0);
-      win->add(dock);
-      win->end();
-      dock->show(); // necessary for tabs
-      Fl_Dockable_Group_Driver::driver(dock)->state(Fl_Dockable_Group::DRAG);
-      win->border(0);
-      win->callback((Fl_Callback0*)do_nothing);
-      win->show();
-      Fl::pushed(dock->drag_box()); // necessary for tabs
+      undock(winx, winy);
       top->handle(FL_UNDOCK);
     }
     return 1;
@@ -303,6 +289,29 @@ int Fl_Dockable_Group_Driver::handle(Fl_Dockable_Group_Driver::drag_box_class *b
     return target->handle(FL_DOCK_RELEASE);
   }
   return box->Fl_Box::handle(event);
+}
+
+
+Fl_Window *Fl_Dockable_Group_Driver::undock(int winx, int winy) {
+  // transform the dockable group into a draggable, borderless toplevel window
+  Fl_Group *top = dockable_->parent();
+  top->remove(dockable_);
+  Fl_Box *tmp = new Fl_Dockable_Group::Dockable_Box(
+                              dockable_->x(), dockable_->y(), dockable_->w(), dockable_->h());
+  tmp->align(FL_ALIGN_CLIP);
+  top->add(tmp);
+  top->redraw();
+  Fl_Window *win = new Fl_Window(winx, winy, dockable_->w(), dockable_->h(), "Fl_Dockable_Group");
+  dockable_->position(0,0);
+  win->add(dockable_);
+  dockable_->show(); // necessary for tabs
+  win->end();
+  win->callback((Fl_Callback0*)do_nothing);
+  state(Fl_Dockable_Group::DRAG);
+  win->border(0);
+  Fl::pushed(dockable_->drag_box()); // necessary for tabs
+  win->show();
+  return win;
 }
 
 

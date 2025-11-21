@@ -28,6 +28,7 @@ private:
   virtual void check_event_(int& event) {}
 protected:
   Fl_Dockable_Group *dockable_;
+  Fl_Window *undock(int x, int y);
 public:
   class drag_box_class : public Fl_Box {
   public:
