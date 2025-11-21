@@ -156,7 +156,7 @@ int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int eve
   if (Fl_Dockable_Group::active_dockable) {
     Fl_Dockable_Group_Driver::driver(active_dockable)->check_event_(event);
   }
-  /*if (event == FL_DOCK_ENTER)   puts("FL_DOCK_ENTER:");
+ /*if (event == FL_DOCK_ENTER)   puts("FL_DOCK_ENTER:");
    if (event == FL_DOCK_DRAG)   puts("FL_DOCK_DRAG:");
    if (event == FL_DOCK_RELEASE) puts("FL_DOCK_RELEASE:");
    if (event == FL_DOCK_LEAVE) puts("FL_DOCK_LEAVE:"); */
@@ -164,16 +164,17 @@ int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int eve
   bool inside = inside_f(target); // true if mouse is inside the target's docking area
   if (event == FL_DOCK_ENTER || event == FL_DOCK_DRAG) {
     if (inside) {
-      if (Fl::belowmouse() && Fl::belowmouse() != target && target_state_f) {
-        target_state_f(Fl::belowmouse(), false);
+      if (Fl::belowmouse() != target) {
+        if (Fl::belowmouse() && target_state_f) {
+          target_state_f(Fl::belowmouse(), false);
+        }
+        Fl::belowmouse(target);
       }
-      Fl::belowmouse(target);
-      if (Fl_Dockable_Group::active_dockable) {
-        Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DOCK);
-        if (target_state_f) target_state_f(target, true);
-      }
-    } else  {
-      target->handle(FL_DOCK_LEAVE);
+      Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DOCK);
+      if (target_state_f) target_state_f(target, true);
+    } else {
+      if (active_dockable->state_ == Fl_Dockable_Group::DOCK) target->handle(FL_DOCK_LEAVE);
+      return 0;
     }
     return 1;
   } else if (event == FL_DOCK_LEAVE) {
@@ -181,12 +182,12 @@ int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int eve
       Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::DRAG);
       if (target_state_f) target_state_f(target, false);
     }
-    if (Fl::belowmouse() && target_state_f) {
-      target_state_f(Fl::belowmouse(), false);
+    if (Fl::belowmouse()) {
+      if( target_state_f) target_state_f(Fl::belowmouse(), false);
+      Fl::belowmouse(NULL);
     }
-    Fl::belowmouse(NULL);
     return 1;
-  } else if (event == FL_DOCK_RELEASE && Fl_Dockable_Group::active_dockable) {
+  } else if (event == FL_DOCK_RELEASE) {
     Fl_Window *top = Fl_Dockable_Group::active_dockable->window();
     top->remove(Fl_Dockable_Group::active_dockable);
     delete top;

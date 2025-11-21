@@ -61,7 +61,6 @@ Fl_Wayland_Dockable_Group_Driver::Fl_Wayland_Dockable_Group_Driver(Fl_Dockable_G
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
   drag_ = NULL;
   old_keyboard_screen_scaling_ = 0;
-    //((Fl_Wayland_Screen_Driver*)Fl::screen_driver())->xdg_toplevel_drag = NULL;//TMP
 #endif
 }
 
