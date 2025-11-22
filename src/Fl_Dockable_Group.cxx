@@ -194,6 +194,7 @@ int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int eve
     top->remove(Fl_Dockable_Group::active_dockable);
     delete top;
     dock_payload_f(target, Fl_Dockable_Group::active_dockable);
+    Fl_Dockable_Group::active_dockable->active_target_ = NULL;
     Fl_Dockable_Group::active_dockable->after_release_();
     Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::UNDOCK);
     Fl_Dockable_Group::active_dockable = NULL;
@@ -227,6 +228,7 @@ static void dock_payload_f(Fl_Widget *target, Fl_Dockable_Group *payload) {
     Fl_Group *group = target->parent();
     payload->resize(target->x(), target->y(), target->w(), target->h());
     group->add(payload);
+    delete target;
 }
     
 int Fl_Dockable_Group::Dockable_Box::handle(int event) {
