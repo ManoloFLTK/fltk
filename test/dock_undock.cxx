@@ -56,7 +56,9 @@ private:
   
 public:
   dockable_tabs(int x, int y, int w, int h, const char *l=NULL) : Fl_Tabs(x,y,w,h,l) {}
-
+  ~dockable_tabs() {
+    Fl_Dockable_Group::check_origin_target(this);
+  }
   int handle(int event) override {
     bool processed;
     int retval =  Fl_Dockable_Group::handle_target(processed, this, event,
@@ -143,6 +145,7 @@ int main(int argc, char **argv) {
   dock->end();
   tile->end();
   source->end();
+  source->callback((Fl_Callback0*)delete_win);
   source->resizable(tile);
   
   source->show();

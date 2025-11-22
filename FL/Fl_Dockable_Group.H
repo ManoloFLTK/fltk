@@ -93,6 +93,7 @@ public:
   class Dockable_Box : public Fl_Box {
   public:
     Dockable_Box(int x, int y, int w, int h);
+    virtual ~Dockable_Box();
     static const char *dockable_label;
     int handle(int event) override;
   };
@@ -122,13 +123,16 @@ public:
 private:
   enum states state_; // The current state of the Fl_Dockable_Group
   Fl_Widget *active_target_; // Target widget below the active dockable
+  Fl_Widget *origin_target_; // Target widget where the Fl_Dockable_Group commes from
 public:
+  int handle(int event) override;
   void state(enum states s);
   /** Gets the state of the Fl_Dockable_Group */
   enum states state() {return state_; }
   /** Non-NULL when an Fl_Dockable_Group is currently being dragged. */
   static Fl_Dockable_Group *active_dockable;
   static bool is_dockable_inside(Fl_Widget *widget);
+  static void check_origin_target(Fl_Widget *target);
 };
 
 #endif // Fl_Dockable_Group_H

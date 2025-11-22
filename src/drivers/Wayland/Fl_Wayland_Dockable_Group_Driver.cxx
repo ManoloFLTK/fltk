@@ -75,14 +75,6 @@ Fl_Dockable_Group_Driver *Fl_Dockable_Group_Driver::newDockableGroupDriver(Fl_Do
 }
 
 
-#ifdef HAVE_XDG_TOPLEVEL_DRAG
-
-static void do_nothing(Fl_Window *win) {
-}
-
-#endif // HAVE_XDG_TOPLEVEL_DRAG
-
-
 void Fl_Wayland_Dockable_Group_Driver::after_release_() {
   Fl_Wayland_Screen_Driver *scr_driver = (Fl_Wayland_Screen_Driver*)Fl::screen_driver();
 #ifdef HAVE_XDG_TOPLEVEL_DRAG
@@ -92,14 +84,13 @@ void Fl_Wayland_Dockable_Group_Driver::after_release_() {
   }
 #endif
   state(Fl_Dockable_Group::UNDOCK);
-  wl_data_source_set_user_data(scr_driver->seat->data_source, NULL);
+  if (scr_driver->seat->data_source) wl_data_source_set_user_data(scr_driver->seat->data_source, NULL);
 }
 
 
 static void xdg_toplevel_drag_data_source_handle_cancelled(void *data, struct wl_data_source *source) {
   Fl_Dockable_Group *dock = (Fl_Dockable_Group*)data;
   if (dock) dock->state(Fl_Dockable_Group::UNDOCK);
-  Fl_Dockable_Group::active_dockable = NULL;
   Fl_Wayland_Screen_Driver::p_data_source_listener->cancelled(NULL, source);
 }
 

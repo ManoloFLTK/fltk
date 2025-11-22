@@ -24,6 +24,7 @@ class Fl_Dockable_Group_Driver {
 private:
   Fl_Color undock_color_, drag_color_, dock_color_, docked_color_, dragged_color_;
   const char *undock_label_, *drag_label_, *dock_label_, *docked_label_, *dragged_label_;
+  static void dragged_dockable_cb_(Fl_Window *win);
   virtual void after_release_() {}
   virtual void check_event_(int& event) {}
 protected:

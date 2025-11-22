@@ -20,6 +20,7 @@
 #include <FL/platform.H> // for FLTK_USE_WAYLAND
 #include <FL/Fl_Dockable_Group.H>
 #include <FL/Fl_Window.H>
+#include <FL/fl_ask.H>
 #include "Fl_Dockable_Group_Driver.H"
 
 Fl_Dockable_Group *Fl_Dockable_Group::active_dockable = NULL;
@@ -44,6 +45,17 @@ Fl_Dockable_Group::Fl_Dockable_Group(int x, int y, int w, int h, const char *t) 
   color_for_states();
   label_for_states();
   active_target_ = NULL;
+  origin_target_ = NULL;
+}
+
+
+int Fl_Dockable_Group::handle(int event) {
+  if (parent() && parent()->as_window() &&
+      parent()->callback() == (Fl_Callback_p)Fl_Dockable_Group_Driver::dragged_dockable_cb_) {
+    if (event == FL_FOCUS) active_dockable = this;
+    else if (event == FL_UNFOCUS && active_dockable == this) active_dockable = NULL;
+  }
+  return Fl_Group::handle(event);
 }
 
 
@@ -101,6 +113,28 @@ const char *Fl_Dockable_Group::Dockable_Box::dockable_label = "Dock here";
 /** Constructor */
 Fl_Dockable_Group::Dockable_Box::Dockable_Box(int x, int y, int w, int h) :
     Fl_Box(FL_DOWN_BOX, x, y, w, h, dockable_label) { }
+
+
+/** Destructor */
+Fl_Dockable_Group::Dockable_Box::~Dockable_Box() {
+  check_origin_target(this);
+}
+
+
+/** needs documentation */
+void Fl_Dockable_Group::check_origin_target(Fl_Widget *target) {
+  Fl_Window *win = Fl::first_window();
+  while (win) {
+    if (!win->parent() && win->callback() == (Fl_Callback_p)Fl_Dockable_Group_Driver::dragged_dockable_cb_) {
+      Fl_Dockable_Group *dock = (Fl_Dockable_Group*)win->child(0);
+      if (dock->origin_target_ == target) {
+        dock->origin_target_ = NULL;
+        break;
+      }
+    }
+    win = Fl::next_window(win);
+  }
+}
 
 
 /** Returns whether the mouse currently dragging an Fl_Dockable_Group is above  \p widget  */
@@ -190,16 +224,19 @@ int Fl_Dockable_Group::handle_target(bool& processed, Fl_Widget *target, int eve
     }
     return 1;
   } else if (event == FL_DOCK_RELEASE) {
-    Fl_Window *top = Fl_Dockable_Group::active_dockable->window();
-    top->remove(Fl_Dockable_Group::active_dockable);
+    Fl_Dockable_Group *dock = Fl_Dockable_Group::active_dockable;
+    Fl_Window *top = dock->window();
+    top->remove(dock);
     delete top;
-    dock_payload_f(target, Fl_Dockable_Group::active_dockable);
-    Fl_Dockable_Group::active_dockable->active_target_ = NULL;
-    Fl_Dockable_Group::active_dockable->after_release_();
-    Fl_Dockable_Group::active_dockable->state(Fl_Dockable_Group::UNDOCK);
+    dock_payload_f(target, dock);
+    dock->active_target_ = NULL;
+    dock->after_release_();
+    dock->state(Fl_Dockable_Group::UNDOCK);
+    dock->origin_target_ = NULL;
     Fl_Dockable_Group::active_dockable = NULL;
     return 1;
   } else if (event == FL_UNDOCK) {
+    Fl_Dockable_Group::active_dockable->origin_target_ = target;
     if (undock_f) undock_f(target);
     return 1;
   }
@@ -247,7 +284,16 @@ int Fl_Dockable_Group_Driver::drag_box_class::handle(int event) {
 }
 
 
-static void do_nothing(Fl_Widget *win) {
+void Fl_Dockable_Group_Driver::dragged_dockable_cb_(Fl_Window *win) {
+  Fl_Dockable_Group *dock = (Fl_Dockable_Group*)win->child(0);
+  if (dock->origin_target_) dock->origin_target_->handle(FL_DOCK_RELEASE);
+  else {
+    int reply = fl_choice_n("Close this dockable window?", "Close", "Cancel", NULL);
+    if (reply == 0) {
+      Fl_Dockable_Group::active_dockable = NULL;
+      Fl::delete_widget(win);
+    }
+  }
 }
 
 
@@ -310,7 +356,7 @@ Fl_Window *Fl_Dockable_Group_Driver::undock(int winx, int winy) {
   win->add(dockable_);
   dockable_->show(); // necessary for tabs
   win->end();
-  win->callback((Fl_Callback0*)do_nothing);
+  win->callback((Fl_Callback0*)dragged_dockable_cb_);
   state(Fl_Dockable_Group::DRAG);
   win->border(0);
   Fl::pushed(dockable_->drag_box()); // necessary for tabs
