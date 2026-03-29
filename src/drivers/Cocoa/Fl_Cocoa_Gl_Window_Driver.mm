@@ -26,6 +26,8 @@
 #include <OpenGL/OpenGL.h>
 #include <FL/Fl_Image_Surface.H>
 #include <dlfcn.h>
+#include <FL/glut.H>
+#include <map>
 
 #import <Cocoa/Cocoa.h>
 
@@ -53,6 +55,8 @@ public:
 Fl_Cocoa_Gl_Window_Driver::Fl_Cocoa_Gl_Window_Driver(Fl_Gl_Window *win) :
                               Fl_Gl_Window_Driver(win) {
   gl1ctxt = NULL;
+  gl1layer = NULL;
+  skip_children_val = false;
 }
 
 
@@ -165,21 +169,188 @@ static void remove_gl_context_opacity(NSOpenGLContext *ctx) {
 }
 
 
+/*
+ Mouse and keyboard events in a GLUT window can involve GL operations (especially glRenderMode)
+ that MUST be performed while inside the drawInCGLContext: member of class CAOpenGLLayer.
+ Therefore these events are processed as follows:
+ - the parts of glut_compatibility.cxx that detect these events call a virtual member function
+ of Fl_Gl_Window_Driver specialized for each event type. For example, a FL_KEYBOARD event is
+ processed calling Fl_Cocoa_Gl_Window_Driver::glut_keyboard_func().
+ - This virtual function memorizes the pending glut_operation in a map that links the GLUT window
+ to a glut_operation_struct containing what operation is pending, what callback function can
+ perform it and its arguments.
+ - Fl_Window_Driver::flush() is called. This sends the setNeedsDisplay message to the GL layer.
+ - later macOS sends the drawInCGLContext: message to the CAOpenGLLayer. That member function
+ tests whether a glut operation associated to this GLUT window is present in the map.
+ If not, the function draws the GL scene.
+ If yes, the memorized struct contains all the information needed to call the adequate callback
+ with its arguments to process the event. The map element for the active GLUT window is removed
+ from the map. After the callback ran and if the GLUT window is damaged, the normal GLUT window
+ drawing procedure runs.
+ */
+enum glut_operation { keyboard_operation, special_operation, mouse_operation, motion_operation,
+  passive_motion_operation, entry_operation };
+struct glut_operation_struct { enum glut_operation oper; void *cb; int arg1, arg2, arg3, arg4; };
+static std::map<Fl_Glut_Window*, glut_operation_struct> operation_map;
+
+void Fl_Cocoa_Gl_Window_Driver::glut_keyboard_func(uchar c, int ex, int ey) {
+  Fl_Glut_Window *glutwin = (Fl_Glut_Window*)pWindow;
+  operation_map[glutwin] = {keyboard_operation, (void*)glutwin->keyboard, c, ex, ey, 0};
+  Fl_Window_Driver::driver(pWindow)->flush();
+}
+
+void Fl_Cocoa_Gl_Window_Driver::glut_special_func(int k, int ex, int ey) {
+  Fl_Glut_Window *glutwin = (Fl_Glut_Window*)pWindow;
+  operation_map[glutwin] = {special_operation, (void*)glutwin->special, k, ex, ey, 0};
+  Fl_Window_Driver::driver(pWindow)->flush();
+}
+
+void Fl_Cocoa_Gl_Window_Driver::glut_mouse_func(int b, int s, int x, int y) {
+  Fl_Glut_Window *glutwin = (Fl_Glut_Window*)pWindow;
+  operation_map[glutwin] = {mouse_operation, (void*)glutwin->mouse, b, s, x, y};
+  Fl_Window_Driver::driver(pWindow)->flush();
+}
+
+void Fl_Cocoa_Gl_Window_Driver::glut_motion_func(int ex, int ey) {
+  Fl_Glut_Window *glutwin = (Fl_Glut_Window*)pWindow;
+  operation_map[glutwin] = {motion_operation, (void*)glutwin->motion, ex, ey, 0, 0};
+  Fl_Window_Driver::driver(pWindow)->flush();
+}
+
+void Fl_Cocoa_Gl_Window_Driver::glut_passive_motion_func(int ex, int ey) {
+  Fl_Glut_Window *glutwin = (Fl_Glut_Window*)pWindow;
+  operation_map[glutwin] = {passive_motion_operation, (void*)glutwin->passivemotion, ex, ey, 0, 0};
+  Fl_Window_Driver::driver(pWindow)->flush();
+}
+
+void Fl_Cocoa_Gl_Window_Driver::glut_entry_func(int e) {
+  Fl_Glut_Window *glutwin = (Fl_Glut_Window*)pWindow;
+  operation_map[glutwin] = {entry_operation, (void*)glutwin->entry, e, 0, 0, 0};
+  Fl_Window_Driver::driver(pWindow)->flush();
+}
+
+
+@interface FLOpenGLLayer : CAOpenGLLayer { // macOS ≥ 10.5
+@public
+  NSOpenGLPixelFormat *pixelformat;
+  NSOpenGLContext *context;
+  Fl_Gl_Window *glwin;
+}
+@end
+
+@implementation FLOpenGLLayer
+
+- (CGLContextObj)copyCGLContextForPixelFormat:(CGLPixelFormatObj)pf {
+  return [[self->context retain] CGLContextObj];
+}
+- (void)releaseCGLContext:(CGLContextObj)ctx {
+  [self->context release];
+}
+
+- (BOOL)isAsynchronous {
+  return NO;
+}
+
+// Create the pixel format for the OpenGL context
+- (CGLPixelFormatObj)copyCGLPixelFormatForDisplayMask:(uint32_t)mask {
+  return [[self->pixelformat retain] CGLPixelFormatObj];
+}
+- (void)releaseCGLPixelFormat:(CGLPixelFormatObj)pf {
+  [self->pixelformat release];
+}
+
+// Draw the OpenGL content
+- (void)drawInCGLContext:(CGLContextObj)glContext
+             pixelFormat:(CGLPixelFormatObj)pixelFormat
+            forLayerTime:(CFTimeInterval)timeInterval
+             displayTime:(const CVTimeStamp *)timeStamp
+{
+  auto iter = operation_map.find((Fl_Glut_Window*)self->glwin);
+  if (iter != operation_map.end()) {
+    if (iter->second.oper == keyboard_operation) {
+      typedef void (*keyboard_f_type)(uchar, int, int);
+      keyboard_f_type keyboard_f = (keyboard_f_type)iter->second.cb;
+      keyboard_f((uchar)iter->second.arg1, iter->second.arg2, iter->second.arg3);
+    } else if (iter->second.oper == special_operation) {
+      typedef void (*special_f_type)(int, int);
+      special_f_type special_f = (special_f_type)iter->second.cb;
+      special_f(iter->second.arg1, iter->second.arg2);
+    } else if (iter->second.oper == mouse_operation) {
+      typedef void (*mouse_f_type)(int, int, int, int);
+      mouse_f_type mouse_f = (mouse_f_type)iter->second.cb;
+      mouse_f(iter->second.arg1, iter->second.arg2, iter->second.arg3, iter->second.arg4);
+    } else if (iter->second.oper == motion_operation) {
+      typedef void (*motion_f_type)(int, int);
+      motion_f_type motion_f = (motion_f_type)iter->second.cb;
+      motion_f(iter->second.arg1, iter->second.arg2);
+    } else if (iter->second.oper == passive_motion_operation) {
+      typedef void (*passive_motion_f_type)(int, int);
+      passive_motion_f_type passive_motion_f = (passive_motion_f_type)iter->second.cb;
+      passive_motion_f(iter->second.arg1, iter->second.arg2);
+    } else if (iter->second.oper == entry_operation) {
+      typedef void (*entry_f_type)(int);
+      entry_f_type entry_f = (entry_f_type)iter->second.cb;
+      entry_f(iter->second.arg1);
+    }
+    operation_map.erase(iter);
+    if (!self->glwin->damage())
+      return;
+    self->glwin->clear_damage();
+  }
+
+  Fl_Cocoa_Gl_Window_Driver *gldr = (Fl_Cocoa_Gl_Window_Driver*)Fl_Gl_Window_Driver::driver(self->glwin);
+  if (!self->glwin->valid()) gldr->apply_scissor();
+  if (gldr->gl1layer) gldr->skip_children_val = true;
+  self->glwin->flush();
+  gldr->skip_children_val = false;
+  glFlush();
+  if (gldr->gl1layer && self->glwin->children())
+    [gldr->gl1layer setNeedsDisplay];
+  self->glwin->clear_damage();
+}
+
+@end
+
+@interface extra_FLOpenGLLayer : FLOpenGLLayer
+@end
+@implementation extra_FLOpenGLLayer
+- (void)drawInCGLContext:(CGLContextObj)glContext
+             pixelFormat:(CGLPixelFormatObj)pixelFormat
+            forLayerTime:(CFTimeInterval)timeInterval
+             displayTime:(const CVTimeStamp *)timeStamp
+{
+  Fl_Gl_Window_Driver::driver(self->glwin)->draw_children();
+  glFlush();
+}
+@end
+
+
 static NSOpenGLContext *create_GLcontext_for_window(
                          NSOpenGLPixelFormat *pixelformat,
                          NSOpenGLContext *shared_ctx, Fl_Window *window)
 {
-  NSOpenGLContext *context = [[NSOpenGLContext alloc] initWithFormat:pixelformat shareContext:shared_ctx];
-  if (shared_ctx && !context) context = [[NSOpenGLContext alloc] initWithFormat:pixelformat shareContext:nil];
-  if (context) {
-    NSView *view = [fl_xid(window) contentView];
-    [view setWantsBestResolutionOpenGLSurface:(Fl::use_high_res_GL() != 0)];
-    [context setView:view];
-    if (Fl_Cocoa_Window_Driver::driver(window)->subRect()) {
-      remove_gl_context_opacity(context);
-    }
+  NSView *view = [fl_xid(window) contentView];
+  Fl_Window_Driver::driver(window)->wait_for_expose_value = 0;
+  // Create our custom OpenGL layer
+  FLOpenGLLayer *layer = [FLOpenGLLayer layer];
+  layer->pixelformat = pixelformat;
+  layer.frame = view.bounds;
+  layer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+  /*CGColorSpaceRef cs = CGColorSpaceCreateWithName(kCGColorSpaceDisplayP3);
+  layer.colorspace = cs; // does impact pixel colors as seen with "Digital Color Meter"
+  CGColorSpaceRelease(cs);*/
+  layer.contentsScale = (Fl_Cocoa_Window_Driver::driver(window)->mapped_to_retina() ? 2 : 1);
+  // Attach the layer to the window's content view
+  view.layer = layer;
+  view.wantsLayer = YES;
+  layer->glwin = window->as_gl_window();
+  [layer release];
+  layer->context = [[NSOpenGLContext alloc] initWithFormat:pixelformat shareContext:shared_ctx];
+  if (shared_ctx && !layer->context) layer->context = [[NSOpenGLContext alloc] initWithFormat:pixelformat shareContext:nil];
+  if (Fl_Cocoa_Window_Driver::driver(window)->subRect()) {
+    remove_gl_context_opacity(layer->context);
   }
-  return context;
+  return layer->context;
 }
 
 GLContext Fl_Cocoa_Gl_Window_Driver::create_gl_context(Fl_Window* window, const Fl_Gl_Choice* g) {
@@ -191,9 +362,6 @@ GLContext Fl_Cocoa_Gl_Window_Driver::create_gl_context(Fl_Window* window, const 
   context = create_GLcontext_for_window(((Fl_Cocoa_Gl_Choice*)g)->pixelformat, (NSOpenGLContext*)shared_ctx, window);
   if (!context) return 0;
   add_context(context);
-  [(NSOpenGLContext*)context makeCurrentContext];
-  glClearColor(0., 0., 0., 1.);
-  apply_scissor();
   return (context);
 }
 
@@ -202,6 +370,11 @@ void Fl_Cocoa_Gl_Window_Driver::set_gl_context(Fl_Window* w, GLContext context) 
   if (context != current_context || w != cached_window) {
     cached_window = w;
     [(NSOpenGLContext*)context makeCurrentContext];
+  }
+  if (!(mode() & FL_ALPHA)) {
+    GLfloat vals[4];
+    glGetFloatv(GL_COLOR_CLEAR_VALUE, vals);
+    if (vals[3] == 0.) glClearColor(vals[0], vals[1], vals[2], 1.);
   }
 }
 
@@ -246,15 +419,23 @@ void Fl_Cocoa_Gl_Window_Driver::after_show() {
     static NSOpenGLPixelFormat *gl1pixelformat = mode_to_NSOpenGLPixelFormat(
                                 FL_RGB8 | FL_ALPHA | FL_SINGLE, NULL);
     gl1ctxt = [[NSOpenGLContext alloc] initWithFormat:gl1pixelformat shareContext:shared_gl1_ctxt];
+    extra_FLOpenGLLayer *layer = [extra_FLOpenGLLayer layer];
+    layer->pixelformat = gl1pixelformat;
+    layer.frame = view.bounds;
+    layer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+    layer.colorspace = ((CAOpenGLLayer*)view.layer).colorspace;
+    layer.contentsScale = view.layer.contentsScale;
+    gl1view.layer = layer;
+    gl1view.wantsLayer = YES;
+    [layer release];
+    layer->context = gl1ctxt;
+    layer->glwin = pWindow->as_gl_window();
+    this->gl1layer = layer;
     if (!shared_gl1_ctxt) {
       shared_gl1_ctxt = gl1ctxt;
       [shared_gl1_ctxt retain];
     }
     [view addSubview:gl1view];
-    if (Fl::use_high_res_GL()) {
-      [gl1view setWantsBestResolutionOpenGLSurface:YES];
-    }
-    [gl1ctxt setView:gl1view];
     remove_gl_context_opacity(gl1ctxt);
   }
 }
@@ -293,8 +474,9 @@ void Fl_Cocoa_Gl_Window_Driver::make_current_before() {
   if (d->changed_resolution()){
     d->changed_resolution(false);
     pWindow->invalidate();
-    [(NSOpenGLContext*)pWindow->context() update];
-    if (gl1ctxt) [gl1ctxt update];
+    CALayer *layer = [[fl_mac_xid(pWindow) contentView] layer];
+    layer.contentsScale = (d->mapped_to_retina() ? 2 : 1);
+    if (this->gl1layer) this->gl1layer.contentsScale = layer.contentsScale;
   }
 }
 
@@ -328,10 +510,15 @@ void Fl_Cocoa_Gl_Window_Driver::swap_buffers() {
     glPopMatrix();
     glMatrixMode(matrixmode);
     glRasterPos3f(pos[0], pos[1], pos[2]);              // restore original glRasterPos
-  } else {
+  } /*else {
     [(NSOpenGLContext*)pWindow->context() flushBuffer];
-  }
+  }*/
 }
+
+void Fl_Cocoa_Gl_Window_Driver::draw_to_back_buffer() {
+  // CAOpenGLLayer creates GL_INVALID_OPERATION error when calling glDrawBuffer(GL_BACK)
+}
+
 
 char Fl_Cocoa_Gl_Window_Driver::swap_type() {return copy;}
 
@@ -355,11 +542,7 @@ int Fl_Cocoa_Gl_Window_Driver::swap_interval() const {
 }
 
 void Fl_Cocoa_Gl_Window_Driver::resize(int is_a_resize, int w, int h) {
-  if (pWindow->shown()) apply_scissor();
-  [(NSOpenGLContext*)pWindow->context() update];
-  if (gl1ctxt) {
-    [gl1ctxt update];
-  }
+  [[[fl_mac_xid(pWindow) contentView] layer] setNeedsDisplay];
 }
 
 void Fl_Cocoa_Gl_Window_Driver::apply_scissor() {
@@ -458,15 +641,12 @@ FL_EXPORT NSOpenGLContext *fl_mac_glcontext(GLContext rc) {
 
 
 void Fl_Cocoa_Gl_Window_Driver::switch_to_GL1() {
-  [gl1ctxt makeCurrentContext];
   glClearColor(0., 0., 0., 0.);
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
 
 void Fl_Cocoa_Gl_Window_Driver::switch_back() {
-  glFlush();
-  [(NSOpenGLContext*)pWindow->context() makeCurrentContext];
 }
 
 

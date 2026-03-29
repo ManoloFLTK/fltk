@@ -1,7 +1,7 @@
 //
 // GLUT emulation routines for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 1998-2023 by Bill Spitzak and others.
+// Copyright 1998-2026 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -91,39 +91,60 @@ int Fl_Glut_Window::handle(int event) {
     if (button>2) button = 2;
     if (menu[button]) {domenu(menu[button],ex,ey); return 1;}
     mouse_down |= 1<<button;
-    if (mouse) {mouse(button,GLUT_DOWN,ex,ey); return 1;}
+    if (mouse) {
+      Fl_Gl_Window_Driver::driver(this)->glut_mouse_func(button, GLUT_DOWN, ex, ey);
+      return 1;
+    }
     if (motion) return 1;
     break;
 
   case FL_MOUSEWHEEL:
     button = Fl::event_dy();
-    while (button < 0) {if (mouse) mouse(3,GLUT_DOWN,ex,ey); ++button;}
-    while (button > 0) {if (mouse) mouse(4,GLUT_DOWN,ex,ey); --button;}
+    while (button < 0) {
+      if (mouse) Fl_Gl_Window_Driver::driver(this)->glut_mouse_func(3, GLUT_DOWN, ex, ey);
+      ++button;
+    }
+    while (button > 0) {
+      if (mouse) Fl_Gl_Window_Driver::driver(this)->glut_mouse_func(4, GLUT_DOWN, ex, ey);
+      --button;
+    }
     return 1;
 
   case FL_RELEASE:
     for (button = 0; button < 3; button++) if (mouse_down & (1<<button)) {
-      if (mouse) mouse(button,GLUT_UP,ex,ey);
+      if (mouse) Fl_Gl_Window_Driver::driver(this)->glut_mouse_func(button, GLUT_UP, ex, ey);
     }
     mouse_down = 0;
     return 1;
 
   case FL_ENTER:
-    if (entry) {entry(GLUT_ENTERED); return 1;}
+      if (entry) {
+        Fl_Gl_Window_Driver::driver(this)->glut_entry_func(GLUT_ENTERED);
+        return 1;
+      }
     if (passivemotion) return 1;
     break;
 
   case FL_LEAVE:
-    if (entry) {entry(GLUT_LEFT); return 1;}
+    if (entry) {
+      Fl_Gl_Window_Driver::driver(this)->glut_entry_func(GLUT_LEFT);
+      return 1;
+    }
     if (passivemotion) return 1;
     break;
 
   case FL_DRAG:
-    if (motion) {motion(ex, ey); return 1;}
+    if (motion) {
+      Fl_Gl_Window_Driver::driver(this)->glut_motion_func(ex, ey);
+      return 1;
+    }
     break;
 
   case FL_MOVE:
-    if (passivemotion) {passivemotion(ex, ey); return 1;}
+    if (passivemotion) {
+      Fl_Gl_Window_Driver::driver(this)->glut_passive_motion_func(ex, ey);
+      return 1;
+    }
     break;
 
   case FL_FOCUS:
@@ -138,13 +159,16 @@ int Fl_Glut_Window::handle(int event) {
       // so check for window scaling keystroke before normal keystroke processing
     if ( Fl::event_command() && Fl_Screen_Driver::scale_handler(FL_SHORTCUT) ) return 1;
     if (Fl::event_text()[0]) {
-      if (keyboard) {keyboard(Fl::event_text()[0],ex,ey); return 1;}
+      if (keyboard) {
+        Fl_Gl_Window_Driver::driver(this)->glut_keyboard_func(Fl::event_text()[0], ex, ey);
+        return 1;
+      }
       break;
     } else {
       if (special) {
         int k = Fl::event_key();
         if (k > FL_F && k <= FL_F_Last) k -= FL_F;
-        special(k,ex,ey);
+        Fl_Gl_Window_Driver::driver(this)->glut_special_func(k, ex, ey);
         return 1;
       }
       break;

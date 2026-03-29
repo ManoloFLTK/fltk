@@ -2,7 +2,7 @@
 // Definition of class Fl_Gl_Window_Driver, and of its platform-specific derived classes
 // for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 2016-2018 by Bill Spitzak and others.
+// Copyright 2016-2026 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -45,6 +45,8 @@ public:
   static int copy;
   static float gl_scale;
   static GLContext gl_start_context;
+  virtual bool skip_children() { return false; }
+  void draw_children() { pWindow->Fl_Gl_Window::draw(); } // accessor to protected member
   Fl_Gl_Choice* g() {return pWindow->g;}
   void g(Fl_Gl_Choice *c) {pWindow->g = c;}
   int mode() {return pWindow->mode_;}
@@ -109,6 +111,13 @@ public:
   virtual bool need_scissor() { return false; }
   virtual void switch_to_GL1();
   virtual void switch_back();
+  virtual void draw_to_back_buffer();
+  virtual void glut_keyboard_func(uchar, int, int);
+  virtual void glut_special_func(int, int, int);
+  virtual void glut_mouse_func(int, int, int, int);
+  virtual void glut_motion_func(int, int);
+  virtual void glut_passive_motion_func(int, int);
+  virtual void glut_entry_func(int);
 };
 
 #endif /* Fl_Gl_Window_Driver_H */

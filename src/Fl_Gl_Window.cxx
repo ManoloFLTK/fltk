@@ -1,7 +1,7 @@
 //
 // OpenGL window code for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 1998-2022 by Bill Spitzak and others.
+// Copyright 1998-2026 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -20,6 +20,7 @@
 extern int fl_gl_load_plugin;
 
 #include <FL/gl.h>
+#include <FL/glut.H>
 #include <FL/Fl_Gl_Window.H>
 #include "Fl_Gl_Window_Driver.H"
 #include "Fl_Window_Driver.H"
@@ -210,8 +211,8 @@ void Fl_Gl_Window::flush() {
   make_current();
 
   if (mode_ & FL_DOUBLE) {
-
-    glDrawBuffer(GL_BACK);
+    //glDrawBuffer(GL_BACK);
+    pGlWindowDriver->draw_to_back_buffer();
 
     if (!SWAP_TYPE) {
       SWAP_TYPE = pGlWindowDriver->swap_type();
@@ -505,6 +506,7 @@ void Fl_Gl_Window::draw_end() {
 
 */
 void Fl_Gl_Window::draw() {
+  if (pGlWindowDriver->skip_children()) return;
   draw_begin();
   Fl_Window::draw();
   draw_end();
@@ -626,6 +628,35 @@ Fl_RGB_Image* Fl_Gl_Window_Driver::capture_gl_rectangle(int x, int y, int w, int
   Fl_RGB_Image *img = new Fl_RGB_Image(baseAddress, w, h, 3, mByteWidth);
   img->alloc_array = 1;
   return img;
+}
+
+
+void Fl_Gl_Window_Driver::draw_to_back_buffer() {
+  glDrawBuffer(GL_BACK);
+}
+
+void Fl_Gl_Window_Driver::glut_keyboard_func(uchar c, int ex, int ey) {
+  ((Fl_Glut_Window*)pWindow)->keyboard(c, ex, ey);
+}
+
+void Fl_Gl_Window_Driver::glut_special_func(int k, int ex, int ey) {
+  ((Fl_Glut_Window*)pWindow)->special(k, ex, ey);
+}
+
+void Fl_Gl_Window_Driver::glut_mouse_func(int b, int s, int x, int y) {
+  ((Fl_Glut_Window*)pWindow)->mouse(b, s, x, y);
+}
+
+void Fl_Gl_Window_Driver::glut_motion_func(int ex, int ey) {
+  ((Fl_Glut_Window*)pWindow)->motion(ex, ey);
+}
+
+void Fl_Gl_Window_Driver::glut_passive_motion_func(int ex, int ey) {
+  ((Fl_Glut_Window*)pWindow)->passivemotion(ex, ey);
+}
+
+void Fl_Gl_Window_Driver::glut_entry_func(int e) {
+  ((Fl_Glut_Window*)pWindow)->entry(e);
 }
 
 /**

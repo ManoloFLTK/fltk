@@ -2339,9 +2339,9 @@ static FLTextInputContext* fltextinputcontext_instance = nil;
   return self;
 }
 
-/* Used by all GL or non-GL windows.
+/* Used by all non-GL windows.
  * Gets called when a window is created, resized, or moved between retina and non-retina displays.
- * For non-GL windows, also called by Fl_Window_Driver::flush() because of the display message sent to the view.
+ * Also called by Fl_Window_Driver::flush() because of the display message sent to the view.
  */
 - (void)drawRect:(NSRect)rect
 {
@@ -2954,7 +2954,7 @@ static FLTextInputContext* fltextinputcontext_instance = nil;
 void Fl_Cocoa_Window_Driver::flush()
 {
   if (pWindow->as_gl_window()) {
-    Fl_Window_Driver::flush();
+    [[[fl_xid(pWindow) contentView] layer] setNeedsDisplay];
   } else {
     through_Fl_X_flush = YES;
     NSView *view = [fl_xid(pWindow) contentView];

@@ -1,7 +1,7 @@
 //
 // Class Fl_Cocoa_Gl_Window_Driver for the Fast Light Tool Kit (FLTK).
 //
-// Copyright 2021 by Bill Spitzak and others.
+// Copyright 2021-2026 by Bill Spitzak and others.
 //
 // This library is free software. Distribution and use rights are outlined in
 // the file "COPYING" which should have been included with this file.  If this
@@ -42,7 +42,6 @@ class Fl_Cocoa_Gl_Window_Driver : public Fl_Gl_Window_Driver {
   int swap_interval() const FL_OVERRIDE;
   Fl_Gl_Choice *find(int m, const int *alistp) FL_OVERRIDE;
   GLContext create_gl_context(Fl_Window* window, const Fl_Gl_Choice* g) FL_OVERRIDE;
-  void set_gl_context(Fl_Window* w, GLContext context) FL_OVERRIDE;
   void delete_gl_context(GLContext) FL_OVERRIDE;
   void make_overlay_current() FL_OVERRIDE;
   void redraw_overlay() FL_OVERRIDE;
@@ -51,9 +50,21 @@ class Fl_Cocoa_Gl_Window_Driver : public Fl_Gl_Window_Driver {
   Fl_RGB_Image* capture_gl_rectangle(int x, int y, int w, int h) FL_OVERRIDE;
   bool need_scissor() FL_OVERRIDE { return true; }
   void* GetProcAddress(const char *procName) FL_OVERRIDE;
-  void apply_scissor();
   void switch_to_GL1() FL_OVERRIDE;
   void switch_back() FL_OVERRIDE;
+  void draw_to_back_buffer() override;
+  void glut_keyboard_func(uchar c, int ex, int ey) override;
+  void glut_special_func(int k, int ex, int ey) override;
+  void glut_mouse_func(int b, int s, int x, int y) override;
+  void glut_motion_func(int ex, int ey) override;
+  void glut_passive_motion_func(int ex, int ey) override;
+  void glut_entry_func(int e) override;
+public:
+  void set_gl_context(Fl_Window* w, GLContext context) FL_OVERRIDE;
+  void apply_scissor();
+  CALayer *gl1layer;
+  bool skip_children_val;
+  bool skip_children() override { return skip_children_val; }
 };
 
 
