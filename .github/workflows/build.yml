@@ -281,7 +281,8 @@ jobs:
         -D FLTK_USE_SYSTEM_LIBPNG:BOOL=OFF `
         -D FLTK_USE_SYSTEM_ZLIB:BOOL=OFF `
         -D FLTK_BUILD_FORMS=ON `
-        -D FLTK_BUILD_SHARED_LIBS:BOOL=ON
+        -D FLTK_BUILD_SHARED_LIBS:BOOL=ON `
+        -D FLTK_BUILD_FLUID:BOOL=OFF
 
     - name: Build
       working-directory: ${{github.workspace}}/build
